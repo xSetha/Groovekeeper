@@ -1,3 +1,4 @@
 <Solution>
+  <Project Path="SongCreator.Tests/SongCreator.Tests.csproj" />
   <Project Path="SongCreator/SongCreator.csproj" />
 </Solution>

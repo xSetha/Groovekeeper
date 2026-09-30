@@ -1,0 +1,96 @@
+<Window x:Class="SongCreator.Views.ExportPdfWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Export PDF" Width="620" SizeToContent="Height" ResizeMode="NoResize"
+        WindowStyle="None" AllowsTransparency="True" Background="Transparent"
+        ShowInTaskbar="False" WindowStartupLocation="CenterOwner"
+        FontFamily="{DynamicResource UiFont}" Foreground="{DynamicResource TextForeground}">
+    <Border Background="{DynamicResource CardBackground}" BorderBrush="{DynamicResource PopupBorder}" BorderThickness="1"
+            CornerRadius="12" Margin="40" Effect="{DynamicResource CardShadow}">
+        <DockPanel>
+            <!-- Header (drag to move) -->
+            <StackPanel DockPanel.Dock="Top" Margin="28,24,28,16" Background="Transparent"
+                        MouseLeftButtonDown="Header_MouseLeftButtonDown">
+                <TextBlock Text="Export PDF" FontSize="20" FontWeight="SemiBold" />
+                <TextBlock Margin="0,6,0,0" TextWrapping="Wrap" Foreground="{DynamicResource MutedForeground}"
+                           Text="Pick the songs and their order. They're combined, one after another, into a single PDF." />
+            </StackPanel>
+
+            <!-- Footer -->
+            <Border DockPanel.Dock="Bottom" BorderBrush="{DynamicResource CardBorder}" BorderThickness="0,1,0,0" Padding="28,16">
+                <DockPanel>
+                    <TextBlock Text="{Binding SelectionSummary}" VerticalAlignment="Center"
+                               Foreground="{DynamicResource MutedForeground}" />
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                        <Button Content="Cancel" Style="{StaticResource FlatButton}" Padding="14,8" IsCancel="True" />
+                        <Button Content="Export PDF" Style="{StaticResource PrimaryButton}" Padding="22,8" Margin="8,0,0,0"
+                                IsDefault="True" Command="{Binding ExportCommand}" IsEnabled="{Binding CanExport}" />
+                    </StackPanel>
+                </DockPanel>
+            </Border>
+
+            <!-- Options -->
+            <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Margin="28,4,28,18">
+                <CheckBox Content="Table of contents" IsChecked="{Binding IncludeTableOfContents}" Margin="0,0,28,0" />
+                <CheckBox Content="Open the PDF when done" IsChecked="{Binding OpenWhenDone}" />
+            </StackPanel>
+
+            <!-- Song list -->
+            <StackPanel Margin="20,0,20,8">
+                <Border BorderBrush="{DynamicResource CardBorder}" BorderThickness="1" CornerRadius="8" Padding="4">
+                    <Grid>
+                        <TextBlock Text="No songs yet. Add song files to export them." Margin="12,18"
+                                   Foreground="{DynamicResource MutedForeground}" HorizontalAlignment="Center"
+                                   Visibility="{Binding IsEmpty, Converter={StaticResource BoolToVisible}}" />
+                        <ScrollViewer MaxHeight="340" VerticalScrollBarVisibility="Auto">
+                            <ItemsControl ItemsSource="{Binding Items}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border x:Name="Row" CornerRadius="6" Padding="10,6" Background="Transparent">
+                                            <DockPanel>
+                                                <!-- Position in the PDF -->
+                                                <TextBlock DockPanel.Dock="Left" Width="26" VerticalAlignment="Center"
+                                                           FontFamily="{DynamicResource SongFont}" Foreground="{DynamicResource MutedForeground}"
+                                                           Text="{Binding Position}" />
+                                                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center"
+                                                            TextElement.FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets">
+                                                    <Button Content="&#xE70E;" Style="{StaticResource FlatButton}" Padding="7,5" FontSize="11"
+                                                            ToolTip="Move up" Foreground="{DynamicResource MutedForeground}"
+                                                            Command="{Binding DataContext.MoveUpCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                            CommandParameter="{Binding}" />
+                                                    <Button Content="&#xE70D;" Style="{StaticResource FlatButton}" Padding="7,5" FontSize="11"
+                                                            ToolTip="Move down" Foreground="{DynamicResource MutedForeground}"
+                                                            Command="{Binding DataContext.MoveDownCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                            CommandParameter="{Binding}" />
+                                                    <Button Content="&#xE711;" Style="{StaticResource FlatButton}" Padding="7,5" FontSize="11"
+                                                            ToolTip="Remove from list" Foreground="{DynamicResource MutedForeground}"
+                                                            Command="{Binding DataContext.RemoveCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                            CommandParameter="{Binding}" />
+                                                </StackPanel>
+                                                <CheckBox IsChecked="{Binding IsSelected}" VerticalAlignment="Center">
+                                                    <StackPanel Margin="4,0,0,0">
+                                                        <TextBlock Text="{Binding Song.DisplayTitle}" FontWeight="SemiBold"
+                                                                   TextTrimming="CharacterEllipsis" />
+                                                        <TextBlock Text="{Binding Details}" FontSize="11.5" TextTrimming="CharacterEllipsis"
+                                                                   Foreground="{DynamicResource MutedForeground}" />
+                                                    </StackPanel>
+                                                </CheckBox>
+                                            </DockPanel>
+                                        </Border>
+                                        <DataTemplate.Triggers>
+                                            <Trigger SourceName="Row" Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="Row" Property="Background" Value="{DynamicResource ButtonHover}" />
+                                            </Trigger>
+                                        </DataTemplate.Triggers>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </Grid>
+                </Border>
+                <Button Content="+ Add song files…" Style="{StaticResource FlatButton}" HorizontalAlignment="Left"
+                        Margin="0,8,0,0" Padding="10,6" Command="{Binding AddFilesCommand}" />
+            </StackPanel>
+        </DockPanel>
+    </Border>
+</Window>

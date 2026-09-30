@@ -1,0 +1,31 @@
+<UserControl x:Class="SongCreator.Controls.SongLineControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="22" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- Chord lane: click to add, chords are drawn in ChordLayer on top -->
+        <Canvas x:Name="Lane" Grid.Row="0" Background="Transparent" Cursor="IBeam"
+                ToolTip="Click above a letter to add a chord"
+                MouseLeftButtonDown="Lane_MouseLeftButtonDown"
+                MouseMove="Lane_MouseMove" MouseLeave="Lane_MouseLeave">
+            <Rectangle x:Name="ColumnGhost" Height="20" Canvas.Top="1" RadiusX="2" RadiusY="2"
+                       Fill="{DynamicResource ColumnHighlight}" Visibility="Collapsed" IsHitTestVisible="False" />
+        </Canvas>
+        <Canvas x:Name="ChordLayer" Grid.Row="0">
+            <TextBox x:Name="ChordEditor" Canvas.Top="0" MinWidth="50" Visibility="Collapsed"
+                     FontFamily="{DynamicResource SongFont}" FontSize="14" FontWeight="Bold"
+                     Background="{DynamicResource ChordEditorBackground}" Foreground="{DynamicResource ChordTagForeground}"
+                     CaretBrush="{DynamicResource ChordTagForeground}" BorderThickness="1" BorderBrush="{DynamicResource FocusBorder}"
+                     KeyDown="ChordEditor_KeyDown" LostKeyboardFocus="ChordEditor_LostKeyboardFocus" />
+        </Canvas>
+
+        <TextBox x:Name="LyricBox" Grid.Row="1" Style="{StaticResource BareTextBox}"
+                 FontFamily="{DynamicResource SongFont}" FontSize="16"
+                 TextWrapping="NoWrap" HorizontalScrollBarVisibility="Hidden"
+                 TextChanged="LyricBox_TextChanged" PreviewKeyDown="LyricBox_PreviewKeyDown" />
+    </Grid>
+</UserControl>

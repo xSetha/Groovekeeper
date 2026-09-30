@@ -1,0 +1,28 @@
+<Window x:Class="SongCreator.Views.SaveChangesDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Close song" SizeToContent="WidthAndHeight" ResizeMode="NoResize"
+        WindowStyle="None" AllowsTransparency="True" Background="Transparent"
+        ShowInTaskbar="False" WindowStartupLocation="CenterOwner"
+        FontFamily="{DynamicResource UiFont}"
+        MouseLeftButtonDown="Window_MouseLeftButtonDown">
+    <Border Background="{DynamicResource CardBackground}" BorderBrush="{DynamicResource PopupBorder}" BorderThickness="1"
+            CornerRadius="10" Padding="28,24" Margin="40" Width="420" Effect="{DynamicResource CardShadow}">
+        <StackPanel>
+            <TextBlock FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextForeground}"
+                       TextWrapping="Wrap">
+                <Run Text="Save “" /><Run x:Name="SongTitle" /><Run Text="” before closing?" />
+            </TextBlock>
+            <TextBlock Margin="0,10,0,24" Foreground="{DynamicResource MutedForeground}" TextWrapping="Wrap"
+                       Text="The song will be saved as a text file with the chords above the lyrics. If you don't save, your changes are lost." />
+            <DockPanel LastChildFill="False">
+                <Button DockPanel.Dock="Left" Content="Don't save" Style="{StaticResource FlatButton}"
+                        Padding="12,8" Click="DontSave_Click" />
+                <Button DockPanel.Dock="Right" Content="Save" Style="{StaticResource PrimaryButton}"
+                        Padding="22,8" Margin="8,0,0,0" IsDefault="True" Click="Save_Click" />
+                <Button DockPanel.Dock="Right" Content="Cancel" Style="{StaticResource FlatButton}"
+                        Padding="12,8" IsCancel="True" />
+            </DockPanel>
+        </StackPanel>
+    </Border>
+</Window>
