@@ -1,0 +1,96 @@
+<UserControl x:Class="SongCreator.Views.ChordPalette"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <UserControl.Resources>
+        <!-- A draggable chord, drawn like the chord tags in the editor -->
+        <DataTemplate x:Key="ChordChip">
+            <Border x:Name="Chip" Background="{DynamicResource ChordTagBackground}" CornerRadius="4" Padding="7,3" Margin="0,0,6,6"
+                    Cursor="SizeAll" ToolTip="Drag onto a lyric line"
+                    PreviewMouseLeftButtonDown="Chip_PreviewMouseLeftButtonDown" MouseMove="Chip_MouseMove">
+                <TextBlock Text="{Binding}" FontFamily="{DynamicResource SongFont}" FontSize="13" FontWeight="Bold"
+                           Foreground="{DynamicResource ChordTagForeground}" />
+            </Border>
+            <DataTemplate.Triggers>
+                <Trigger SourceName="Chip" Property="IsMouseOver" Value="True">
+                    <Setter TargetName="Chip" Property="Opacity" Value="0.8" />
+                </Trigger>
+            </DataTemplate.Triggers>
+        </DataTemplate>
+
+        <ItemsPanelTemplate x:Key="Wrap">
+            <WrapPanel />
+        </ItemsPanelTemplate>
+
+        <Style x:Key="GroupLabel" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Margin" Value="0,14,0,8" />
+        </Style>
+
+        <!-- Root selector: small pills, the selected one filled with the accent -->
+        <Style x:Key="RootPill" TargetType="ListBoxItem">
+            <Setter Property="Foreground" Value="{DynamicResource MutedForeground}" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <Border x:Name="Bd" Background="Transparent" CornerRadius="10" Padding="7,2" Margin="0,0,3,4" MinWidth="30">
+                            <ContentPresenter HorizontalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ButtonHover}" />
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource AccentFill}" />
+                                <Setter Property="Foreground" Value="{DynamicResource OnAccentForeground}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
+    <Border Width="250" Background="{DynamicResource ToolbarBackground}" BorderBrush="{DynamicResource CardBorder}"
+            BorderThickness="1,0,0,0">
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <StackPanel Margin="18,18,12,18">
+                <TextBlock Text="CHORDS" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource MutedForeground}" />
+                <TextBlock Margin="0,4,0,0" FontSize="11.5" TextWrapping="Wrap" Foreground="{DynamicResource MutedForeground}"
+                           Text="Drag a chord above a letter or onto a word. Drop it on a chord to replace that chord." />
+
+                <!-- Chords in the song's key -->
+                <TextBlock Style="{StaticResource GroupLabel}" Text="{Binding KeyTitle}"
+                           Visibility="{Binding HasKey, Converter={StaticResource BoolToVisible}}" />
+                <ItemsControl ItemsSource="{Binding KeyChords}" ItemTemplate="{StaticResource ChordChip}"
+                              ItemsPanel="{StaticResource Wrap}"
+                              Visibility="{Binding HasKey, Converter={StaticResource BoolToVisible}}" />
+                <TextBlock Margin="0,14,0,0" FontSize="11.5" TextWrapping="Wrap" Foreground="{DynamicResource HintForeground}"
+                           Text="Set the song's key to see the chords that fit it."
+                           Visibility="{Binding HasKey, Converter={StaticResource BoolToCollapsed}}" />
+
+                <!-- Chords already in the song -->
+                <TextBlock Style="{StaticResource GroupLabel}" Text="In this song"
+                           Visibility="{Binding HasUsedChords, Converter={StaticResource BoolToVisible}}" />
+                <ItemsControl ItemsSource="{Binding UsedChords}" ItemTemplate="{StaticResource ChordChip}"
+                              ItemsPanel="{StaticResource Wrap}" />
+
+                <!-- Every chord type for a chosen root -->
+                <TextBlock Style="{StaticResource GroupLabel}" Text="All chords" />
+                <ListBox ItemsSource="{Binding Roots}" SelectedItem="{Binding SelectedRoot}"
+                         ItemContainerStyle="{StaticResource RootPill}" ItemsPanel="{StaticResource Wrap}"
+                         Background="Transparent" BorderThickness="0" Padding="0"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled" FontSize="12" />
+                <TextBlock Text="Bass note (slash chords)" FontSize="11" Margin="0,8,0,4"
+                           Foreground="{DynamicResource MutedForeground}" />
+                <ListBox ItemsSource="{Binding BassOptions}" SelectedItem="{Binding SelectedBass}"
+                         ItemContainerStyle="{StaticResource RootPill}" ItemsPanel="{StaticResource Wrap}"
+                         Background="Transparent" BorderThickness="0" Padding="0"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled" FontSize="12" />
+                <ItemsControl Margin="0,8,0,0" ItemsSource="{Binding RootChords}" ItemTemplate="{StaticResource ChordChip}"
+                              ItemsPanel="{StaticResource Wrap}" />
+            </StackPanel>
+        </ScrollViewer>
+    </Border>
+</UserControl>

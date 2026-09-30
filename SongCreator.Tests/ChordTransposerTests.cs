@@ -23,6 +23,17 @@ namespace SongCreator.Tests
             Assert.Equal(expected, ChordTransposer.Transpose(chord, semitones));
         }
 
+        [Theory]
+        [InlineData("A", 1, true, "Bb")]
+        [InlineData("A", 1, false, "A#")]
+        [InlineData("Bb", 0, false, "A#")]
+        [InlineData("D/F#", 1, true, "Eb/G")]
+        [InlineData("C/E", -1, false, "B/D#")]
+        public void SpellsWithTheRequestedAccidentals(string chord, int semitones, bool useFlats, string expected)
+        {
+            Assert.Equal(expected, ChordTransposer.Transpose(chord, semitones, useFlats));
+        }
+
         [Fact]
         public void KeepsFlats()
         {
@@ -33,6 +44,7 @@ namespace SongCreator.Tests
         [InlineData("")]
         [InlineData("N.C.")]
         [InlineData("x2")]
+        [InlineData("Am-ish")]
         public void LeavesNonChordsUnchanged(string text)
         {
             Assert.Equal(text, ChordTransposer.Transpose(text, 3));

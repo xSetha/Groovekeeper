@@ -9,7 +9,7 @@ namespace SongCreator.Tests
             "Constantine",
             "Traditional",
             "",
-            "Tuning: E A D G B E · Key: Dm",
+            "Key: Dm",
             "",
             "[Intro]",
             "Dm  Gm  Dm  Dm",
@@ -26,7 +26,6 @@ namespace SongCreator.Tests
             var song = SongTextReader.Parse(Sample);
             Assert.Equal("Constantine", song.Title);
             Assert.Equal("Traditional", song.Artist);
-            Assert.Equal("E A D G B E", song.Tuning);
             Assert.Equal("Dm", song.Key);
         }
 
@@ -47,6 +46,14 @@ namespace SongCreator.Tests
             Assert.Equal([0, 13, 22], verse[0].Chords.Select(c => c.Position));
             Assert.Equal("Every Day without chords", verse[1].Text);
             Assert.Empty(verse[1].Chords);
+        }
+
+        [Fact]
+        public void ReadsOlderFilesThatHaveATuning()
+        {
+            var song = SongTextReader.Parse("Old Song\r\n\r\nTuning: D A D G B E · Key: Em\r\n\r\n[Verse]\r\nEm\r\nhello\r\n");
+            Assert.Equal("Em", song.Key);
+            Assert.Equal("hello", Assert.Single(Assert.Single(song.Sections).Lines).Text);
         }
 
         [Fact]

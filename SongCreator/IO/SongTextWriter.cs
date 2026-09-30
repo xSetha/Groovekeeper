@@ -16,16 +16,11 @@ namespace SongCreator.IO
             if (song.Artist.Length > 0)
                 text.AppendLine(song.Artist);
 
-            var info = new List<string>();
-            if (song.Tuning.Length > 0)
-                info.Add($"Tuning: {song.Tuning}");
             if (song.Key.Length > 0)
-                info.Add($"Key: {song.Key}");
-            if (info.Count > 0)
             {
                 if (text.Length > 0)
                     text.AppendLine();
-                text.AppendLine(string.Join(" · ", info));
+                text.AppendLine($"Key: {song.Key}");
             }
 
             foreach (var section in song.Sections)

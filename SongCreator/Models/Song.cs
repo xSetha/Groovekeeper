@@ -7,7 +7,6 @@ namespace SongCreator.Models
     {
         private string _title = "";
         private string _artist = "";
-        private string _tuning = "E A D G B E";
         private string _key = "";
 
         public string Title
@@ -23,16 +22,18 @@ namespace SongCreator.Models
         public string DisplayTitle => Title.Length > 0 ? Title : "Untitled song";
 
         public string Artist { get => _artist; set => SetProperty(ref _artist, value); }
-        public string Tuning { get => _tuning; set => SetProperty(ref _tuning, value); }
         public string Key { get => _key; set => SetProperty(ref _key, value); }
 
         public ObservableCollection<Section> Sections { get; } = new();
 
         public void Transpose(int semitones)
         {
-            Key = ChordTransposer.Transpose(Key, semitones);
+            // The key gets its usual name, and every chord is spelled with that key's sharps or flats
+            // (so going up and back down returns the same names). Without a key, chords keep their own spelling.
+            Key = MusicKeys.Transpose(Key, semitones);
+            bool? useFlats = MusicKeys.UsesFlats(Key);
             foreach (var chord in Sections.SelectMany(s => s.Lines).SelectMany(l => l.Chords))
-                chord.Name = ChordTransposer.Transpose(chord.Name, semitones);
+                chord.Name = ChordTransposer.Transpose(chord.Name, semitones, useFlats);
         }
 
         public bool HasContent =>

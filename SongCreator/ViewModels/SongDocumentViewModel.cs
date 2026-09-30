@@ -18,6 +18,7 @@ namespace SongCreator.ViewModels
         public SongDocumentViewModel(Song song, string? filePath = null)
         {
             Song = song;
+            Palette = new ChordPaletteViewModel(song);
             if (filePath != null)
             {
                 FilePath = filePath;
@@ -32,6 +33,8 @@ namespace SongCreator.ViewModels
         }
 
         public Song Song { get; }
+
+        public ChordPaletteViewModel Palette { get; }
 
         /// <summary>The .txt file this song was opened from or last saved to, if any.</summary>
         public string? FilePath { get; private set; }

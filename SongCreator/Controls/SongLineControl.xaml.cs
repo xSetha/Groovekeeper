@@ -35,10 +35,6 @@ namespace SongCreator.Controls
         private int _dragStartPosition;
         private bool _dragging;
 
-        private bool _editing;
-        private ChordPlacement? _editingChord;
-        private int _editingColumn;
-
         public SongLineControl()
         {
             InitializeComponent();
@@ -51,6 +47,12 @@ namespace SongCreator.Controls
             Unloaded += (_, _) => ThemeManager.ThemeChanged -= OnThemeChanged;
             LyricBox.SizeChanged += (_, _) => RenderChords();
             DataObject.AddPastingHandler(LyricBox, OnPaste);
+
+            // Chords dragged from the palette can be dropped anywhere on the line: above a letter or onto the word.
+            AllowDrop = true;
+            PreviewDragOver += OnChordDragOver;
+            PreviewDragLeave += (_, _) => ColumnGhost.Visibility = Visibility.Collapsed;
+            PreviewDrop += OnChordDrop;
         }
 
         public int Caret => LyricBox.CaretIndex;
@@ -194,7 +196,7 @@ namespace SongCreator.Controls
                     CornerRadius = new CornerRadius(3),
                     Padding = new Thickness(TagPadding, 0, TagPadding, 0),
                     Cursor = Cursors.Hand,
-                    ToolTip = "Drag to move · Click to rename · Right-click to delete",
+                    ToolTip = "Drag to move · Right-click to delete",
                     Child = label,
                 };
                 tag.SetResourceReference(Border.BackgroundProperty, "ChordTagBackground");
@@ -209,35 +211,44 @@ namespace SongCreator.Controls
                     e.Handled = true;
                 };
                 _tags[chord] = tag;
-                ChordLayer.Children.Insert(0, tag); // keep the editor on top
+                ChordLayer.Children.Add(tag);
             }
         }
 
-        // ---- Lane: add chords ----
+        // ---- Dropping a chord from the palette (the only way to add or change one) ----
 
-        private void Lane_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        private void ShowColumnGhost(int column)
         {
-            if (_line == null)
-                return;
-            int column = ColumnAt(e.GetPosition(Lane).X);
-            BeginEdit(_line.Chords.FirstOrDefault(c => c.Position == column), column);
-            e.Handled = true;
-        }
-
-        private void Lane_MouseMove(object sender, MouseEventArgs e)
-        {
-            int column = ColumnAt(e.GetPosition(Lane).X);
             ColumnGhost.Width = CharWidth;
             Canvas.SetLeft(ColumnGhost, ColumnX(column));
             ColumnGhost.Visibility = Visibility.Visible;
         }
 
-        private void Lane_MouseLeave(object sender, MouseEventArgs e)
+        private void OnChordDragOver(object sender, DragEventArgs e)
         {
-            ColumnGhost.Visibility = Visibility.Collapsed;
+            if (!e.Data.GetDataPresent(ChordDrag.Format))
+                return;
+            e.Effects = DragDropEffects.Copy;
+            e.Handled = true;
+            ShowColumnGhost(ColumnAt(e.GetPosition(Lane).X));
         }
 
-        // ---- Chord drag ----
+        private void OnChordDrop(object sender, DragEventArgs e)
+        {
+            if (_line == null || e.Data.GetData(ChordDrag.Format) is not string name)
+                return;
+            e.Handled = true;
+            ColumnGhost.Visibility = Visibility.Collapsed;
+
+            // Dropping on an existing chord replaces it.
+            int column = ColumnAt(e.GetPosition(Lane).X);
+            if (_line.Chords.FirstOrDefault(c => c.Position == column) is { } existing)
+                existing.Name = name;
+            else
+                _line.Chords.Add(new ChordPlacement(column, name));
+        }
+
+        // ---- Moving a chord along its line ----
 
         private void StartDrag(Border tag, ChordPlacement chord, MouseButtonEventArgs e)
         {
@@ -264,64 +275,9 @@ namespace SongCreator.Controls
         {
             if (_dragChord == null)
                 return;
-            var chord = _dragChord;
             _dragChord = null;
             tag.ReleaseMouseCapture();
-            if (!_dragging)
-                BeginEdit(chord, chord.Position);
             e.Handled = true;
-        }
-
-        // ---- Chord name editor ----
-
-        private void BeginEdit(ChordPlacement? chord, int column)
-        {
-            _editing = true;
-            _editingChord = chord;
-            _editingColumn = column;
-            ChordEditor.Text = chord?.Name ?? "";
-            Canvas.SetLeft(ChordEditor, ColumnX(column) - TagPadding);
-            ChordEditor.Visibility = Visibility.Visible;
-            ChordEditor.Focus();
-            ChordEditor.SelectAll();
-        }
-
-        private void EndEdit(bool commit)
-        {
-            if (!_editing || _line == null)
-                return;
-            _editing = false;
-            ChordEditor.Visibility = Visibility.Collapsed;
-            if (!commit)
-                return;
-
-            string name = ChordEditor.Text.Trim();
-            if (_editingChord != null)
-            {
-                if (name.Length == 0)
-                    _line.Chords.Remove(_editingChord);
-                else
-                    _editingChord.Name = name;
-            }
-            else if (name.Length > 0)
-            {
-                _line.Chords.Add(new ChordPlacement(_editingColumn, name));
-            }
-        }
-
-        private void ChordEditor_KeyDown(object sender, KeyEventArgs e)
-        {
-            if (e.Key is Key.Enter or Key.Escape)
-            {
-                EndEdit(commit: e.Key == Key.Enter);
-                FocusText(_editingColumn);
-                e.Handled = true;
-            }
-        }
-
-        private void ChordEditor_LostKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
-        {
-            EndEdit(commit: true);
         }
 
         // ---- Lyric keyboard handling ----

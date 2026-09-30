@@ -81,6 +81,33 @@ namespace SongCreator.Tests
             Assert.Equal(["startone", "two", "end"], verse.Lines.Select(l => l.Text));
         }
 
+        [Theory]
+        [MemberData(nameof(AllKeys))]
+        public void TransposingKeepsTheKeyInTheKeyDropdown(string key)
+        {
+            _song.Key = key;
+            _document.TransposeUpCommand.Execute(null);
+            Assert.Contains(_song.Key, Music.MusicKeys.All);
+            _document.TransposeDownCommand.Execute(null);
+            _document.TransposeDownCommand.Execute(null);
+            Assert.Contains(_song.Key, Music.MusicKeys.All);
+        }
+
+        public static TheoryData<string> AllKeys() => new(Music.MusicKeys.All);
+
+        [Fact]
+        public void TransposeUpdatesTheKeyAndChords()
+        {
+            _song.Key = "G";
+            AddSection("Verse", "x").Lines[0].Chords.Add(new ChordPlacement(0, "Em"));
+
+            _document.TransposeUpCommand.Execute(null);
+            _document.TransposeUpCommand.Execute(null);
+
+            Assert.Equal("A", _song.Key);
+            Assert.Equal("F#m", _song.Sections[0].Lines[0].Chords[0].Name);
+        }
+
         [Fact]
         public void CommandsEditTheSong()
         {

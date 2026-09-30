@@ -16,6 +16,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- The seedable sample songs, checked by SampleSongsTests -->
+    <None Include="..\samples\songs\*.txt" LinkBase="samples" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\SongCreator\SongCreator.csproj" />
   </ItemGroup>
 

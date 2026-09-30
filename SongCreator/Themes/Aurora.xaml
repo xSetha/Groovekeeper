@@ -28,7 +28,6 @@
         <GradientStop Color="#1C3B5E" Offset="1" />
     </LinearGradientBrush>
     <SolidColorBrush x:Key="ChordTagForeground" Color="#E4DAFF" />
-    <SolidColorBrush x:Key="ChordEditorBackground" Color="#252B40" />
     <SolidColorBrush x:Key="ColumnHighlight" Color="#408B5CF6" />
 
     <SolidColorBrush x:Key="ButtonHover" Color="#222840" />
@@ -38,7 +37,6 @@
         <GradientStop Color="#22D3EE" Offset="1" />
     </LinearGradientBrush>
     <SolidColorBrush x:Key="OnAccentForeground" Color="#0B0D12" />
-    <SolidColorBrush x:Key="FocusBorder" Color="#8B5CF6" />
     <SolidColorBrush x:Key="SelectionBrush" Color="#7C5CE0" />
     <SolidColorBrush x:Key="KeyCapBorder" Color="#2E3550" />
     <SolidColorBrush x:Key="ScrollThumb" Color="#2E3650" />

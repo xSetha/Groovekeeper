@@ -1,19 +1,17 @@
 using System.IO;
 using System.Text.RegularExpressions;
 using SongCreator.Models;
+using SongCreator.Music;
 
 namespace SongCreator.IO
 {
     /// <summary>
     /// Reads the text format written by <see cref="SongTextWriter"/>: title and artist lines, a
-    /// "Tuning: … · Key: …" line, then "[Section]" headings with chord lines above lyric lines.
+    /// "Key: …" line, then "[Section]" headings with chord lines above lyric lines.
+    /// Files from older versions have "Tuning: … · Key: …" there; the tuning is ignored.
     /// </summary>
     public static partial class SongTextReader
     {
-        // Strict on purpose, so lyric words such as "Every" or "Day" are not mistaken for chords.
-        [GeneratedRegex(@"^[A-G][#b]?(?:maj|min|dim|aug|sus|add|m|M|\+|°|ø|\d|[#b]\d|\(|\))*(?:/[A-G][#b]?)?$")]
-        private static partial Regex ChordRegex();
-
         [GeneratedRegex(@"^\[(.+)\]$")]
         private static partial Regex HeadingRegex();
 
@@ -34,7 +32,7 @@ namespace SongCreator.IO
 
         public static Song Parse(string text)
         {
-            var song = new Song { Tuning = "" };
+            var song = new Song();
             var headerLines = new List<string>();
             Section? section = null;
             SongLine? pendingChords = null;
@@ -104,7 +102,7 @@ namespace SongCreator.IO
         public static bool IsChordLine(string line)
         {
             var tokens = TokenRegex().Matches(line);
-            return tokens.Count > 0 && tokens.All(t => ChordRegex().IsMatch(t.Value));
+            return tokens.Count > 0 && tokens.All(t => Chord.IsValid(t.Value));
         }
 
         private static bool IsInfoLine(string line)
@@ -118,9 +116,7 @@ namespace SongCreator.IO
             foreach (string part in line.Split('·'))
             {
                 string field = part.Trim();
-                if (field.StartsWith("Tuning:"))
-                    song.Tuning = field["Tuning:".Length..].Trim();
-                else if (field.StartsWith("Key:"))
+                if (field.StartsWith("Key:"))
                     song.Key = field["Key:".Length..].Trim();
             }
         }

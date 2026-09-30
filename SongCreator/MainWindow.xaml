@@ -133,32 +133,29 @@
                                        Foreground="{DynamicResource MutedForeground}" />
                             <Button Content="−" Style="{StaticResource FlatButton}" Command="{Binding TransposeDownCommand}" ToolTip="Down one semitone" />
                             <Button Content="+" Style="{StaticResource FlatButton}" Command="{Binding TransposeUpCommand}" ToolTip="Up one semitone" />
+                            <!-- Transposing updates the key -->
+                            <TextBlock Text="Key" Margin="20,0,6,0" VerticalAlignment="Center"
+                                       Foreground="{DynamicResource MutedForeground}" />
+                            <ComboBox Style="{StaticResource DarkComboBox}" ItemsSource="{x:Static music:MusicKeys.All}"
+                                      SelectedItem="{Binding Song.Key}" FontWeight="SemiBold" MinHeight="26"
+                                      MaxDropDownHeight="540" ToolTip="Key">
+                                <ComboBox.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <UniformGrid Columns="2" />
+                                    </ItemsPanelTemplate>
+                                </ComboBox.ItemsPanel>
+                            </ComboBox>
                         </StackPanel>
                     </Border>
+
+                    <views:ChordPalette DockPanel.Dock="Right" DataContext="{Binding Palette}" />
 
                     <ScrollViewer x:Name="EditorScroll" VerticalScrollBarVisibility="Auto">
                         <StackPanel Margin="40,24,40,40">
                             <TextBox x:Name="TitleBox" Text="{Binding Song.Title, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource HintTextBox}" Tag="Song title"
                                      FontSize="26" FontWeight="SemiBold" />
                             <TextBox Text="{Binding Song.Artist, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource HintTextBox}" Tag="Artist"
-                                     FontSize="16" Foreground="{DynamicResource MutedForeground}" Margin="0,2,0,14" />
-
-                            <!-- Tuning · Key -->
-                            <StackPanel Orientation="Horizontal" TextElement.FontSize="15">
-                                <TextBlock Text="Tuning: " Foreground="{DynamicResource MutedForeground}" VerticalAlignment="Center" />
-                                <TextBox Text="{Binding Song.Tuning, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource BareTextBox}"
-                                         FontSize="15" MinWidth="20" VerticalAlignment="Center" />
-                                <TextBlock Text="  ·  Key: " Foreground="{DynamicResource MutedForeground}" VerticalAlignment="Center" />
-                                <ComboBox Style="{StaticResource DarkComboBox}" ItemsSource="{x:Static music:MusicKeys.All}"
-                                          SelectedItem="{Binding Song.Key}" FontSize="15" FontWeight="SemiBold"
-                                          MaxDropDownHeight="540">
-                                    <ComboBox.ItemsPanel>
-                                        <ItemsPanelTemplate>
-                                            <UniformGrid Columns="2" />
-                                        </ItemsPanelTemplate>
-                                    </ComboBox.ItemsPanel>
-                                </ComboBox>
-                            </StackPanel>
+                                     FontSize="16" Foreground="{DynamicResource MutedForeground}" Margin="0,2,0,6" />
 
                             <ItemsControl ItemsSource="{Binding Song.Sections}" Margin="0,12,0,0">
                                 <ItemsControl.ItemTemplate>

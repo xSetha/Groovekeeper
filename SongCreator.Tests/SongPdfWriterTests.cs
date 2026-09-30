@@ -7,7 +7,7 @@ namespace SongCreator.Tests
     public class SongPdfWriterTests
     {
         private const string Constantine =
-            "Constantine\r\nTraditional\r\n\r\nTuning: E A D G B E · Key: Dm\r\n\r\n[Intro]\r\nDm  Gm  Dm  Dm\r\n\r\n" +
+            "Constantine\r\nTraditional\r\n\r\nKey: Dm\r\n\r\n[Intro]\r\nDm  Gm  Dm  Dm\r\n\r\n" +
             "[Verse 1]\r\nDm           A        Dm\r\nConstantine, Constantine\r\nDm        A        Dm\r\nMă mir şi mă uit la tine\r\n";
 
         [Theory]

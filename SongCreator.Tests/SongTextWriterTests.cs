@@ -33,7 +33,7 @@ namespace SongCreator.Tests
             [
                 "My Song",
                 "",
-                "Tuning: E A D G B E · Key: Am",
+                "Key: Am",
                 "",
                 "[Verse 1]",
                 "      Am",

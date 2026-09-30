@@ -114,7 +114,7 @@
                 <StackPanel TextElement.FontFamily="{DynamicResource SongFont}" TextElement.FontSize="14">
                     <TextBlock FontFamily="{DynamicResource UiFont}" FontSize="16" FontWeight="SemiBold" Text="Twinkle, Twinkle" />
                     <TextBlock FontFamily="{DynamicResource UiFont}" FontSize="12" Foreground="{DynamicResource MutedForeground}" Margin="0,2,0,14">
-                        <Run Text="Tuning:" /> <Run Text="E A D G B E" Foreground="{DynamicResource TextForeground}" /> <Run Text="·  Key:" /> <Run Text="C" Foreground="{DynamicResource TextForeground}" FontWeight="SemiBold" />
+                        <Run Text="Key:" /> <Run Text="C" Foreground="{DynamicResource TextForeground}" FontWeight="SemiBold" />
                     </TextBlock>
                     <TextBlock Text="[Verse 1]" Margin="0,0,0,2" />
                     <TextBlock><Run Style="{StaticResource Chord}" Text="C" /><Run Text="                 " /><Run Style="{StaticResource Chord}" Text="F" /><Run Text="      " /><Run Style="{StaticResource Chord}" Text="C" /></TextBlock>
@@ -137,9 +137,9 @@
                 <Border Style="{StaticResource Card}" Padding="20" Margin="8">
                     <StackPanel>
                         <TextBlock Style="{StaticResource TipNumber}" Text="02" />
-                        <TextBlock Style="{StaticResource TipTitle}" Text="Click above a letter" />
+                        <TextBlock Style="{StaticResource TipTitle}" Text="Drag in the chords" />
                         <TextBlock Style="{StaticResource TipText}"
-                                   Text="Type the chord name and press Enter. It stays anchored to that letter while you keep editing the words." />
+                                   Text="Drag a chord from the panel on the right onto a word. It stays anchored to that letter while you keep editing the lyrics." />
                     </StackPanel>
                 </Border>
                 <Border Style="{StaticResource Card}" Padding="20" Margin="8">
@@ -147,7 +147,7 @@
                         <TextBlock Style="{StaticResource TipNumber}" Text="03" />
                         <TextBlock Style="{StaticResource TipTitle}" Text="Refine and transpose" />
                         <TextBlock Style="{StaticResource TipText}"
-                                   Text="Drag chords to move them, click to rename, right-click to remove. Transpose the whole song from the Song menu." />
+                                   Text="Drag chords sideways to move them, right-click to remove. Transposing updates every chord and the key." />
                     </StackPanel>
                 </Border>
             </UniformGrid>
@@ -160,9 +160,7 @@
                 <TextBlock Text="join with line above" Margin="0,0,24,8" />
                 <Border Style="{StaticResource KeyCap}"><TextBlock Text="↑" /></Border>
                 <Border Style="{StaticResource KeyCap}"><TextBlock Text="↓" /></Border>
-                <TextBlock Text="move between lines" Margin="0,0,24,8" />
-                <Border Style="{StaticResource KeyCap}"><TextBlock Text="Esc" /></Border>
-                <TextBlock Text="cancel chord edit" Margin="0,0,0,8" />
+                <TextBlock Text="move between lines" Margin="0,0,0,8" />
             </WrapPanel>
 
             <!-- Theme picker -->

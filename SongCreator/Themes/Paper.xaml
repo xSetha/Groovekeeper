@@ -22,14 +22,12 @@
 
     <SolidColorBrush x:Key="ChordTagBackground" Color="#FFE3D5" />
     <SolidColorBrush x:Key="ChordTagForeground" Color="#B23A0E" />
-    <SolidColorBrush x:Key="ChordEditorBackground" Color="#FFFFFF" />
     <SolidColorBrush x:Key="ColumnHighlight" Color="#26E4572E" />
 
     <SolidColorBrush x:Key="ButtonHover" Color="#ECE7DD" />
     <SolidColorBrush x:Key="AccentBrush" Color="#D9481F" />
     <SolidColorBrush x:Key="AccentFill" Color="#E4572E" />
     <SolidColorBrush x:Key="OnAccentForeground" Color="#FFFFFF" />
-    <SolidColorBrush x:Key="FocusBorder" Color="#E4572E" />
     <SolidColorBrush x:Key="SelectionBrush" Color="#F4A98C" />
     <SolidColorBrush x:Key="KeyCapBorder" Color="#D6D0C3" />
     <SolidColorBrush x:Key="ScrollThumb" Color="#D6D0C3" />

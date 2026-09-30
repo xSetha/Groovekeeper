@@ -88,13 +88,8 @@ namespace SongCreator.IO
                 if (song.Artist.Length > 0)
                     column.Item().Text(song.Artist).FontSize(11).FontColor(MutedColor);
 
-                var info = new List<string>();
-                if (song.Tuning.Length > 0)
-                    info.Add($"Tuning: {song.Tuning}");
                 if (song.Key.Length > 0)
-                    info.Add($"Key: {song.Key}");
-                if (info.Count > 0)
-                    column.Item().PaddingTop(4).Text(string.Join("  ·  ", info)).FontSize(9).FontColor(MutedColor);
+                    column.Item().PaddingTop(4).Text($"Key: {song.Key}").FontSize(9).FontColor(MutedColor);
 
                 foreach (var section in song.Sections)
                 {
