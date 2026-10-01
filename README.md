@@ -4,7 +4,8 @@ A Windows desktop app for writing chord sheets: type the lyrics, drop each chord
 syllable where it changes, then transpose, print, and build setlists for a gig.
 
 Songs are plain `.txt` files with the chords on the line above the lyrics, so they stay readable
-in any text editor.
+in any text editor. The app also opens and saves songs in the ChordPro format used by many other
+chord apps.
 
 ## Features
 
@@ -17,6 +18,8 @@ in any text editor.
 - Undo and redo for everything: typing, chords, sections and transposing.
 - Find and replace in the lyrics (matches are highlighted) or in the chords, by exact name.
 - Several songs open at once, each in its own tab.
+- Open and save ChordPro files (`.cho`, `.chopro`, `.chordpro`, `.pro`) as well as `.txt`.
+  A song keeps its format when saved; Save as can switch it.
 
 **Music**
 - Transpose up or down by semitones. The key and every chord are respelled to match.
@@ -90,6 +93,26 @@ That saved a wretch like me
 
 [Verse 1]
 (Repeat)
+```
+
+**Songs in ChordPro (`.cho`, `.chopro`, `.chordpro`, `.pro`)**: directives in braces and each
+chord in brackets right before the letter it belongs to. Sections are saved as verse, chorus or
+bridge environments, depending on their name. A chorus repeat is `{chorus}`; any other repeat is a
+`{comment:}` heading naming an earlier section, with nothing under it. When reading, `{comment:}`
+headings and paragraphs separated by blank lines also become sections. Directives the app has no
+place for (capo, tempo, …) are skipped, so they are not kept when the song is saved.
+
+```text
+{title: Amazing Grace}
+{artist: John Newton}
+{key: G}
+
+{start_of_verse: Verse 1}
+A[G]mazing grace, how [G7]sweet the [C]sound
+That [G]saved a wretch like [D]me
+{end_of_verse}
+
+{comment: Verse 1}
 ```
 
 **Setlists (`.setlist`)**: JSON with the setlist's name and its songs in order, each with
