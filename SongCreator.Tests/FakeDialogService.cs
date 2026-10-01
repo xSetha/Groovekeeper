@@ -52,9 +52,9 @@ namespace SongCreator.Tests
 
         public string? PickBackupPath(string suggestedFileName) => BackupPath;
 
-        public bool Confirm(string title, string message)
+        public bool Confirm(string title, string question, string detail, string confirmText)
         {
-            Confirmations.Add(message);
+            Confirmations.Add($"{question} {detail}");
             return ConfirmAnswer;
         }
 

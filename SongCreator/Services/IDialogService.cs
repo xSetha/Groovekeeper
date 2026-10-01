@@ -45,8 +45,11 @@ namespace SongCreator.Services
         /// <summary>Returns the path for a library backup, or null if cancelled.</summary>
         string? PickBackupPath(string suggestedFileName);
 
-        /// <summary>Asks a yes/no question; returns true for yes.</summary>
-        bool Confirm(string title, string message);
+        /// <summary>
+        /// Asks before doing something (e.g. deleting): <paramref name="question"/> as the heading, <paramref name="detail"/>
+        /// below it, and a button labelled <paramref name="confirmText"/>. Returns true if the user pressed it.
+        /// </summary>
+        bool Confirm(string title, string question, string detail, string confirmText);
 
         /// <summary>Shows the setlist window (modal) for the given view model.</summary>
         void ShowSetlist(SetlistViewModel viewModel);

@@ -87,8 +87,8 @@ namespace SongCreator.Views
             return dialog.ShowDialog(owner) == true ? dialog.FileName : null;
         }
 
-        public bool Confirm(string title, string message) =>
-            MessageBox.Show(ActiveWindow, message, title, MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes;
+        public bool Confirm(string title, string question, string detail, string confirmText) =>
+            ConfirmDialog.Ask(ActiveWindow, title, question, detail, confirmText);
 
         public void ShowSetlist(SetlistViewModel viewModel)
         {

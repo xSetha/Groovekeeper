@@ -117,13 +117,13 @@ namespace SongCreator.ViewModels
             try
             {
                 int setlists = Library.SetlistCountFor(song.Id);
-                string usage = setlists switch
+                string detail = setlists switch
                 {
-                    0 => "",
-                    1 => "\nIt will also be taken out of 1 setlist.",
-                    _ => $"\nIt will also be taken out of {setlists} setlists.",
+                    0 => "This can't be undone.",
+                    1 => "It will also be taken out of 1 setlist. This can't be undone.",
+                    _ => $"It will also be taken out of {setlists} setlists. This can't be undone.",
                 };
-                if (!_dialogs.Confirm("Delete song", $"Delete \"{song.DisplayTitle}\" from the library?{usage}"))
+                if (!_dialogs.Confirm("Delete song", $"Delete “{song.DisplayTitle}” from the library?", detail, "Delete"))
                     return;
                 Library.DeleteSong(song.Id);
             }

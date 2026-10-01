@@ -181,7 +181,7 @@ namespace SongCreator.ViewModels
         /// <summary>Deletes the setlist from the library (its songs stay) and starts an empty one.</summary>
         public void Delete()
         {
-            if (SetlistId is not long id || !_dialogs.Confirm("Delete setlist", $"Delete the setlist \"{Name}\"? Its songs stay in the library."))
+            if (SetlistId is not long id || !_dialogs.Confirm("Delete setlist", $"Delete the setlist “{Name}”?", "Its songs stay in the library.", "Delete"))
                 return;
             try
             {
