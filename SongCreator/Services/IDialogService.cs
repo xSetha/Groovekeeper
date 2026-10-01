@@ -54,6 +54,9 @@ namespace SongCreator.Services
         /// <summary>Shows the setlist window (modal) for the given view model.</summary>
         void ShowSetlist(SetlistViewModel viewModel);
 
+        /// <summary>Shows the Import from Web window (modal) for the given view model.</summary>
+        void ShowWebImport(WebImportViewModel viewModel);
+
         /// <summary>Opens a file with its default app (e.g. the PDF viewer).</summary>
         void OpenWithDefaultApp(string path);
     }

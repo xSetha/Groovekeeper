@@ -25,6 +25,7 @@ namespace SongCreator.ViewModels
             _library = library;
             Library = new LibraryViewModel(library, dialogs);
             Library.OpenRequested += (_, song) => OpenFromLibrary(song.Id);
+            Library.ImportFromWebRequested += (_, _) => ImportFromWeb();
             Library.SongDeleted += (_, id) => Documents.FirstOrDefault(d => d.LibraryId == id)?.DetachFromLibrary();
             Documents.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasDocuments));
 
@@ -40,6 +41,7 @@ namespace SongCreator.ViewModels
                 Library.Refresh();   // importing a setlist adds songs
             });
             BackupLibraryCommand = new RelayCommand(BackupLibrary);
+            ImportFromWebCommand = new RelayCommand(ImportFromWeb);
             ToggleLibraryPanelCommand = new RelayCommand(() => IsLibraryPanelOpen = !IsLibraryPanelOpen);
         }
 
@@ -74,6 +76,7 @@ namespace SongCreator.ViewModels
         public ICommand SetlistCommand { get; }
         public ICommand BackupLibraryCommand { get; }
         public ICommand ToggleLibraryPanelCommand { get; }
+        public ICommand ImportFromWebCommand { get; }
 
         /// <summary>Asks the view to focus the active song's title.</summary>
         public event EventHandler? FocusTitleRequested;
@@ -114,6 +117,15 @@ namespace SongCreator.ViewModels
                 }
                 Add(new SongDocumentViewModel(song, path));
             }
+        }
+
+        /// <summary>Shows the Import from Web window; an imported song opens as a new, unsaved song.</summary>
+        public void ImportFromWeb()
+        {
+            var import = new WebImportViewModel();
+            _dialogs.ShowWebImport(import);
+            if (import.ImportedSong != null)
+                Add(new SongDocumentViewModel(import.ImportedSong));
         }
 
         /// <summary>Opens a library song, or switches to its tab if it is already open.</summary>

@@ -13,9 +13,12 @@
             </Border>
         </StackPanel>
 
-        <Button DockPanel.Dock="Bottom" Content="+ Import songs…" Style="{StaticResource FlatButton}" HorizontalAlignment="Left"
-                Padding="10,6" Margin="0,8,0,0" Command="{Binding ImportCommand}"
-                ToolTip="Add copies of .txt or ChordPro files to the library" />
+        <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Margin="0,8,0,0">
+            <Button Content="+ Import songs…" Style="{StaticResource FlatButton}" Padding="10,6" Command="{Binding ImportCommand}"
+                    ToolTip="Add copies of .txt or ChordPro files to the library" />
+            <Button Content="+ From the web…" Style="{StaticResource FlatButton}" Padding="10,6" Margin="4,0,0,0"
+                    Command="{Binding ImportFromWebCommand}" ToolTip="Find a song's chords online and import them (Ctrl+I)" />
+        </StackPanel>
 
         <Grid>
             <TextBlock Text="No songs yet. Import .txt or ChordPro files, or save a new song (Ctrl+S)." TextWrapping="Wrap"

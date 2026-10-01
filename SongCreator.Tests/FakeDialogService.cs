@@ -61,5 +61,10 @@ namespace SongCreator.Tests
         public void ShowSetlist(SetlistViewModel viewModel) => ShownSetlist = viewModel;
 
         public void OpenWithDefaultApp(string path) => Opened.Add(path);
+
+        /// <summary>What the user does in the Import from Web window (e.g. import some text); nothing if null.</summary>
+        public Action<WebImportViewModel>? WebImportAction { get; set; }
+
+        public void ShowWebImport(WebImportViewModel viewModel) => WebImportAction?.Invoke(viewModel);
     }
 }

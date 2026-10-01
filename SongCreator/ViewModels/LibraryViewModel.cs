@@ -26,6 +26,7 @@ namespace SongCreator.ViewModels
             DeleteCommand = new RelayCommand<SongSummary?>(song => { if (song != null) Delete(song); });
             // The import reports its own errors, so the task needn't be awaited here.
             ImportCommand = new RelayCommand(() => _ = ImportSongsAsync(_dialogs.PickSongsToOpen()));
+            ImportFromWebCommand = new RelayCommand(() => ImportFromWebRequested?.Invoke(this, EventArgs.Empty));
             Refresh();
         }
 
@@ -49,9 +50,13 @@ namespace SongCreator.ViewModels
         public ICommand OpenCommand { get; }
         public ICommand DeleteCommand { get; }
         public ICommand ImportCommand { get; }
+        public ICommand ImportFromWebCommand { get; }
 
         /// <summary>Asks the window to open a library song.</summary>
         public event EventHandler<SongSummary>? OpenRequested;
+
+        /// <summary>Asks the window to open the Import from Web window.</summary>
+        public event EventHandler? ImportFromWebRequested;
 
         /// <summary>Raised after a song was deleted from the library, with its id.</summary>
         public event EventHandler<long>? SongDeleted;

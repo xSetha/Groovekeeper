@@ -96,6 +96,12 @@ namespace SongCreator.Views
             window.ShowDialog();
         }
 
+        public void ShowWebImport(WebImportViewModel viewModel)
+        {
+            var window = new WebImportWindow { Owner = owner, DataContext = viewModel };
+            window.ShowDialog();
+        }
+
         public void OpenWithDefaultApp(string path) => Process.Start(new ProcessStartInfo(path) { UseShellExecute = true });
 
         // Dialogs raised from the export window must be owned by it, not the main window behind it.

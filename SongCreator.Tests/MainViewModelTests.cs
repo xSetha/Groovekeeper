@@ -238,6 +238,26 @@ namespace SongCreator.Tests
         }
 
         [Fact]
+        public void ImportFromWebOpensTheSongAsANewTab()
+        {
+            _dialogs.WebImportAction = import => import.Import("G    C\nHello there", "Hello Chords by Someone");
+
+            _vm.ImportFromWebCommand.Execute(null);
+
+            var document = Assert.Single(_vm.Documents);
+            Assert.Equal("Hello", document.Song.Title);
+            Assert.Equal(SongHome.New, document.Home);
+            Assert.True(document.HasUnsavedChanges);
+        }
+
+        [Fact]
+        public void CancellingTheWebImportOpensNothing()
+        {
+            _vm.ImportFromWebCommand.Execute(null);
+            Assert.Empty(_vm.Documents);
+        }
+
+        [Fact]
         public void OpeningALibrarySongTwiceSwitchesToItsTab()
         {
             long id = _library.AddSong(new Models.Song { Title = "Kept" });

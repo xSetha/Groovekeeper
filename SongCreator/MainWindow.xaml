@@ -18,6 +18,7 @@
         <KeyBinding Key="E" Modifiers="Control" Command="{Binding ExportPdfCommand}" />
         <KeyBinding Key="L" Modifiers="Control" Command="{Binding SetlistCommand}" />
         <KeyBinding Key="B" Modifiers="Control" Command="{Binding ToggleLibraryPanelCommand}" />
+        <KeyBinding Key="I" Modifiers="Control" Command="{Binding ImportFromWebCommand}" />
     </Window.InputBindings>
 
     <DockPanel>
@@ -90,6 +91,7 @@
                               IsEnabled="{Binding HasDocuments}" />
                     <Separator />
                     <MenuItem Header="_Import Songs into Library…" Command="{Binding Library.ImportCommand}" />
+                    <MenuItem Header="Import from _Web…" InputGestureText="Ctrl+I" Command="{Binding ImportFromWebCommand}" />
                     <MenuItem Header="_Back Up Library…" Command="{Binding BackupLibraryCommand}" />
                     <Separator />
                     <MenuItem Header="_Export PDF…" InputGestureText="Ctrl+E" Command="{Binding ExportPdfCommand}" />
