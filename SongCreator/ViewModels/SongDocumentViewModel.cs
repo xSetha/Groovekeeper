@@ -3,6 +3,7 @@ using System.Text.RegularExpressions;
 using System.Windows.Input;
 using SongCreator.IO;
 using SongCreator.Models;
+using SongCreator.Music;
 
 namespace SongCreator.ViewModels
 {
@@ -25,7 +26,10 @@ namespace SongCreator.ViewModels
             song.PropertyChanged += (_, e) =>
             {
                 if (e.PropertyName == nameof(Song.Key))
+                {
                     OnPropertyChanged(nameof(NumeralKey));
+                    OnPropertyChanged(nameof(KeyChoice));
+                }
             };
             if (filePath != null)
             {
@@ -62,6 +66,21 @@ namespace SongCreator.ViewModels
             {
                 if (SetProperty(ref _showNumerals, value))
                     OnPropertyChanged(nameof(NumeralKey));
+            }
+        }
+
+        /// <summary>
+        /// The key picked in the Key box: null when the song has no known key, so the box shows nothing
+        /// (a value that isn't in the list would leave the previous tab's key on display). The box sends
+        /// null back when it is cleared or switches songs; that never clears the song's key.
+        /// </summary>
+        public string? KeyChoice
+        {
+            get => MusicKeys.All.Contains(Song.Key) ? Song.Key : null;
+            set
+            {
+                if (value != null)
+                    Song.Key = value;
             }
         }
 

@@ -218,5 +218,35 @@ namespace SongCreator.Tests
             Assert.Equal(["keep me", "la"], verse.Lines.Select(l => l.Text));
             Assert.Equal("Em", Assert.Single(verse.Lines[1].Chords).Name);
         }
+
+        [Fact]
+        public void TheKeyBoxShowsNothingForASongWithoutAKey()
+        {
+            Assert.Null(_document.KeyChoice);
+            _song.Key = "H";                                       // not a key the box offers
+            Assert.Null(_document.KeyChoice);
+        }
+
+        [Fact]
+        public void TheKeyBoxFollowsAndSetsTheSongKey()
+        {
+            var changed = new List<string?>();
+            _document.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
+
+            _song.Key = "G";
+            Assert.Equal("G", _document.KeyChoice);
+            Assert.Contains(nameof(SongDocumentViewModel.KeyChoice), changed);
+
+            _document.KeyChoice = "Em";
+            Assert.Equal("Em", _song.Key);
+        }
+
+        [Fact]
+        public void AClearedKeyBoxLeavesTheKeyAlone()
+        {
+            _song.Key = "G";
+            _document.KeyChoice = null;
+            Assert.Equal("G", _song.Key);
+        }
     }
 }

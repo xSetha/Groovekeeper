@@ -151,7 +151,7 @@
                             <TextBlock Text="Key" Margin="20,0,6,0" VerticalAlignment="Center"
                                        Foreground="{DynamicResource MutedForeground}" />
                             <ComboBox Style="{StaticResource DarkComboBox}" ItemsSource="{x:Static music:MusicKeys.All}"
-                                      SelectedItem="{Binding Song.Key}" FontWeight="SemiBold" MinHeight="26"
+                                      SelectedItem="{Binding KeyChoice}" FontWeight="SemiBold" MinHeight="26"
                                       MaxDropDownHeight="540" ToolTip="Key">
                                 <ComboBox.ItemsPanel>
                                     <ItemsPanelTemplate>
