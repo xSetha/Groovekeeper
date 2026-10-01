@@ -30,10 +30,11 @@
             </Border>
 
             <!-- Options -->
-            <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Margin="28,4,28,18">
-                <CheckBox Content="Table of contents" IsChecked="{Binding IncludeTableOfContents}" Margin="0,0,28,0" />
-                <CheckBox Content="Open the PDF when done" IsChecked="{Binding OpenWhenDone}" />
-            </StackPanel>
+            <WrapPanel DockPanel.Dock="Bottom" Margin="28,4,28,12">
+                <CheckBox Content="Table of contents" IsChecked="{Binding IncludeTableOfContents}" Margin="0,0,28,6" />
+                <CheckBox Content="Chords as Roman numerals" IsChecked="{Binding RomanNumerals}" Margin="0,0,28,6" />
+                <CheckBox Content="Open the PDF when done" IsChecked="{Binding OpenWhenDone}" Margin="0,0,0,6" />
+            </WrapPanel>
 
             <!-- Song list -->
             <StackPanel Margin="20,0,20,8">

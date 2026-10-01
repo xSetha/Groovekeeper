@@ -2,6 +2,7 @@ using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
 using SongCreator.Models;
+using SongCreator.Music;
 
 namespace SongCreator.IO
 {
@@ -23,7 +24,8 @@ namespace SongCreator.IO
             QuestPDF.Settings.UseSystemFonts = true;
         }
 
-        public static byte[] Create(IReadOnlyList<Song> songs, bool tableOfContents)
+        /// <param name="romanNumerals">Write chords as Roman numerals in each song's key (songs without a key keep chord names).</param>
+        public static byte[] Create(IReadOnlyList<Song> songs, bool tableOfContents, bool romanNumerals = false)
         {
             return Document.Create(document =>
             {
@@ -46,7 +48,7 @@ namespace SongCreator.IO
                             if (i > 0)
                                 column.Item().PaddingVertical(22).LineHorizontal(0.75f).LineColor(Colors.Grey.Lighten2);
                             // Keep a song's title from being stranded at the bottom of a page.
-                            column.Item().Section(SectionId(i)).EnsureSpace(110).Element(container => ComposeSong(container, songs[i]));
+                            column.Item().Section(SectionId(i)).EnsureSpace(110).Element(container => ComposeSong(container, songs[i], romanNumerals));
                         }
                     });
                 });
@@ -80,8 +82,12 @@ namespace SongCreator.IO
             });
         }
 
-        private static void ComposeSong(IContainer container, Song song)
+        private static void ComposeSong(IContainer container, Song song, bool romanNumerals)
         {
+            Func<string, string>? display = romanNumerals && MusicKeys.TryParse(song.Key, out _, out _)
+                ? name => RomanNumerals.Of(name, song.Key) ?? name
+                : null;
+
             container.Column(column =>
             {
                 column.Item().Text(song.DisplayTitle).FontSize(18).Bold();
@@ -112,22 +118,22 @@ namespace SongCreator.IO
                     {
                         start.Item().PaddingBottom(2).Text($"[{section.Name}]")
                             .FontFamily(SongFont).FontSize(SongFontSize).Bold().FontColor(MutedColor);
-                        start.Item().Element(pair => ComposeLine(pair, lines[0]));
+                        start.Item().Element(pair => ComposeLine(pair, lines[0], display));
                     });
                     foreach (var line in lines.Skip(1))
-                        column.Item().ShowEntire().Element(pair => ComposeLine(pair, line));   // never split a chord line from its lyric
+                        column.Item().ShowEntire().Element(pair => ComposeLine(pair, line, display));   // never split a chord line from its lyric
                 }
             });
         }
 
-        private static void ComposeLine(IContainer container, SongLine line)
+        private static void ComposeLine(IContainer container, SongLine line, Func<string, string>? display)
         {
             container.Column(column =>
             {
                 if (line.Chords.Count > 0)
                 {
                     // Non-breaking spaces keep the column padding intact and stop the chord line from wrapping.
-                    string chords = SongTextWriter.ChordLine(line).Replace(' ', ' ');
+                    string chords = SongTextWriter.ChordLine(line, display).Replace(' ', ' ');
                     column.Item().Text(chords).FontFamily(SongFont).FontSize(SongFontSize).Bold().FontColor(ChordColor);
                 }
                 if (line.Text.Trim().Length > 0)

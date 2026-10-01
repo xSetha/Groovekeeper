@@ -16,6 +16,7 @@ namespace SongCreator.ViewModels
         private readonly IDialogService _dialogs;
         private bool _includeTableOfContents = true;
         private bool _openWhenDone = true;
+        private bool _romanNumerals;
 
         public ExportPdfViewModel(IEnumerable<SongDocumentViewModel> openDocuments, IDialogService dialogs)
         {
@@ -53,6 +54,13 @@ namespace SongCreator.ViewModels
         {
             get => _openWhenDone;
             set => SetProperty(ref _openWhenDone, value);
+        }
+
+        /// <summary>Write chords as Roman numerals in each song's key.</summary>
+        public bool RomanNumerals
+        {
+            get => _romanNumerals;
+            set => SetProperty(ref _romanNumerals, value);
         }
 
         public bool IsEmpty => Items.Count == 0;
@@ -104,7 +112,7 @@ namespace SongCreator.ViewModels
 
             try
             {
-                File.WriteAllBytes(path, SongPdfWriter.Create(songs, IncludeTableOfContents));
+                File.WriteAllBytes(path, SongPdfWriter.Create(songs, IncludeTableOfContents, RomanNumerals));
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {

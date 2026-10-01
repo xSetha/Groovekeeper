@@ -166,5 +166,20 @@ namespace SongCreator.Tests
             Assert.Equal(2, verse.Lines.Count);
             Assert.Equal("New Section", Assert.Single(_song.Sections).Name);
         }
+
+        [Fact]
+        public void NumeralsFollowTheToggleAndTheKey()
+        {
+            _song.Key = "G";
+            var changed = new List<string?>();
+            _document.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
+
+            Assert.Equal("", _document.NumeralKey);
+            _document.ShowNumerals = true;
+            Assert.Equal("G", _document.NumeralKey);
+            _song.Key = "A";
+            Assert.Equal("A", _document.NumeralKey);
+            Assert.Equal(2, changed.Count(name => name == nameof(SongDocumentViewModel.NumeralKey)));
+        }
     }
 }

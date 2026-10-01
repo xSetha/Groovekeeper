@@ -53,5 +53,12 @@ namespace SongCreator.Tests
             song.Sections.Add(new Section("Chorus", isRepeat: true));
             Assert.Equal($"[Chorus]{Environment.NewLine}(Repeat){Environment.NewLine}", SongTextWriter.ToText(song));
         }
+
+        [Fact]
+        public void ChordLineCanWriteChordsDifferently()
+        {
+            var line = new SongLine("Amazing grace").WithChord(0, "G").WithChord(8, "C");
+            Assert.Equal("I       IV", SongTextWriter.ChordLine(line, name => Music.RomanNumerals.Of(name, "G")!));
+        }
     }
 }

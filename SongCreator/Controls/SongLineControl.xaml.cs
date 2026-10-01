@@ -8,6 +8,7 @@ using System.Windows.Media;
 using System.Windows.Shapes;
 using System.Windows.Threading;
 using SongCreator.Models;
+using SongCreator.Music;
 using SongCreator.Themes;
 using SongCreator.ViewModels;
 
@@ -58,6 +59,17 @@ namespace SongCreator.Controls
         }
 
         public int Caret => LyricBox.CaretIndex;
+
+        /// <summary>Key to show chords as Roman numerals in, or empty to show their names.</summary>
+        public string NumeralKey
+        {
+            get => (string)GetValue(NumeralKeyProperty);
+            set => SetValue(NumeralKeyProperty, value);
+        }
+
+        public static readonly DependencyProperty NumeralKeyProperty = DependencyProperty.Register(
+            nameof(NumeralKey), typeof(string), typeof(SongLineControl),
+            new PropertyMetadata("", (d, _) => ((SongLineControl)d).RenderChords()));
 
         /// <summary>Lyric text to highlight (the find bar's search), or empty.</summary>
         public string HighlightText
@@ -162,7 +174,7 @@ namespace SongCreator.Controls
         {
             if (sender is not ChordPlacement chord || !_tags.TryGetValue(chord, out var tag))
                 return;
-            ((TextBlock)tag.Child).Text = chord.Name;
+            ((TextBlock)tag.Child).Text = Display(chord);
             Canvas.SetLeft(tag, ColumnX(chord.Position) - TagPadding);
         }
 
@@ -212,7 +224,7 @@ namespace SongCreator.Controls
             {
                 var label = new TextBlock
                 {
-                    Text = chord.Name,
+                    Text = Display(chord),
                     FontSize = 14,
                     FontWeight = FontWeights.Bold,
                 };
@@ -265,6 +277,9 @@ namespace SongCreator.Controls
                 HighlightLayer.Children.Add(mark);
             }
         }
+
+        private string Display(ChordPlacement chord) =>
+            NumeralKey.Length > 0 ? RomanNumerals.Of(chord.Name, NumeralKey) ?? chord.Name : chord.Name;
 
         // ---- Dropping a chord from the palette (the only way to add or change one) ----
 

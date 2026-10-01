@@ -11,9 +11,10 @@ namespace SongCreator.ViewModels
     /// <summary>
     /// One open song (a tab): its file state and all structural editing of its sections and lines.
     /// </summary>
-    public class SongDocumentViewModel
+    public class SongDocumentViewModel : ObservableObject
     {
         private string? _savedText;
+        private bool _showNumerals;
 
         public SongDocumentViewModel(Song song, string? filePath = null)
         {
@@ -21,6 +22,11 @@ namespace SongCreator.ViewModels
             Palette = new ChordPaletteViewModel(song);
             History = new UndoHistory(song);
             Find = new FindReplaceViewModel(song, Edit);
+            song.PropertyChanged += (_, e) =>
+            {
+                if (e.PropertyName == nameof(Song.Key))
+                    OnPropertyChanged(nameof(NumeralKey));
+            };
             if (filePath != null)
             {
                 FilePath = filePath;
@@ -47,6 +53,20 @@ namespace SongCreator.ViewModels
         public UndoHistory History { get; }
 
         public FindReplaceViewModel Find { get; }
+
+        /// <summary>Show chords as Roman numerals in the song's key (display only; the song keeps chord names).</summary>
+        public bool ShowNumerals
+        {
+            get => _showNumerals;
+            set
+            {
+                if (SetProperty(ref _showNumerals, value))
+                    OnPropertyChanged(nameof(NumeralKey));
+            }
+        }
+
+        /// <summary>The key chords are shown as numerals in, or empty to show chord names.</summary>
+        public string NumeralKey => ShowNumerals ? Song.Key : "";
 
         /// <summary>The .txt file this song was opened from or last saved to, if any.</summary>
         public string? FilePath { get; private set; }

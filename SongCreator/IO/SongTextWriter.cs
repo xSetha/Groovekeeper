@@ -56,8 +56,9 @@ namespace SongCreator.IO
 
         /// <summary>
         /// Places each chord at its column; a chord that would overlap the previous one is pushed right.
+        /// <paramref name="display"/> can write each chord differently (e.g. as a Roman numeral).
         /// </summary>
-        public static string ChordLine(SongLine line)
+        public static string ChordLine(SongLine line, Func<string, string>? display = null)
         {
             var text = new StringBuilder();
             foreach (var chord in line.Chords.OrderBy(c => c.Position))
@@ -65,7 +66,7 @@ namespace SongCreator.IO
                 int padding = chord.Position - text.Length;
                 if (text.Length > 0)
                     padding = Math.Max(padding, 1);
-                text.Append(' ', Math.Max(padding, 0)).Append(chord.Name);
+                text.Append(' ', Math.Max(padding, 0)).Append(display?.Invoke(chord.Name) ?? chord.Name);
             }
             return text.ToString();
         }
