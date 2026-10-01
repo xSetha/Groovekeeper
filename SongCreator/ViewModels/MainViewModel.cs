@@ -22,6 +22,8 @@ namespace SongCreator.ViewModels
 
             NewSongCommand = new RelayCommand(NewSong);
             OpenSongCommand = new RelayCommand(() => Open(_dialogs.PickSongsToOpen()));
+            SaveCommand = new RelayCommand(() => { if (ActiveDocument != null) Save(ActiveDocument); });
+            SaveAsCommand = new RelayCommand(() => { if (ActiveDocument != null) SaveAs(ActiveDocument); });
             CloseSongCommand = new RelayCommand<SongDocumentViewModel>(document => Close(document));
             ExportPdfCommand = new RelayCommand(() => _dialogs.ShowExportPdf(new ExportPdfViewModel(Documents, _dialogs)));
             SetlistCommand = new RelayCommand(() => _dialogs.ShowSetlist(new SetlistViewModel(_dialogs)));
@@ -42,6 +44,8 @@ namespace SongCreator.ViewModels
 
         public ICommand NewSongCommand { get; }
         public ICommand OpenSongCommand { get; }
+        public ICommand SaveCommand { get; }
+        public ICommand SaveAsCommand { get; }
         public ICommand CloseSongCommand { get; }
         public ICommand ExportPdfCommand { get; }
         public ICommand SetlistCommand { get; }
@@ -113,15 +117,24 @@ namespace SongCreator.ViewModels
         /// <summary>Closes every song (asking to save each); returns false if the user cancelled.</summary>
         public bool CloseAll() => Documents.ToList().All(Close);
 
-        private bool Save(SongDocumentViewModel document)
+        /// <summary>
+        /// Saves the song to its file, or asks where to save it if it has none yet. Returns false if cancelled or failed.
+        /// </summary>
+        public bool Save(SongDocumentViewModel document) =>
+            document.FilePath != null ? WriteTo(document, document.FilePath) : SaveAs(document);
+
+        /// <summary>Asks where to save the song, then saves it there. Returns false if cancelled or failed.</summary>
+        public bool SaveAs(SongDocumentViewModel document)
         {
             string suggestedName = document.FilePath != null
                 ? Path.GetFileName(document.FilePath)
                 : string.Concat(document.Song.DisplayTitle.Split(Path.GetInvalidFileNameChars()));
             string? path = _dialogs.PickSavePath(suggestedName, Path.GetDirectoryName(document.FilePath));
-            if (path == null)
-                return false;
+            return path != null && WriteTo(document, path);
+        }
 
+        private bool WriteTo(SongDocumentViewModel document, string path)
+        {
             try
             {
                 document.SaveTo(path);

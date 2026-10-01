@@ -58,6 +58,8 @@ powershell -ExecutionPolicy Bypass -File scripts\seed-songs.ps1
 | --- | --- |
 | Ctrl+N | New song |
 | Ctrl+O | Open songs |
+| Ctrl+S | Save (asks where only for a new song) |
+| Ctrl+Shift+S | Save as |
 | Ctrl+E | Export PDF |
 | Ctrl+L | Setlist |
 | Ctrl+Z | Undo |
@@ -67,8 +69,7 @@ powershell -ExecutionPolicy Bypass -File scripts\seed-songs.ps1
 | Backspace (at line start) | Join with the line above |
 | Up / Down | Move between lines |
 
-There is no separate Save command: closing a song (or the app) with unsaved changes asks
-whether to save it.
+Closing a song (or the app) with unsaved changes asks whether to save it first.
 
 ## File formats
 

@@ -14,6 +14,7 @@ namespace SongCreator.Tests
         public SaveChoice SaveAnswer { get; set; } = SaveChoice.Cancel;
 
         public List<string> AskedToSave { get; } = [];
+        public List<string> AskedForSavePath { get; } = [];
         public List<string> Errors { get; } = [];
         public List<string> Opened { get; } = [];
         public ExportPdfViewModel? ShownExport { get; private set; }
@@ -21,7 +22,11 @@ namespace SongCreator.Tests
 
         public IReadOnlyList<string> PickSongsToOpen() => FilesToOpen;
 
-        public string? PickSavePath(string suggestedFileName, string? initialDirectory) => SavePath;
+        public string? PickSavePath(string suggestedFileName, string? initialDirectory)
+        {
+            AskedForSavePath.Add(suggestedFileName);
+            return SavePath;
+        }
 
         public SaveChoice AskToSave(string songTitle)
         {

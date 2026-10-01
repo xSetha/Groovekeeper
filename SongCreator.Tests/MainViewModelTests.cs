@@ -168,5 +168,109 @@ namespace SongCreator.Tests
             Assert.False(_vm.CloseAll());
             Assert.Single(_vm.Documents);
         }
+
+        // ---- Save and Save As ----
+
+        private SongDocumentViewModel OpenSong(string name = "song.txt")
+        {
+            _vm.Open([WriteSong(name, "Old title\r\n\r\n[Verse 1]\r\nla la\r\n")]);
+            return _vm.ActiveDocument!;
+        }
+
+        [Fact]
+        public void SaveWritesASongToItsOwnFileWithoutAsking()
+        {
+            var document = OpenSong();
+            document.Song.Title = "New title";
+
+            _vm.SaveCommand.Execute(null);
+
+            Assert.StartsWith("New title", File.ReadAllText(document.FilePath!));
+            Assert.Empty(_dialogs.AskedForSavePath);
+            Assert.False(document.HasUnsavedChanges);
+        }
+
+        [Fact]
+        public void SavingANewSongAsksWhereOnlyTheFirstTime()
+        {
+            _vm.NewSong();
+            var document = _vm.ActiveDocument!;
+            document.Song.Title = "Draft";
+            _dialogs.SavePath = Path.Combine(_dir, "draft.txt");
+
+            _vm.SaveCommand.Execute(null);
+            document.Song.Title = "Draft 2";
+            _vm.SaveCommand.Execute(null);
+
+            Assert.Equal(["Draft"], _dialogs.AskedForSavePath);   // suggested from the title
+            Assert.Equal(_dialogs.SavePath, document.FilePath);
+            Assert.StartsWith("Draft 2", File.ReadAllText(_dialogs.SavePath));
+        }
+
+        [Fact]
+        public void SaveAsWritesANewFileAndKeepsTheOldOne()
+        {
+            var document = OpenSong();
+            string original = document.FilePath!;
+            document.Song.Title = "Copy";
+            _dialogs.SavePath = Path.Combine(_dir, "copy.txt");
+
+            _vm.SaveAsCommand.Execute(null);
+
+            Assert.Equal(["song.txt"], _dialogs.AskedForSavePath);
+            Assert.Equal(_dialogs.SavePath, document.FilePath);
+            Assert.StartsWith("Copy", File.ReadAllText(_dialogs.SavePath));
+            Assert.StartsWith("Old title", File.ReadAllText(original));
+        }
+
+        [Fact]
+        public void CancellingSaveAsChangesNothing()
+        {
+            var document = OpenSong();
+            document.Song.Title = "Changed";
+            _dialogs.SavePath = null;
+
+            Assert.False(_vm.SaveAs(document));
+            Assert.EndsWith("song.txt", document.FilePath);
+            Assert.True(document.HasUnsavedChanges);
+        }
+
+        [Fact]
+        public void ClosingASongWithAFileSavesItThere()
+        {
+            var document = OpenSong();
+            document.Song.Title = "Closed";
+            _dialogs.SaveAnswer = SaveChoice.Save;
+
+            Assert.True(_vm.Close(document));
+            Assert.StartsWith("Closed", File.ReadAllText(document.FilePath!));
+            Assert.Empty(_dialogs.AskedForSavePath);
+        }
+
+        [Fact]
+        public void AFailedSaveIsReported()
+        {
+            var document = OpenSong();
+            document.Song.Title = "Changed";
+            File.SetAttributes(document.FilePath!, FileAttributes.ReadOnly);
+            try
+            {
+                Assert.False(_vm.Save(document));
+                Assert.Contains("song.txt", Assert.Single(_dialogs.Errors));
+                Assert.True(document.HasUnsavedChanges);
+            }
+            finally
+            {
+                File.SetAttributes(document.FilePath!, FileAttributes.Normal);
+            }
+        }
+
+        [Fact]
+        public void SaveWithNoSongOpenDoesNothing()
+        {
+            _vm.SaveCommand.Execute(null);
+            _vm.SaveAsCommand.Execute(null);
+            Assert.Empty(_dialogs.AskedForSavePath);
+        }
     }
 }
