@@ -36,5 +36,27 @@ namespace SongCreator.Tests
         {
             Assert.Equal(expected, ChordTheory.RootOf(key));
         }
+
+        [Theory]
+        [InlineData("Am7", "G", true)]
+        [InlineData("F#dim", "G", true)]
+        [InlineData("F", "G", false)]
+        [InlineData("Bm", "G", true)]
+        [InlineData("B", "G", false)]               // the scale has Bm, not B
+        [InlineData("E7", "Am", true)]              // the major V of a minor key
+        [InlineData("Am", "", false)]
+        public void ChordsFitTheKeyByRootAndTriad(string chord, string key, bool fits)
+        {
+            Assert.Equal(fits, ChordTheory.FitsKey(chord, key));
+        }
+
+        [Fact]
+        public void SuggestsWhatUsuallyComesNext()
+        {
+            Assert.Equal(["C", "D", "Em", "Am"], ChordTheory.SuggestNext("G", "G"));
+            Assert.Equal(["G", "Em", "C"], ChordTheory.SuggestNext("D7", "G"));
+            Assert.Equal(["Am", "F"], ChordTheory.SuggestNext("E", "Am"));
+            Assert.Empty(ChordTheory.SuggestNext("F", "G"));
+        }
     }
 }

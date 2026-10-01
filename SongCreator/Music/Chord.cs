@@ -39,6 +39,14 @@ namespace SongCreator.Music
         private static int Mod12(int value) => (value % 12 + 12) % 12;
     }
 
+    public enum Triad
+    {
+        Major,
+        Minor,
+        Diminished,
+        Augmented,
+    }
+
     /// <summary>
     /// A chord name split into root, chord type and optional bass note ("F#m7/C#" → F#, "m7", C#).
     /// This is the single definition of a valid chord, used by the transposer, the file reader and the palette.
@@ -60,6 +68,16 @@ namespace SongCreator.Music
         }
 
         public static bool IsValid(string text) => TryParse(text, out _);
+
+        /// <summary>The basic triad the chord type starts from ("m7" → minor, "maj7" → major, "m7b5" → diminished).</summary>
+        public Triad Triad => Quality switch
+        {
+            _ when Quality.StartsWith("maj") => Triad.Major,
+            _ when Quality.StartsWith("dim") || Quality.StartsWith('°') || Quality.StartsWith('ø') || Quality.Contains("b5") => Triad.Diminished,
+            _ when Quality.StartsWith("aug") || Quality.StartsWith('+') => Triad.Augmented,
+            _ when Quality.StartsWith('m') => Triad.Minor,
+            _ => Triad.Major,
+        };
 
         /// <summary>
         /// Moves the root and the bass by <paramref name="semitones"/>. The notes are spelled with flats or sharps
