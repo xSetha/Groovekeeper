@@ -141,7 +141,8 @@
                     </ListBox.ItemsPanel>
                     <ListBox.ItemTemplate>
                         <DataTemplate>
-                            <StackPanel Orientation="Horizontal">
+                            <StackPanel Orientation="Horizontal" ToolTip="{Binding HomeDescription}">
+                                <TextBlock Style="{StaticResource SongHomeIcon}" Margin="0,0,8,0" />
                                 <TextBlock Text="{Binding Song.DisplayTitle}" MaxWidth="200" TextTrimming="CharacterEllipsis"
                                            VerticalAlignment="Center" />
                                 <Button Content="✕" Style="{StaticResource FlatButton}" Padding="6,2" Margin="10,0,0,0"
@@ -156,40 +157,58 @@
                 <!-- Editor for the active song -->
                 <DockPanel x:Name="EditorPanel" DataContext="{Binding ActiveDocument}">
                     <Border DockPanel.Dock="Top" Background="{DynamicResource ToolbarBackground}" Padding="8,6">
-                        <StackPanel Orientation="Horizontal">
-                            <Button Content="+ Section" Style="{StaticResource FlatButton}" Command="{Binding AddSectionCommand}" />
-                            <TextBlock Text="Transpose" Margin="24,0,6,0" VerticalAlignment="Center"
-                                       Foreground="{DynamicResource MutedForeground}" />
-                            <Button Content="−" Style="{StaticResource FlatButton}" Command="{Binding TransposeDownCommand}" ToolTip="Down one semitone" />
-                            <Button Content="+" Style="{StaticResource FlatButton}" Command="{Binding TransposeUpCommand}" ToolTip="Up one semitone" />
-                            <!-- Transposing updates the key -->
-                            <TextBlock Text="Key" Margin="20,0,6,0" VerticalAlignment="Center"
-                                       Foreground="{DynamicResource MutedForeground}" />
-                            <ComboBox Style="{StaticResource DarkComboBox}" ItemsSource="{x:Static music:MusicKeys.All}"
-                                      SelectedItem="{Binding KeyChoice}" FontWeight="SemiBold" MinHeight="26"
-                                      MaxDropDownHeight="540" ToolTip="Key">
-                                <ComboBox.ItemsPanel>
-                                    <ItemsPanelTemplate>
-                                        <UniformGrid Columns="2" />
-                                    </ItemsPanelTemplate>
-                                </ComboBox.ItemsPanel>
-                            </ComboBox>
-                            <ToggleButton Style="{StaticResource IconToggle}" Width="56" Margin="12,0,0,0"
-                                          FontFamily="{DynamicResource UiFont}" FontSize="12" Content="I IV V"
-                                          ToolTip="Show chords as Roman numerals in the song's key"
-                                          IsChecked="{Binding ShowNumerals}" />
-                            <!-- Key guessed from the chords, offered when the song isn't in it -->
-                            <Button Style="{StaticResource FlatButton}" Margin="6,0,0,0" Padding="8,4"
-                                    ToolTip="Set the song's key (chords stay as they are)"
-                                    Command="{Binding Palette.UseDetectedKeyCommand}"
-                                    Visibility="{Binding Palette.ShowKeySuggestion, Converter={StaticResource BoolToVisible}}">
-                                <TextBlock>
-                                    <Run Text="Looks like" Foreground="{DynamicResource MutedForeground}" />
-                                    <Run Text="{Binding Palette.DetectedKey, Mode=OneWay}" FontWeight="SemiBold" />
-                                    <Run Text="· Use" Foreground="{DynamicResource AccentBrush}" />
-                                </TextBlock>
-                            </Button>
-                        </StackPanel>
+                        <DockPanel>
+                            <!-- Where the song is saved, and Save (same as Ctrl+S) -->
+                            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Margin="12,0,0,0">
+                                <StackPanel Orientation="Horizontal" ToolTip="{Binding HomeDescription}" Margin="0,0,12,0">
+                                    <TextBlock Style="{StaticResource SongHomeIcon}" Margin="0,0,6,0" />
+                                    <TextBlock Text="{Binding HomeLabel}" VerticalAlignment="Center" MaxWidth="220"
+                                               TextTrimming="CharacterEllipsis" Foreground="{DynamicResource MutedForeground}" />
+                                </StackPanel>
+                                <Button Style="{StaticResource FlatButton}" ToolTip="Save (Ctrl+S)" AutomationProperties.Name="Save"
+                                        Command="{Binding DataContext.SaveCommand, RelativeSource={RelativeSource AncestorType=Window}}">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="&#xE74E;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14"
+                                                   VerticalAlignment="Center" Margin="0,0,6,0" />
+                                        <TextBlock Text="Save" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </Button>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <Button Content="+ Section" Style="{StaticResource FlatButton}" Command="{Binding AddSectionCommand}" />
+                                <TextBlock Text="Transpose" Margin="24,0,6,0" VerticalAlignment="Center"
+                                           Foreground="{DynamicResource MutedForeground}" />
+                                <Button Content="−" Style="{StaticResource FlatButton}" Command="{Binding TransposeDownCommand}" ToolTip="Down one semitone" />
+                                <Button Content="+" Style="{StaticResource FlatButton}" Command="{Binding TransposeUpCommand}" ToolTip="Up one semitone" />
+                                <!-- Transposing updates the key -->
+                                <TextBlock Text="Key" Margin="20,0,6,0" VerticalAlignment="Center"
+                                           Foreground="{DynamicResource MutedForeground}" />
+                                <ComboBox Style="{StaticResource DarkComboBox}" ItemsSource="{x:Static music:MusicKeys.All}"
+                                          SelectedItem="{Binding KeyChoice}" FontWeight="SemiBold" MinHeight="26"
+                                          MaxDropDownHeight="540" ToolTip="Key">
+                                    <ComboBox.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <UniformGrid Columns="2" />
+                                        </ItemsPanelTemplate>
+                                    </ComboBox.ItemsPanel>
+                                </ComboBox>
+                                <ToggleButton Style="{StaticResource IconToggle}" Width="56" Margin="12,0,0,0"
+                                              FontFamily="{DynamicResource UiFont}" FontSize="12" Content="I IV V"
+                                              ToolTip="Show chords as Roman numerals in the song's key"
+                                              IsChecked="{Binding ShowNumerals}" />
+                                <!-- Key guessed from the chords, offered when the song isn't in it -->
+                                <Button Style="{StaticResource FlatButton}" Margin="6,0,0,0" Padding="8,4"
+                                        ToolTip="Set the song's key (chords stay as they are)"
+                                        Command="{Binding Palette.UseDetectedKeyCommand}"
+                                        Visibility="{Binding Palette.ShowKeySuggestion, Converter={StaticResource BoolToVisible}}">
+                                    <TextBlock>
+                                        <Run Text="Looks like" Foreground="{DynamicResource MutedForeground}" />
+                                        <Run Text="{Binding Palette.DetectedKey, Mode=OneWay}" FontWeight="SemiBold" />
+                                        <Run Text="· Use" Foreground="{DynamicResource AccentBrush}" />
+                                    </TextBlock>
+                                </Button>
+                            </StackPanel>
+                        </DockPanel>
                     </Border>
 
                     <!-- Find and replace, opened with Ctrl+F -->

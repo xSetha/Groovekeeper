@@ -17,7 +17,8 @@ other chord apps.
 - Paste a whole song at once, including chords-over-lyrics text copied from chord sites.
 - Undo and redo for everything: typing, chords, sections and transposing.
 - Find and replace in the lyrics (matches are highlighted) or in the chords, by exact name.
-- Several songs open at once, each in its own tab.
+- Several songs open at once, each in its own tab. An icon on the tab and a label next to the
+  Save button show where the song is saved: in the library, in a file, or not yet.
 
 **Library**
 - Every song you save goes into the library. It's listed on the start page and in a side panel

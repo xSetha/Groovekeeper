@@ -229,6 +229,25 @@
             </Setter>
         </Style>
 
+        <!-- Where an open song is saved (SongDocumentViewModel.Home): a library or file icon, nothing for a new song -->
+        <Style x:Key="SongHomeIcon" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="Segoe Fluent Icons, Segoe MDL2 Assets" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Foreground" Value="{DynamicResource MutedForeground}" />
+            <Setter Property="Visibility" Value="Collapsed" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Home}" Value="Library">
+                    <Setter Property="Text" Value="&#xE8F1;" />
+                    <Setter Property="Visibility" Value="Visible" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Home}" Value="File">
+                    <Setter Property="Text" Value="&#xE8A5;" />
+                    <Setter Property="Visibility" Value="Visible" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
         <!-- A library song in a list: its title, then artist and key -->
         <DataTemplate x:Key="LibrarySong">
             <StackPanel Margin="2,3">

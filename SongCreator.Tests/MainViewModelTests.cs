@@ -216,6 +216,28 @@ namespace SongCreator.Tests
         }
 
         [Fact]
+        public void ShowsWhereEachSongIsSaved()
+        {
+            _vm.NewSong();
+            var document = _vm.ActiveDocument!;
+            Assert.Equal(SongHome.New, document.Home);
+            Assert.Equal("Not saved yet", document.HomeLabel);
+
+            var changed = new List<string?>();
+            document.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
+            document.Song.Title = "Draft";
+            _vm.SaveCommand.Execute(null);
+
+            Assert.Equal(SongHome.Library, document.Home);
+            Assert.Equal("Library", document.HomeLabel);
+            Assert.Contains(nameof(SongDocumentViewModel.HomeLabel), changed);   // the toolbar updates
+
+            _vm.Open([WriteSong("song.cho", "{title: From a file}\n")]);
+            Assert.Equal(SongHome.File, _vm.ActiveDocument!.Home);
+            Assert.Equal("song.cho", _vm.ActiveDocument.HomeLabel);
+        }
+
+        [Fact]
         public void OpeningALibrarySongTwiceSwitchesToItsTab()
         {
             long id = _library.AddSong(new Models.Song { Title = "Kept" });

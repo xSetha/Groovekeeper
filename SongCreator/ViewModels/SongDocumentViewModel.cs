@@ -9,6 +9,15 @@ namespace SongCreator.ViewModels
 {
     public record FocusRequest(SongLine Line, int Caret);
 
+    /// <summary>Where a song is saved.</summary>
+    public enum SongHome
+    {
+        /// <summary>Not saved anywhere yet; Save adds it to the library.</summary>
+        New,
+        Library,
+        File,
+    }
+
     /// <summary>
     /// One open song (a tab): where it is saved (a library song, a file, or neither yet) and all structural
     /// editing of its sections and lines.
@@ -16,6 +25,8 @@ namespace SongCreator.ViewModels
     public class SongDocumentViewModel : ObservableObject
     {
         private string? _savedText;
+        private string? _filePath;
+        private long? _libraryId;
         private bool _showNumerals;
 
         public SongDocumentViewModel(Song song, string? filePath = null, long? libraryId = null)
@@ -32,8 +43,8 @@ namespace SongCreator.ViewModels
                     OnPropertyChanged(nameof(KeyChoice));
                 }
             };
-            FilePath = filePath;
-            LibraryId = libraryId;
+            _filePath = filePath;
+            _libraryId = libraryId;
             if (filePath != null || libraryId != null)
                 _savedText = SongTextWriter.ToText(song);
 
@@ -88,10 +99,39 @@ namespace SongCreator.ViewModels
         public string NumeralKey => ShowNumerals ? Song.Key : "";
 
         /// <summary>The song file (.txt or ChordPro) this song was opened from or last saved to, if any.</summary>
-        public string? FilePath { get; private set; }
+        public string? FilePath
+        {
+            get => _filePath;
+            private set
+            {
+                if (SetProperty(ref _filePath, value))
+                    OnHomeChanged();
+            }
+        }
 
         /// <summary>The library song this tab edits, if it is one (then <see cref="FilePath"/> is null).</summary>
-        public long? LibraryId { get; private set; }
+        public long? LibraryId
+        {
+            get => _libraryId;
+            private set
+            {
+                if (SetProperty(ref _libraryId, value))
+                    OnHomeChanged();
+            }
+        }
+
+        public SongHome Home => FilePath != null ? SongHome.File : LibraryId != null ? SongHome.Library : SongHome.New;
+
+        /// <summary>Where the song is saved, in a word or two: "Library", the file's name, or "Not saved yet".</summary>
+        public string HomeLabel =>
+            FilePath != null ? Path.GetFileName(FilePath) : Home == SongHome.Library ? "Library" : "Not saved yet";
+
+        public string HomeDescription => Home switch
+        {
+            SongHome.File => $"Saved as a file: {FilePath}",
+            SongHome.Library => "Saved in your song library",
+            _ => "Save (Ctrl+S) adds it to your song library",
+        };
 
         public bool HasUnsavedChanges => _savedText == null ? Song.HasContent : SongTextWriter.ToText(Song) != _savedText;
 
@@ -112,6 +152,13 @@ namespace SongCreator.ViewModels
         public ICommand RedoCommand { get; }
 
         /// <summary>Saves the song to a file, which becomes the song's home (it is no longer a library song).</summary>
+        private void OnHomeChanged()
+        {
+            OnPropertyChanged(nameof(Home));
+            OnPropertyChanged(nameof(HomeLabel));
+            OnPropertyChanged(nameof(HomeDescription));
+        }
+
         public void SaveTo(string path)
         {
             File.WriteAllText(path, SongFile.ToText(Song, path));
