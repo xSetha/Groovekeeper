@@ -28,6 +28,15 @@ other chord apps.
 - Import `.txt` and ChordPro files into the library; the files themselves aren't changed.
 - Back up the whole library to a single file (File → Back Up Library…).
 
+**Import from the web**
+- File → Import from Web… (Ctrl+I) opens a built-in browser. Search for a song, open its chord
+  page, select the chords and lyrics (or nothing, to take the page's chord sheet), and press
+  Import. The song opens as a new tab with its sections and chords; title and artist are
+  guessed from the page title.
+- The app never searches or downloads songs on its own. Songs on chord sites are usually
+  copyrighted: import them for your own use, and check the site's terms before sharing.
+- Needs the Microsoft Edge WebView2 Runtime, which comes with Windows 11 and most Windows 10 PCs.
+
 **Song files**
 - Open `.txt` and ChordPro files (`.cho`, `.chopro`, `.chordpro`, `.pro`) and edit them in place:
   Save writes the file, in its own format.
@@ -79,6 +88,7 @@ powershell -ExecutionPolicy Bypass -File scripts\seed-songs.ps1
 | Ctrl+S | Save (to the library, or to the song's file if it was opened from one) |
 | Ctrl+Shift+S | Save as file |
 | Ctrl+B | Show or hide the library panel |
+| Ctrl+I | Import from the web |
 | Ctrl+E | Export PDF |
 | Ctrl+L | Setlist |
 | Ctrl+Z | Undo |
