@@ -19,7 +19,10 @@ namespace SongCreator.Models
             }
         }
 
-        public string DisplayTitle => Title.Length > 0 ? Title : "Untitled song";
+        /// <summary>What a song without a title is called.</summary>
+        public const string UntitledTitle = "Untitled song";
+
+        public string DisplayTitle => Title.Length > 0 ? Title : UntitledTitle;
 
         public string Artist { get => _artist; set => SetProperty(ref _artist, value); }
         public string Key { get => _key; set => SetProperty(ref _key, value); }
