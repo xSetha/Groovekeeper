@@ -1,1 +1,4 @@
 * text=auto
+
+# The sample tests compare these with the app's own output, which uses Windows line endings.
+samples/songs/*.txt text eol=crlf

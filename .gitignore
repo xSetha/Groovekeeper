@@ -13,5 +13,3 @@
 *.nupkg
 **/packages/*
 !**/packages/build/
-
-samples
