@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
 using System.Windows.Input;
+using Microsoft.Data.Sqlite;
 using SongCreator.IO;
 using SongCreator.Models;
 using SongCreator.Services;
@@ -9,18 +10,20 @@ using SongCreator.Services;
 namespace SongCreator.ViewModels
 {
     /// <summary>
-    /// The export window: pick songs (open tabs or files), order them, and write them as one PDF.
+    /// The export window: pick songs (open tabs, library songs or files), order them, and write them as one PDF.
     /// </summary>
     public class ExportPdfViewModel : ObservableObject
     {
         private readonly IDialogService _dialogs;
+        private readonly SongLibrary _library;
         private bool _includeTableOfContents = true;
         private bool _openWhenDone = true;
         private bool _romanNumerals;
 
-        public ExportPdfViewModel(IEnumerable<SongDocumentViewModel> openDocuments, IDialogService dialogs)
+        public ExportPdfViewModel(IEnumerable<SongDocumentViewModel> openDocuments, IDialogService dialogs, SongLibrary library)
         {
             _dialogs = dialogs;
+            _library = library;
             Items.CollectionChanged += (_, e) =>
             {
                 foreach (ExportItemViewModel item in e.NewItems ?? Array.Empty<object>())
@@ -36,6 +39,7 @@ namespace SongCreator.ViewModels
                 Items.Add(new ExportItemViewModel(document.Song, "Open tab", document.FilePath) { IsSelected = document.Song.HasContent });
 
             AddFilesCommand = new RelayCommand(() => AddFiles(_dialogs.PickSongsToOpen()));
+            AddFromLibraryCommand = new RelayCommand(() => AddFromLibrary(_dialogs.PickLibrarySongs(_library)));
             MoveUpCommand = new RelayCommand<ExportItemViewModel>(item => Move(item, -1));
             MoveDownCommand = new RelayCommand<ExportItemViewModel>(item => Move(item, 1));
             RemoveCommand = new RelayCommand<ExportItemViewModel>(item => Items.Remove(item));
@@ -72,6 +76,7 @@ namespace SongCreator.ViewModels
         public string SelectionSummary => $"{SelectedCount} of {Items.Count} songs selected";
 
         public ICommand AddFilesCommand { get; }
+        public ICommand AddFromLibraryCommand { get; }
         public ICommand MoveUpCommand { get; }
         public ICommand MoveDownCommand { get; }
         public ICommand RemoveCommand { get; }
@@ -94,6 +99,25 @@ namespace SongCreator.ViewModels
                 {
                     _dialogs.ShowError("Add song", $"Couldn't open {Path.GetFileName(path)}:\n{ex.Message}");
                 }
+            }
+        }
+
+        public void AddFromLibrary(IEnumerable<SongSummary> songs)
+        {
+            foreach (var summary in songs)
+            {
+                Song? song;
+                try
+                {
+                    song = _library.LoadSong(summary.Id);
+                }
+                catch (SqliteException ex)
+                {
+                    _dialogs.ShowError("Add song", $"Couldn't read {summary.Title} from the library:\n{ex.Message}");
+                    continue;
+                }
+                if (song != null)
+                    Items.Add(new ExportItemViewModel(song, "Library"));
             }
         }
 

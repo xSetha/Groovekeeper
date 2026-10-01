@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Windows;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using SongCreator.ViewModels;
 
@@ -13,6 +14,14 @@ namespace SongCreator.Views
         public SetlistWindow()
         {
             InitializeComponent();
+        }
+
+        private void OpenButton_Click(object sender, RoutedEventArgs e)
+        {
+            var menu = OpenButton.ContextMenu;
+            menu.PlacementTarget = OpenButton;
+            menu.Placement = PlacementMode.Bottom;
+            menu.IsOpen = true;
         }
 
         private void Header_MouseLeftButtonDown(object sender, MouseButtonEventArgs e) => DragMove();

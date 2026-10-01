@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Windows.Input;
+using Microsoft.Data.Sqlite;
 using SongCreator.IO;
 using SongCreator.Models;
 using SongCreator.Services;
@@ -9,15 +10,22 @@ namespace SongCreator.ViewModels
 {
     /// <summary>
     /// The window: which songs are open, which one is active, and creating, opening, saving and closing them.
+    /// A song is saved in the library unless it was opened from (or saved as) a file.
     /// </summary>
     public class MainViewModel : ObservableObject
     {
         private readonly IDialogService _dialogs;
+        private readonly SongLibrary _library;
         private SongDocumentViewModel? _activeDocument;
+        private bool _isLibraryPanelOpen = true;
 
-        public MainViewModel(IDialogService dialogs)
+        public MainViewModel(IDialogService dialogs, SongLibrary library)
         {
             _dialogs = dialogs;
+            _library = library;
+            Library = new LibraryViewModel(library, dialogs);
+            Library.OpenRequested += (_, song) => OpenFromLibrary(song.Id);
+            Library.SongDeleted += (_, id) => Documents.FirstOrDefault(d => d.LibraryId == id)?.DetachFromLibrary();
             Documents.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasDocuments));
 
             NewSongCommand = new RelayCommand(NewSong);
@@ -25,8 +33,14 @@ namespace SongCreator.ViewModels
             SaveCommand = new RelayCommand(() => { if (ActiveDocument != null) Save(ActiveDocument); });
             SaveAsCommand = new RelayCommand(() => { if (ActiveDocument != null) SaveAs(ActiveDocument); });
             CloseSongCommand = new RelayCommand<SongDocumentViewModel>(document => Close(document));
-            ExportPdfCommand = new RelayCommand(() => _dialogs.ShowExportPdf(new ExportPdfViewModel(Documents, _dialogs)));
-            SetlistCommand = new RelayCommand(() => _dialogs.ShowSetlist(new SetlistViewModel(_dialogs)));
+            ExportPdfCommand = new RelayCommand(() => _dialogs.ShowExportPdf(new ExportPdfViewModel(Documents, _dialogs, _library)));
+            SetlistCommand = new RelayCommand(() =>
+            {
+                _dialogs.ShowSetlist(new SetlistViewModel(_dialogs, _library));
+                Library.Refresh();   // importing a setlist adds songs
+            });
+            BackupLibraryCommand = new RelayCommand(BackupLibrary);
+            ToggleLibraryPanelCommand = new RelayCommand(() => IsLibraryPanelOpen = !IsLibraryPanelOpen);
         }
 
         public ObservableCollection<SongDocumentViewModel> Documents { get; } = new();
@@ -39,6 +53,15 @@ namespace SongCreator.ViewModels
 
         public bool HasDocuments => Documents.Count > 0;
 
+        public LibraryViewModel Library { get; }
+
+        /// <summary>Whether the library panel is shown next to the editor.</summary>
+        public bool IsLibraryPanelOpen
+        {
+            get => _isLibraryPanelOpen;
+            set => SetProperty(ref _isLibraryPanelOpen, value);
+        }
+
         /// <summary>Theme picker; set by the view (it needs the running WPF application).</summary>
         public ThemesViewModel? Themes { get; init; }
 
@@ -49,6 +72,8 @@ namespace SongCreator.ViewModels
         public ICommand CloseSongCommand { get; }
         public ICommand ExportPdfCommand { get; }
         public ICommand SetlistCommand { get; }
+        public ICommand BackupLibraryCommand { get; }
+        public ICommand ToggleLibraryPanelCommand { get; }
 
         /// <summary>Asks the view to focus the active song's title.</summary>
         public event EventHandler? FocusTitleRequested;
@@ -91,6 +116,35 @@ namespace SongCreator.ViewModels
             }
         }
 
+        /// <summary>Opens a library song, or switches to its tab if it is already open.</summary>
+        public void OpenFromLibrary(long id)
+        {
+            var open = Documents.FirstOrDefault(d => d.LibraryId == id);
+            if (open != null)
+            {
+                ActiveDocument = open;
+                return;
+            }
+
+            Song? song;
+            try
+            {
+                song = _library.LoadSong(id);
+            }
+            catch (SqliteException ex)
+            {
+                _dialogs.ShowError("Open song", $"Couldn't read the song from the library:\n{ex.Message}");
+                return;
+            }
+            if (song == null)
+            {
+                _dialogs.ShowError("Open song", "This song is no longer in the library.");
+                Library.Refresh();
+                return;
+            }
+            Add(new SongDocumentViewModel(song, libraryId: id));
+        }
+
         /// <summary>
         /// Asks to save a song with unsaved changes, then closes it. Returns false if the user cancelled.
         /// </summary>
@@ -118,12 +172,15 @@ namespace SongCreator.ViewModels
         public bool CloseAll() => Documents.ToList().All(Close);
 
         /// <summary>
-        /// Saves the song to its file, or asks where to save it if it has none yet. Returns false if cancelled or failed.
+        /// Saves the song to its file, or to the library if it has no file. Returns false if it failed.
         /// </summary>
         public bool Save(SongDocumentViewModel document) =>
-            document.FilePath != null ? WriteTo(document, document.FilePath) : SaveAs(document);
+            document.FilePath != null ? WriteTo(document, document.FilePath) : SaveToLibrary(document);
 
-        /// <summary>Asks where to save the song, then saves it there. Returns false if cancelled or failed.</summary>
+        /// <summary>
+        /// Asks for a file and saves the song there. A library song stays in the library and the file is a copy;
+        /// any other song moves to the new file. Returns false if cancelled or failed.
+        /// </summary>
         public bool SaveAs(SongDocumentViewModel document)
         {
             string suggestedName = document.FilePath != null
@@ -133,17 +190,52 @@ namespace SongCreator.ViewModels
             return path != null && WriteTo(document, path);
         }
 
+        private bool SaveToLibrary(SongDocumentViewModel document)
+        {
+            try
+            {
+                document.SaveTo(_library);
+            }
+            catch (SqliteException ex)
+            {
+                _dialogs.ShowError("Save song", $"Couldn't save {document.Song.DisplayTitle} in the library:\n{ex.Message}");
+                return false;
+            }
+            Library.Refresh();
+            return true;
+        }
+
         private bool WriteTo(SongDocumentViewModel document, string path)
         {
             try
             {
-                document.SaveTo(path);
+                if (document.LibraryId != null)
+                    document.ExportTo(path);
+                else
+                    document.SaveTo(path);
                 return true;
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
                 _dialogs.ShowError("Save song", $"Couldn't save {Path.GetFileName(path)}:\n{ex.Message}");
                 return false;
+            }
+        }
+
+        private void BackupLibrary()
+        {
+            string? path = _dialogs.PickBackupPath($"SongCreator library {DateTime.Now:yyyy-MM-dd}");
+            if (path == null)
+                return;
+            try
+            {
+                // The save dialog already asked before replacing a file, and a backup can't be written over one.
+                File.Delete(path);
+                _library.BackupTo(path);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or SqliteException)
+            {
+                _dialogs.ShowError("Back up library", $"Couldn't write {Path.GetFileName(path)}:\n{ex.Message}");
             }
         }
 

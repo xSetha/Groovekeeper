@@ -10,14 +10,15 @@ namespace SongCreator.ViewModels
     public record FocusRequest(SongLine Line, int Caret);
 
     /// <summary>
-    /// One open song (a tab): its file state and all structural editing of its sections and lines.
+    /// One open song (a tab): where it is saved (a library song, a file, or neither yet) and all structural
+    /// editing of its sections and lines.
     /// </summary>
     public class SongDocumentViewModel : ObservableObject
     {
         private string? _savedText;
         private bool _showNumerals;
 
-        public SongDocumentViewModel(Song song, string? filePath = null)
+        public SongDocumentViewModel(Song song, string? filePath = null, long? libraryId = null)
         {
             Song = song;
             Palette = new ChordPaletteViewModel(song);
@@ -31,11 +32,10 @@ namespace SongCreator.ViewModels
                     OnPropertyChanged(nameof(KeyChoice));
                 }
             };
-            if (filePath != null)
-            {
-                FilePath = filePath;
+            FilePath = filePath;
+            LibraryId = libraryId;
+            if (filePath != null || libraryId != null)
                 _savedText = SongTextWriter.ToText(song);
-            }
 
             AddSectionCommand = new RelayCommand(() => Edit(AddSection));
             DeleteSectionCommand = new RelayCommand<Section>(section => Edit(() => Song.Sections.Remove(section)));
@@ -90,6 +90,9 @@ namespace SongCreator.ViewModels
         /// <summary>The song file (.txt or ChordPro) this song was opened from or last saved to, if any.</summary>
         public string? FilePath { get; private set; }
 
+        /// <summary>The library song this tab edits, if it is one (then <see cref="FilePath"/> is null).</summary>
+        public long? LibraryId { get; private set; }
+
         public bool HasUnsavedChanges => _savedText == null ? Song.HasContent : SongTextWriter.ToText(Song) != _savedText;
 
         /// <summary>Asks the view to put the caret in a line (e.g. one that was just created).</summary>
@@ -108,11 +111,34 @@ namespace SongCreator.ViewModels
         public ICommand UndoCommand { get; }
         public ICommand RedoCommand { get; }
 
+        /// <summary>Saves the song to a file, which becomes the song's home (it is no longer a library song).</summary>
         public void SaveTo(string path)
         {
             File.WriteAllText(path, SongFile.ToText(Song, path));
             FilePath = path;
+            LibraryId = null;
             _savedText = SongTextWriter.ToText(Song);
+        }
+
+        /// <summary>Writes a copy of the song to a file; where the song is saved doesn't change.</summary>
+        public void ExportTo(string path) => File.WriteAllText(path, SongFile.ToText(Song, path));
+
+        /// <summary>Saves the song in the library: updates its library song, or adds it if it has none.</summary>
+        public void SaveTo(SongLibrary library)
+        {
+            if (LibraryId is long id)
+                library.UpdateSong(id, Song);
+            else
+                LibraryId = library.AddSong(Song);
+            FilePath = null;
+            _savedText = SongTextWriter.ToText(Song);
+        }
+
+        /// <summary>Called when the song was deleted from the library: the tab keeps it, as a song not saved anywhere.</summary>
+        public void DetachFromLibrary()
+        {
+            LibraryId = null;
+            _savedText = null;
         }
 
         private void AddSection()

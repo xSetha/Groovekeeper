@@ -1,11 +1,10 @@
-using System.IO;
 using SongCreator.Models;
 using SongCreator.Music;
 
 namespace SongCreator.ViewModels
 {
     /// <summary>
-    /// A song in a setlist and the key to play it in. The song file is never changed: the export transposes a copy.
+    /// A library song in a setlist and the key to play it in. The song is never changed: the export transposes a copy.
     /// A song without a key uses the key detected from its chords.
     /// </summary>
     public class SetlistItemViewModel : ObservableObject
@@ -13,10 +12,10 @@ namespace SongCreator.ViewModels
         private string _key;
         private int _position;
 
-        public SetlistItemViewModel(Song song, string filePath, string key = "")
+        public SetlistItemViewModel(Song song, long songId, string key = "")
         {
             Song = song;
-            FilePath = filePath;
+            SongId = songId;
             if (MusicKeys.TryParse(song.Key, out _, out _))
             {
                 OriginalKey = song.Key;
@@ -39,9 +38,7 @@ namespace SongCreator.ViewModels
 
         public Song Song { get; }
 
-        public string FilePath { get; }
-
-        public string FileName => Path.GetFileName(FilePath);
+        public long SongId { get; }
 
         /// <summary>The key the song is written in (or detected in), empty if unknown.</summary>
         public string OriginalKey { get; }

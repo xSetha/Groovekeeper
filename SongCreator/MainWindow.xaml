@@ -17,6 +17,7 @@
         <KeyBinding Key="S" Modifiers="Control+Shift" Command="{Binding SaveAsCommand}" />
         <KeyBinding Key="E" Modifiers="Control" Command="{Binding ExportPdfCommand}" />
         <KeyBinding Key="L" Modifiers="Control" Command="{Binding SetlistCommand}" />
+        <KeyBinding Key="B" Modifiers="Control" Command="{Binding ToggleLibraryPanelCommand}" />
     </Window.InputBindings>
 
     <DockPanel>
@@ -85,8 +86,11 @@
                     <MenuItem Header="_Open Song…" InputGestureText="Ctrl+O" Command="{Binding OpenSongCommand}" />
                     <MenuItem Header="_Save" InputGestureText="Ctrl+S" Command="{Binding SaveCommand}"
                               IsEnabled="{Binding HasDocuments}" />
-                    <MenuItem Header="Save _As…" InputGestureText="Ctrl+Shift+S" Command="{Binding SaveAsCommand}"
+                    <MenuItem Header="Save _As File…" InputGestureText="Ctrl+Shift+S" Command="{Binding SaveAsCommand}"
                               IsEnabled="{Binding HasDocuments}" />
+                    <Separator />
+                    <MenuItem Header="_Import Songs into Library…" Command="{Binding Library.ImportCommand}" />
+                    <MenuItem Header="_Back Up Library…" Command="{Binding BackupLibraryCommand}" />
                     <Separator />
                     <MenuItem Header="_Export PDF…" InputGestureText="Ctrl+E" Command="{Binding ExportPdfCommand}" />
                     <MenuItem Header="Set_list…" InputGestureText="Ctrl+L" Command="{Binding SetlistCommand}" />
@@ -98,6 +102,10 @@
                     <MenuItem Header="_Redo" InputGestureText="Ctrl+Y" Click="Redo_Click" />
                     <Separator />
                     <MenuItem Header="_Find and Replace…" InputGestureText="Ctrl+F" Click="Find_Click" />
+                </MenuItem>
+                <MenuItem Header="_View">
+                    <MenuItem Header="_Library" InputGestureText="Ctrl+B" IsCheckable="True"
+                              IsChecked="{Binding IsLibraryPanelOpen}" />
                 </MenuItem>
                 <MenuItem Header="_Song" IsEnabled="{Binding HasDocuments}">
                     <MenuItem Header="Add _Section" Command="{Binding ActiveDocument.AddSectionCommand}" />
@@ -113,6 +121,13 @@
             <views:StartPage Visibility="{Binding HasDocuments, Converter={StaticResource BoolToCollapsed}}" />
 
             <DockPanel Visibility="{Binding HasDocuments, Converter={StaticResource BoolToVisible}}">
+                <!-- The library, next to the open songs (Ctrl+B) -->
+                <Border DockPanel.Dock="Left" Width="260" Background="{DynamicResource ToolbarBackground}"
+                        BorderBrush="{DynamicResource CardBorder}" BorderThickness="0,0,1,0" Padding="12"
+                        Visibility="{Binding IsLibraryPanelOpen, Converter={StaticResource BoolToVisible}}">
+                    <views:LibraryPanel DataContext="{Binding Library}" />
+                </Border>
+
                 <!-- One tab per open song -->
                 <ListBox x:Name="TabStrip" DockPanel.Dock="Top" Background="{DynamicResource TabStripBackground}"
                          BorderThickness="0" Padding="0" ItemContainerStyle="{StaticResource SongTab}"

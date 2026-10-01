@@ -1,3 +1,4 @@
+using SongCreator.IO;
 using SongCreator.ViewModels;
 
 namespace SongCreator.Services
@@ -35,11 +36,17 @@ namespace SongCreator.Services
         /// <summary>Shows the export window (modal) for the given view model.</summary>
         void ShowExportPdf(ExportPdfViewModel viewModel);
 
-        /// <summary>Returns the chosen .setlist file, or null if cancelled.</summary>
-        string? PickSetlistToOpen();
+        /// <summary>Returns the chosen .setlist file to import into the library, or null if cancelled.</summary>
+        string? PickSetlistToImport();
 
-        /// <summary>Returns the chosen .setlist path, or null if cancelled.</summary>
-        string? PickSetlistSavePath(string suggestedFileName);
+        /// <summary>Lets the user pick songs from the library; returns them, or an empty list if cancelled.</summary>
+        IReadOnlyList<SongSummary> PickLibrarySongs(SongLibrary library);
+
+        /// <summary>Returns the path for a library backup, or null if cancelled.</summary>
+        string? PickBackupPath(string suggestedFileName);
+
+        /// <summary>Asks a yes/no question; returns true for yes.</summary>
+        bool Confirm(string title, string message);
 
         /// <summary>Shows the setlist window (modal) for the given view model.</summary>
         void ShowSetlist(SetlistViewModel viewModel);

@@ -1,4 +1,5 @@
 using System.IO;
+using SongCreator.IO;
 using SongCreator.Models;
 using SongCreator.ViewModels;
 
@@ -8,8 +9,19 @@ namespace SongCreator.Tests
     {
         private readonly FakeDialogService _dialogs = new();
         private readonly string _dir = Directory.CreateTempSubdirectory("SongCreatorTests").FullName;
+        private readonly string _libraryDir = Directory.CreateTempSubdirectory("SongCreatorTests").FullName;
+        private readonly SongLibrary _library;
 
-        public void Dispose() => Directory.Delete(_dir, recursive: true);
+        public ExportPdfViewModelTests()
+        {
+            _library = new SongLibrary(Path.Combine(_libraryDir, "library.db"));
+        }
+
+        public void Dispose()
+        {
+            Directory.Delete(_dir, recursive: true);
+            Directory.Delete(_libraryDir, recursive: true);
+        }
 
         private static SongDocumentViewModel Document(string title)
         {
@@ -20,7 +32,7 @@ namespace SongCreator.Tests
             return new SongDocumentViewModel(song);
         }
 
-        private ExportPdfViewModel Create(params SongDocumentViewModel[] open) => new(open, _dialogs);
+        private ExportPdfViewModel Create(params SongDocumentViewModel[] open) => new(open, _dialogs, _library);
 
         [Fact]
         public void ListsOpenSongsAndTicksOnlyThoseWithContent()
@@ -107,9 +119,22 @@ namespace SongCreator.Tests
         }
 
         [Fact]
+        public void AddsLibrarySongs()
+        {
+            _library.AddSong(new Song { Title = "From the library", Artist = "Me" });
+            var vm = Create();
+
+            vm.AddFromLibrary(_library.ListSongs());
+
+            var item = Assert.Single(vm.Items);
+            Assert.Equal("From the library", item.Song.Title);
+            Assert.Equal("Library  ·  Me", item.Details);
+        }
+
+        [Fact]
         public void MainWindowCommandOpensTheExportWindowWithOpenSongs()
         {
-            var main = new MainViewModel(_dialogs);
+            var main = new MainViewModel(_dialogs, _library);
             main.NewSong();
 
             main.ExportPdfCommand.Execute(null);

@@ -1,11 +1,14 @@
 using System.ComponentModel;
+using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
+using Microsoft.Data.Sqlite;
 using SongCreator.Controls;
+using SongCreator.IO;
 using SongCreator.Models;
 using SongCreator.Themes;
 using SongCreator.ViewModels;
@@ -24,7 +27,7 @@ namespace SongCreator
         public MainWindow()
         {
             InitializeComponent();
-            _viewModel = new MainViewModel(new DialogService(this)) { Themes = new ThemesViewModel() };
+            _viewModel = new MainViewModel(new DialogService(this), OpenLibrary()) { Themes = new ThemesViewModel() };
             _viewModel.FocusTitleRequested += (_, _) => Dispatcher.BeginInvoke(DispatcherPriority.Loaded, () => TitleBox.Focus());
             _viewModel.FocusLineRequested += (_, request) => FocusLine(request.Line, request.Caret);
             _viewModel.FindMatchFound += (_, match) => FindLineControl(this, match.Line)?.BringIntoView();
@@ -35,6 +38,22 @@ namespace SongCreator
         }
 
         private SongDocumentViewModel Document => _viewModel.ActiveDocument!;
+
+        /// <summary>Opens the song library; the app can't run without it, so a failure is reported and ends the app.</summary>
+        private static SongLibrary OpenLibrary()
+        {
+            try
+            {
+                return new SongLibrary(SongLibrary.DefaultPath);
+            }
+            catch (Exception ex) when (ex is SqliteException or IOException or UnauthorizedAccessException)
+            {
+                MessageBox.Show($"Couldn't open the song library at {SongLibrary.DefaultPath}:\n{ex.Message}", "SongCreator",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+                Environment.Exit(1);
+                throw;   // not reached
+            }
+        }
 
         private void Window_Closing(object? sender, CancelEventArgs e) => e.Cancel = !_viewModel.CloseAll();
 

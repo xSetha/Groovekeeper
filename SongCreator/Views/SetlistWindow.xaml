@@ -9,18 +9,37 @@
     <Border Background="{DynamicResource CardBackground}" BorderBrush="{DynamicResource PopupBorder}" BorderThickness="1"
             CornerRadius="12" Margin="40" Effect="{DynamicResource CardShadow}">
         <DockPanel>
-            <!-- Header (drag to move): the setlist's name, open and save -->
+            <!-- Header (drag to move): the setlist's name, and the library's setlists -->
             <DockPanel DockPanel.Dock="Top" Margin="28,24,28,16" Background="Transparent"
                        MouseLeftButtonDown="Header_MouseLeftButtonDown">
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Top">
-                    <Button Content="Open…" Style="{StaticResource FlatButton}" Command="{Binding OpenCommand}" />
+                    <Button Content="New" Style="{StaticResource FlatButton}" Command="{Binding NewCommand}" />
+                    <Button x:Name="OpenButton" Content="Open ▾" Style="{StaticResource FlatButton}" Click="OpenButton_Click"
+                            ToolTip="Open a setlist from the library">
+                        <Button.ContextMenu>
+                            <ContextMenu ItemsSource="{Binding Setlists}">
+                                <ContextMenu.ItemContainerStyle>
+                                    <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
+                                        <Setter Property="Header" Value="{Binding Name}" />
+                                        <Setter Property="Command"
+                                                Value="{Binding DataContext.OpenCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                                        <Setter Property="CommandParameter" Value="{Binding}" />
+                                    </Style>
+                                </ContextMenu.ItemContainerStyle>
+                            </ContextMenu>
+                        </Button.ContextMenu>
+                    </Button>
+                    <Button Content="Import…" Style="{StaticResource FlatButton}" Command="{Binding ImportCommand}"
+                            ToolTip="Import a .setlist file and its songs into the library" />
                     <Button Content="Save" Style="{StaticResource FlatButton}" Command="{Binding SaveCommand}" />
+                    <Button Content="Delete" Style="{StaticResource FlatButton}" Command="{Binding DeleteCommand}"
+                            IsEnabled="{Binding IsSaved}" />
                 </StackPanel>
                 <StackPanel>
                     <TextBox Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource HintTextBox}"
                              Tag="Setlist name" FontSize="20" FontWeight="SemiBold" />
                     <TextBlock Margin="0,6,0,0" TextWrapping="Wrap" Foreground="{DynamicResource MutedForeground}"
-                               Text="Songs in playing order, each in the key you'll play it in. The song files stay as they are." />
+                               Text="Library songs in playing order, each in the key you'll play it in. The songs themselves stay as they are." />
                 </StackPanel>
             </DockPanel>
 
@@ -45,7 +64,7 @@
             <StackPanel Margin="20,0,20,8">
                 <Border BorderBrush="{DynamicResource CardBorder}" BorderThickness="1" CornerRadius="8" Padding="4">
                     <Grid>
-                        <TextBlock Text="No songs yet. Add song files to build the setlist." Margin="12,18"
+                        <TextBlock Text="No songs yet. Add songs from the library to build the setlist." Margin="12,18"
                                    Foreground="{DynamicResource MutedForeground}" HorizontalAlignment="Center"
                                    Visibility="{Binding IsEmpty, Converter={StaticResource BoolToVisible}}" />
                         <ScrollViewer MaxHeight="380" VerticalScrollBarVisibility="Auto">
@@ -84,7 +103,7 @@
                                                 </StackPanel>
                                                 <StackPanel VerticalAlignment="Center">
                                                     <TextBlock Text="{Binding Song.DisplayTitle}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
-                                                    <TextBlock Text="{Binding FileName}" FontSize="11.5" TextTrimming="CharacterEllipsis"
+                                                    <TextBlock Text="{Binding Song.Artist}" FontSize="11.5" TextTrimming="CharacterEllipsis"
                                                                Foreground="{DynamicResource MutedForeground}" />
                                                 </StackPanel>
                                             </DockPanel>

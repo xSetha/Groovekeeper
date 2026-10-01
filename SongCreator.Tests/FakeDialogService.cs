@@ -1,3 +1,4 @@
+using SongCreator.IO;
 using SongCreator.Services;
 using SongCreator.ViewModels;
 
@@ -9,13 +10,16 @@ namespace SongCreator.Tests
         public IReadOnlyList<string> FilesToOpen { get; set; } = [];
         public string? SavePath { get; set; }
         public string? PdfPath { get; set; }
-        public string? SetlistToOpen { get; set; }
-        public string? SetlistSavePath { get; set; }
+        public string? SetlistToImport { get; set; }
+        public IReadOnlyList<SongSummary> LibrarySongsToPick { get; set; } = [];
+        public string? BackupPath { get; set; }
+        public bool ConfirmAnswer { get; set; } = true;
         public SaveChoice SaveAnswer { get; set; } = SaveChoice.Cancel;
 
         public List<string> AskedToSave { get; } = [];
         public List<string> AskedForSavePath { get; } = [];
         public List<string> Errors { get; } = [];
+        public List<string> Confirmations { get; } = [];
         public List<string> Opened { get; } = [];
         public ExportPdfViewModel? ShownExport { get; private set; }
         public SetlistViewModel? ShownSetlist { get; private set; }
@@ -42,9 +46,17 @@ namespace SongCreator.Tests
 
         public void ShowExportPdf(ExportPdfViewModel viewModel) => ShownExport = viewModel;
 
-        public string? PickSetlistToOpen() => SetlistToOpen;
+        public string? PickSetlistToImport() => SetlistToImport;
 
-        public string? PickSetlistSavePath(string suggestedFileName) => SetlistSavePath;
+        public IReadOnlyList<SongSummary> PickLibrarySongs(SongLibrary library) => LibrarySongsToPick;
+
+        public string? PickBackupPath(string suggestedFileName) => BackupPath;
+
+        public bool Confirm(string title, string message)
+        {
+            Confirmations.Add(message);
+            return ConfirmAnswer;
+        }
 
         public void ShowSetlist(SetlistViewModel viewModel) => ShownSetlist = viewModel;
 

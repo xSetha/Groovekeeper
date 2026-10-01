@@ -10,10 +10,23 @@ namespace SongCreator.Tests
     {
         private readonly FakeDialogService _dialogs = new();
         private readonly string _dir = Directory.CreateTempSubdirectory("SongCreatorTests").FullName;
+        private readonly SongLibrary _library;
+
+        public SetlistViewModelTests()
+        {
+            _library = new SongLibrary(Path.Combine(_dir, "library.db"));
+        }
 
         public void Dispose() => Directory.Delete(_dir, recursive: true);
 
         private static string Sample(string name) => Path.Combine(AppContext.BaseDirectory, "samples", name + ".txt");
+
+        /// <summary>Adds a sample song to the library and returns it as the library list shows it.</summary>
+        private SongSummary LibrarySample(string name)
+        {
+            long id = _library.AddSong(IO.SongFile.Load(Sample(name)));
+            return _library.ListSongs().Single(s => s.Id == id);
+        }
 
         /// <summary>A song file in the temp folder, so tests can change or delete it.</summary>
         private string SongFile(string name, string text)
@@ -23,11 +36,13 @@ namespace SongCreator.Tests
             return path;
         }
 
+        private SetlistViewModel Create() => new(_dialogs, _library);
+
         [Fact]
         public void AddedSongsStartInTheirOwnKey()
         {
-            var setlist = new SetlistViewModel(_dialogs);
-            setlist.AddFiles([Sample("Amazing Grace"), Sample("House of the Rising Sun")]);
+            var setlist = Create();
+            setlist.AddSongs([LibrarySample("Amazing Grace"), LibrarySample("House of the Rising Sun")]);
 
             Assert.Equal([1, 2], setlist.Items.Select(i => i.Position));
             Assert.Equal(["G", "Am"], setlist.Items.Select(i => i.Key));
@@ -38,7 +53,7 @@ namespace SongCreator.Tests
         [Fact]
         public void KeyOptionsAreTheTwelveKeysOfTheSameMode()
         {
-            var item = new SetlistItemViewModel(IO.SongFile.Load(Sample("House of the Rising Sun")), "x");
+            var item = new SetlistItemViewModel(IO.SongFile.Load(Sample("House of the Rising Sun")), 1);
             Assert.Equal(["Cm", "C#m", "Dm", "Ebm", "Em", "Fm", "F#m", "Gm", "G#m", "Am", "Bbm", "Bm"], item.KeyOptions);
         }
 
@@ -46,7 +61,7 @@ namespace SongCreator.Tests
         public void ChangingTheKeyTransposesACopyForTheGig()
         {
             var song = IO.SongFile.Load(Sample("Amazing Grace"));
-            var item = new SetlistItemViewModel(song, "x") { Key = "Bb" };
+            var item = new SetlistItemViewModel(song, 1) { Key = "Bb" };
 
             Assert.Equal(3, item.Semitones);
             Assert.Equal("+3 from G", item.KeyNote);
@@ -63,7 +78,7 @@ namespace SongCreator.Tests
         public void ASongWithoutAKeyUsesTheDetectedOne()
         {
             var song = SongTextReader.Parse("Untitled\n\n[Verse]\nAm  F  C  G  Am\nla la");
-            var item = new SetlistItemViewModel(song, "x") { Key = "Bm" };
+            var item = new SetlistItemViewModel(song, 1) { Key = "Bm" };
 
             Assert.Equal("Am", item.OriginalKey);
             Assert.Equal("+2 from Am (detected)", item.KeyNote);
@@ -74,7 +89,7 @@ namespace SongCreator.Tests
         public void ASongWithNoKeyAtAllPlaysAsWritten()
         {
             var song = SongTextReader.Parse("Untitled\n\n[Verse]\nla la");
-            var item = new SetlistItemViewModel(song, "x");
+            var item = new SetlistItemViewModel(song, 1);
 
             Assert.False(item.HasKey);
             Assert.Same(song, item.SongToPlay());
@@ -83,39 +98,84 @@ namespace SongCreator.Tests
         [Fact]
         public void SavesAndOpensTheOrderAndKeys()
         {
-            string grace = SongFile("Grace", File.ReadAllText(Sample("Amazing Grace")));
-            string sun = SongFile("Sun", File.ReadAllText(Sample("House of the Rising Sun")));
-            var setlist = new SetlistViewModel(_dialogs) { Name = "Friday gig" };
-            setlist.AddFiles([grace, sun]);
+            var grace = LibrarySample("Amazing Grace");
+            var sun = LibrarySample("House of the Rising Sun");
+            var setlist = Create();
+            setlist.Name = "Friday gig";
+            setlist.AddSongs([grace, sun]);
             setlist.Items[1].Key = "Em";
             setlist.MoveUpCommand.Execute(setlist.Items[1]);
 
-            _dialogs.SetlistSavePath = Path.Combine(_dir, "friday.setlist");
             Assert.True(setlist.Save());
             Assert.False(setlist.IsDirty);
-            Assert.Contains("\"Sun.txt\"", File.ReadAllText(_dialogs.SetlistSavePath));   // stored relative to the setlist
+            Assert.Equal(["Friday gig"], setlist.Setlists.Select(s => s.Name));
 
-            var reopened = new SetlistViewModel(_dialogs);
-            reopened.Load(_dialogs.SetlistSavePath);
+            var reopened = Create();
+            reopened.OpenCommand.Execute(Assert.Single(reopened.Setlists));
             Assert.Equal("Friday gig", reopened.Name);
-            Assert.Equal([sun, grace], reopened.Items.Select(i => i.FilePath));
+            Assert.Equal([sun.Id, grace.Id], reopened.Items.Select(i => i.SongId));
             Assert.Equal(["Em", "G"], reopened.Items.Select(i => i.Key));
             Assert.False(reopened.IsDirty);
         }
 
         [Fact]
-        public void AMissingSongIsReportedAndSkipped()
+        public void SavingAgainUpdatesTheSameSetlist()
         {
-            string grace = SongFile("Grace", File.ReadAllText(Sample("Amazing Grace")));
-            string gone = SongFile("Gone", "Gone\n");
+            var setlist = Create();
+            setlist.AddSongs([LibrarySample("Amazing Grace")]);
+            setlist.Save();
+            setlist.Name = "Renamed";
+            setlist.Save();
+
+            Assert.Equal(["Renamed"], _library.ListSetlists().Select(s => s.Name));
+        }
+
+        [Fact]
+        public void DeletingASetlistKeepsItsSongs()
+        {
+            var setlist = Create();
+            setlist.AddSongs([LibrarySample("Amazing Grace")]);
+            setlist.Save();
+
+            setlist.Delete();
+
+            Assert.Single(_dialogs.Confirmations);
+            Assert.Empty(_library.ListSetlists());
+            Assert.Empty(setlist.Items);
+            Assert.False(setlist.IsSaved);
+            Assert.Single(_library.ListSongs());
+        }
+
+        [Fact]
+        public void ImportsASetlistFileAndItsSongsIntoTheLibrary()
+        {
+            SongFile("Grace", File.ReadAllText(Sample("Amazing Grace")));
+            SongFile("Sun", File.ReadAllText(Sample("House of the Rising Sun")));
+            string path = Path.Combine(_dir, "friday.setlist");
+            File.WriteAllText(path, """{ "name": "Friday", "songs": [ { "path": "Sun.txt", "key": "Em" }, { "path": "Grace.txt", "key": "" } ] }""");
+
+            var setlist = Create();
+            setlist.ImportFile(path);
+
+            Assert.Equal("Friday", setlist.Name);
+            Assert.Equal(["House of the Rising Sun", "Amazing Grace"], setlist.Items.Select(i => i.Song.Title));
+            Assert.Equal(["Em", "G"], setlist.Items.Select(i => i.Key));
+            Assert.Equal(2, _library.ListSongs().Count);
+            Assert.True(setlist.IsSaved);
+            Assert.Equal(["Friday"], _library.ListSetlists().Select(s => s.Name));
+        }
+
+        [Fact]
+        public void AMissingSongIsReportedAndSkippedOnImport()
+        {
+            SongFile("Grace", File.ReadAllText(Sample("Amazing Grace")));
             string path = Path.Combine(_dir, "set.setlist");
-            SetlistFile.Save(path, new Setlist("Set", [new SetlistEntry(gone, ""), new SetlistEntry(grace, "A")]));
-            File.Delete(gone);
+            File.WriteAllText(path, """{ "name": "Set", "songs": [ { "path": "Gone.txt", "key": "" }, { "path": "Grace.txt", "key": "A" } ] }""");
 
-            var setlist = new SetlistViewModel(_dialogs);
-            setlist.Load(path);
+            var setlist = Create();
+            setlist.ImportFile(path);
 
-            Assert.Equal([grace], setlist.Items.Select(i => i.FilePath));
+            Assert.Equal(["Amazing Grace"], setlist.Items.Select(i => i.Song.Title));
             Assert.Contains("Gone.txt", Assert.Single(_dialogs.Errors));
         }
 
@@ -125,18 +185,19 @@ namespace SongCreator.Tests
             string path = Path.Combine(_dir, "broken.setlist");
             File.WriteAllText(path, "not json");
 
-            new SetlistViewModel(_dialogs).Load(path);
+            Create().ImportFile(path);
             Assert.Contains("broken.setlist", Assert.Single(_dialogs.Errors));
+            Assert.Empty(_library.ListSetlists());
         }
 
         [Fact]
         public void ClosingAsksToSaveOnlyWhenChanged()
         {
-            var setlist = new SetlistViewModel(_dialogs);
+            var setlist = Create();
             Assert.True(setlist.ConfirmClose());
             Assert.Empty(_dialogs.AskedToSave);
 
-            setlist.AddFiles([Sample("Amazing Grace")]);
+            setlist.AddSongs([LibrarySample("Amazing Grace")]);
             _dialogs.SaveAnswer = SaveChoice.Cancel;
             Assert.False(setlist.ConfirmClose());
             _dialogs.SaveAnswer = SaveChoice.DontSave;
@@ -146,8 +207,9 @@ namespace SongCreator.Tests
         [Fact]
         public void ExportsThePdfInTheChosenKeys()
         {
-            var setlist = new SetlistViewModel(_dialogs) { OpenWhenDone = true };
-            setlist.AddFiles([Sample("Amazing Grace")]);
+            var setlist = Create();
+            setlist.OpenWhenDone = true;
+            setlist.AddSongs([LibrarySample("Amazing Grace")]);
             setlist.Items[0].Key = "A";
             _dialogs.PdfPath = Path.Combine(_dir, "set.pdf");
 
@@ -160,7 +222,7 @@ namespace SongCreator.Tests
         [Fact]
         public void MainWindowOpensTheSetlist()
         {
-            new MainViewModel(_dialogs).SetlistCommand.Execute(null);
+            new MainViewModel(_dialogs, _library).SetlistCommand.Execute(null);
             Assert.NotNull(_dialogs.ShownSetlist);
         }
     }

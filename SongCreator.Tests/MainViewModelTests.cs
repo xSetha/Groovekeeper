@@ -1,4 +1,5 @@
 using System.IO;
+using SongCreator.IO;
 using SongCreator.Services;
 using SongCreator.ViewModels;
 
@@ -9,10 +10,12 @@ namespace SongCreator.Tests
         private readonly FakeDialogService _dialogs = new();
         private readonly MainViewModel _vm;
         private readonly string _dir = Directory.CreateTempSubdirectory("SongCreatorTests").FullName;
+        private readonly SongLibrary _library;
 
         public MainViewModelTests()
         {
-            _vm = new MainViewModel(_dialogs);
+            _library = new SongLibrary(Path.Combine(_dir, "library", "library.db"));
+            _vm = new MainViewModel(_dialogs, _library);
         }
 
         public void Dispose() => Directory.Delete(_dir, recursive: true);
@@ -71,31 +74,33 @@ namespace SongCreator.Tests
             Assert.True(_vm.Close(_vm.ActiveDocument));
             Assert.Empty(_vm.Documents);
             Assert.Empty(Directory.GetFiles(_dir));
+            Assert.Empty(_library.ListSongs());
         }
 
         [Fact]
-        public void SaveWritesTheFileThenCloses()
+        public void SaveAddsANewSongToTheLibraryThenCloses()
         {
             _vm.NewSong();
             _vm.ActiveDocument!.Song.Title = "Draft";
             _dialogs.SaveAnswer = SaveChoice.Save;
-            _dialogs.SavePath = Path.Combine(_dir, "draft.txt");
 
             Assert.True(_vm.Close(_vm.ActiveDocument));
             Assert.Empty(_vm.Documents);
-            Assert.StartsWith("Draft", File.ReadAllText(_dialogs.SavePath));
+            Assert.Empty(_dialogs.AskedForSavePath);
+            Assert.Equal(["Draft"], _library.ListSongs().Select(s => s.Title));
         }
 
         [Fact]
-        public void CancellingTheSaveDialogKeepsTheSongOpen()
+        public void AFailedLibrarySaveKeepsTheSongOpen()
         {
             _vm.NewSong();
             _vm.ActiveDocument!.Song.Title = "Draft";
             _dialogs.SaveAnswer = SaveChoice.Save;
-            _dialogs.SavePath = null;
+            File.Delete(Path.Combine(_dir, "library", "library.db"));   // a fresh, empty database has no song table
 
             Assert.False(_vm.Close(_vm.ActiveDocument));
             Assert.Single(_vm.Documents);
+            Assert.Contains("Draft", Assert.Single(_dialogs.Errors));
         }
 
         [Fact]
@@ -191,20 +196,100 @@ namespace SongCreator.Tests
         }
 
         [Fact]
-        public void SavingANewSongAsksWhereOnlyTheFirstTime()
+        public void SavingANewSongAddsItToTheLibraryOnce()
+        {
+            _vm.NewSong();
+            var document = _vm.ActiveDocument!;
+            document.Song.Title = "Draft";
+
+            _vm.SaveCommand.Execute(null);
+            document.Song.Title = "Draft 2";
+            _vm.SaveCommand.Execute(null);
+
+            Assert.Empty(_dialogs.AskedForSavePath);
+            var saved = Assert.Single(_library.ListSongs());
+            Assert.Equal("Draft 2", saved.Title);
+            Assert.Equal(saved.Id, document.LibraryId);
+            Assert.Null(document.FilePath);
+            Assert.False(document.HasUnsavedChanges);
+            Assert.Equal(["Draft 2"], _vm.Library.Songs.Select(s => s.Title));   // the list is refreshed
+        }
+
+        [Fact]
+        public void OpeningALibrarySongTwiceSwitchesToItsTab()
+        {
+            long id = _library.AddSong(new Models.Song { Title = "Kept" });
+            _vm.Library.Refresh();
+
+            _vm.Library.OpenCommand.Execute(_vm.Library.Songs[0]);
+            _vm.NewSong();
+            _vm.OpenFromLibrary(id);
+
+            Assert.Equal(2, _vm.Documents.Count);
+            Assert.Equal("Kept", _vm.ActiveDocument!.Song.Title);
+            Assert.Equal(id, _vm.ActiveDocument.LibraryId);
+            Assert.False(_vm.ActiveDocument.HasUnsavedChanges);
+        }
+
+        [Fact]
+        public void SaveAsFileFromALibrarySongWritesACopy()
+        {
+            _vm.NewSong();
+            var document = _vm.ActiveDocument!;
+            document.Song.Title = "Library song";
+            _vm.SaveCommand.Execute(null);
+            _dialogs.SavePath = Path.Combine(_dir, "copy.cho");
+
+            _vm.SaveAsCommand.Execute(null);
+
+            Assert.StartsWith("{title: Library song}", File.ReadAllText(_dialogs.SavePath));
+            Assert.NotNull(document.LibraryId);
+            Assert.Null(document.FilePath);
+        }
+
+        [Fact]
+        public void SaveAsFileFromANewSongMakesItAFileSong()
         {
             _vm.NewSong();
             var document = _vm.ActiveDocument!;
             document.Song.Title = "Draft";
             _dialogs.SavePath = Path.Combine(_dir, "draft.txt");
 
-            _vm.SaveCommand.Execute(null);
+            _vm.SaveAsCommand.Execute(null);
             document.Song.Title = "Draft 2";
             _vm.SaveCommand.Execute(null);
 
             Assert.Equal(["Draft"], _dialogs.AskedForSavePath);   // suggested from the title
-            Assert.Equal(_dialogs.SavePath, document.FilePath);
             Assert.StartsWith("Draft 2", File.ReadAllText(_dialogs.SavePath));
+            Assert.Empty(_library.ListSongs());
+        }
+
+        [Fact]
+        public void DeletingAnOpenLibrarySongKeepsItsTabAsUnsaved()
+        {
+            _vm.NewSong();
+            var document = _vm.ActiveDocument!;
+            document.Song.Title = "Doomed";
+            _vm.SaveCommand.Execute(null);
+
+            _vm.Library.DeleteCommand.Execute(_vm.Library.Songs[0]);
+
+            Assert.Empty(_library.ListSongs());
+            Assert.Null(document.LibraryId);
+            Assert.True(document.HasUnsavedChanges);
+        }
+
+        [Fact]
+        public void BacksUpTheLibrary()
+        {
+            _library.AddSong(new Models.Song { Title = "Safe" });
+            _dialogs.BackupPath = Path.Combine(_dir, "backup.db");
+            File.WriteAllText(_dialogs.BackupPath, "an older backup the user chose to replace");
+
+            _vm.BackupLibraryCommand.Execute(null);
+
+            Assert.Empty(_dialogs.Errors);
+            Assert.Equal("Safe", Assert.Single(new SongLibrary(_dialogs.BackupPath).ListSongs()).Title);
         }
 
         [Fact]

@@ -229,6 +229,55 @@
             </Setter>
         </Style>
 
+        <!-- A library song in a list: its title, then artist and key -->
+        <DataTemplate x:Key="LibrarySong">
+            <StackPanel Margin="2,3">
+                <TextBlock Text="{Binding DisplayTitle}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                <TextBlock Text="{Binding Details}" FontSize="11.5" Foreground="{DynamicResource MutedForeground}"
+                           TextTrimming="CharacterEllipsis" />
+            </StackPanel>
+        </DataTemplate>
+
+        <!-- A plain list row: no system highlight colors, hover and selection from the theme -->
+        <Style x:Key="LibrarySongItem" TargetType="ListBoxItem">
+            <Setter Property="Foreground" Value="{DynamicResource TextForeground}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <Border x:Name="Bd" Background="Transparent" CornerRadius="6" Padding="8,4" Margin="0,0,0,2">
+                            <ContentPresenter />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ButtonHover}" />
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ButtonHover}" />
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+                                <Setter TargetName="Bd" Property="BorderThickness" Value="2,0,0,0" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Context menus look like the menu bar's drop-downs -->
+        <Style TargetType="ContextMenu">
+            <Setter Property="OverridesDefaultStyle" Value="True" />
+            <Setter Property="HasDropShadow" Value="False" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ContextMenu">
+                        <Border Background="{DynamicResource PopupBackground}" BorderBrush="{DynamicResource PopupBorder}" BorderThickness="1"
+                                CornerRadius="6" Padding="4" MinWidth="160">
+                            <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Cycle" />
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <!-- Slim scrollbars: a rounded thumb on an empty track -->
         <Style TargetType="ScrollBar">
             <Setter Property="Width" Value="10" />

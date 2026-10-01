@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.IO;
 using System.Text.Json;
 using System.Windows.Input;
+using Microsoft.Data.Sqlite;
 using SongCreator.IO;
 using SongCreator.Models;
 using SongCreator.Services;
@@ -9,22 +10,26 @@ using SongCreator.Services;
 namespace SongCreator.ViewModels
 {
     /// <summary>
-    /// The setlist window: songs in playing order, each in the key chosen for the gig, saved as a .setlist file
-    /// and exported as one PDF.
+    /// The setlist window: library songs in playing order, each in the key chosen for the gig, saved in the
+    /// library and exported as one PDF. Older .setlist files can be imported.
     /// </summary>
     public class SetlistViewModel : ObservableObject
     {
+        private const string NewSetlistName = "New setlist";
+
         private readonly IDialogService _dialogs;
-        private string _name = "New setlist";
-        private string? _filePath;
+        private readonly SongLibrary _library;
+        private string _name = NewSetlistName;
+        private long? _setlistId;
         private bool _isDirty;
         private bool _includeTableOfContents = true;
         private bool _romanNumerals;
         private bool _openWhenDone = true;
 
-        public SetlistViewModel(IDialogService dialogs)
+        public SetlistViewModel(IDialogService dialogs, SongLibrary library)
         {
             _dialogs = dialogs;
+            _library = library;
             Items.CollectionChanged += (_, e) =>
             {
                 foreach (SetlistItemViewModel item in e.NewItems ?? Array.Empty<object>())
@@ -39,15 +44,22 @@ namespace SongCreator.ViewModels
                 IsDirty = true;
             };
 
-            AddSongsCommand = new RelayCommand(() => AddFiles(_dialogs.PickSongsToOpen()));
+            AddSongsCommand = new RelayCommand(() => AddSongs(_dialogs.PickLibrarySongs(_library)));
             MoveUpCommand = new RelayCommand<SetlistItemViewModel>(item => Move(item, -1));
             MoveDownCommand = new RelayCommand<SetlistItemViewModel>(item => Move(item, 1));
             RemoveCommand = new RelayCommand<SetlistItemViewModel>(item => Items.Remove(item));
-            OpenCommand = new RelayCommand(Open);
+            NewCommand = new RelayCommand(New);
+            OpenCommand = new RelayCommand<LibrarySetlist>(setlist => Open(setlist.Id));
             SaveCommand = new RelayCommand(() => Save());
+            DeleteCommand = new RelayCommand(Delete);
+            ImportCommand = new RelayCommand(Import);
             ExportCommand = new RelayCommand(Export);
+            RefreshSetlists();
             IsDirty = false;
         }
+
+        /// <summary>The setlists saved in the library, to pick one to open.</summary>
+        public ObservableCollection<LibrarySetlist> Setlists { get; } = new();
 
         public ObservableCollection<SetlistItemViewModel> Items { get; } = new();
 
@@ -61,12 +73,18 @@ namespace SongCreator.ViewModels
             }
         }
 
-        /// <summary>The .setlist file this was opened from or saved to, if any.</summary>
-        public string? FilePath
+        /// <summary>The library setlist this is, or null if it hasn't been saved yet.</summary>
+        public long? SetlistId
         {
-            get => _filePath;
-            private set => SetProperty(ref _filePath, value);
+            get => _setlistId;
+            private set
+            {
+                if (SetProperty(ref _setlistId, value))
+                    OnPropertyChanged(nameof(IsSaved));
+            }
         }
+
+        public bool IsSaved => SetlistId != null;
 
         public bool IsDirty
         {
@@ -98,27 +116,97 @@ namespace SongCreator.ViewModels
         public ICommand MoveUpCommand { get; }
         public ICommand MoveDownCommand { get; }
         public ICommand RemoveCommand { get; }
+        public ICommand NewCommand { get; }
         public ICommand OpenCommand { get; }
         public ICommand SaveCommand { get; }
+        public ICommand DeleteCommand { get; }
+        public ICommand ImportCommand { get; }
         public ICommand ExportCommand { get; }
 
-        public void AddFiles(IEnumerable<string> paths)
+        public void AddSongs(IEnumerable<SongSummary> songs)
         {
-            foreach (string path in paths)
-                if (LoadSong(path, "") is { } item)
+            foreach (var song in songs)
+                if (LoadSong(song.Id, "") is { } item)
                     Items.Add(item);
         }
 
-        public void Open()
+        /// <summary>Starts an empty setlist (after asking to save unsaved changes).</summary>
+        public void New()
         {
             if (!ConfirmClose())
                 return;
-            string? path = _dialogs.PickSetlistToOpen();
-            if (path != null)
-                Load(path);
+            Show(null, NewSetlistName, []);
         }
 
-        public void Load(string path)
+        public void Open(long id)
+        {
+            if (!ConfirmClose())
+                return;
+
+            LibrarySetlist? setlist;
+            try
+            {
+                setlist = _library.LoadSetlist(id);
+            }
+            catch (SqliteException ex)
+            {
+                _dialogs.ShowError("Open setlist", $"Couldn't read the setlist from the library:\n{ex.Message}");
+                return;
+            }
+            if (setlist == null)
+            {
+                RefreshSetlists();
+                return;
+            }
+            Show(setlist.Id, setlist.Name, setlist.Songs.Select(entry => LoadSong(entry.SongId, entry.Key)).OfType<SetlistItemViewModel>());
+        }
+
+        /// <summary>Saves the setlist in the library. Returns false if it failed.</summary>
+        public bool Save()
+        {
+            try
+            {
+                SetlistId = _library.SaveSetlist(SetlistId, Name, Items.Select(i => new LibrarySetlistEntry(i.SongId, i.Key)).ToList());
+            }
+            catch (SqliteException ex)
+            {
+                _dialogs.ShowError("Save setlist", $"Couldn't save the setlist in the library:\n{ex.Message}");
+                return false;
+            }
+            IsDirty = false;
+            RefreshSetlists();
+            return true;
+        }
+
+        /// <summary>Deletes the setlist from the library (its songs stay) and starts an empty one.</summary>
+        public void Delete()
+        {
+            if (SetlistId is not long id || !_dialogs.Confirm("Delete setlist", $"Delete the setlist \"{Name}\"? Its songs stay in the library."))
+                return;
+            try
+            {
+                _library.DeleteSetlist(id);
+            }
+            catch (SqliteException ex)
+            {
+                _dialogs.ShowError("Delete setlist", $"Couldn't delete the setlist:\n{ex.Message}");
+                return;
+            }
+            Show(null, NewSetlistName, []);
+            RefreshSetlists();
+        }
+
+        /// <summary>Imports a .setlist file: its songs are added to the library and the setlist is saved there.</summary>
+        public void Import()
+        {
+            if (!ConfirmClose())
+                return;
+            string? path = _dialogs.PickSetlistToImport();
+            if (path != null)
+                ImportFile(path);
+        }
+
+        public void ImportFile(string path)
         {
             Setlist setlist;
             try
@@ -127,37 +215,35 @@ namespace SongCreator.ViewModels
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)
             {
-                _dialogs.ShowError("Open setlist", $"Couldn't open {Path.GetFileName(path)}:\n{ex.Message}");
+                _dialogs.ShowError("Import setlist", $"Couldn't open {Path.GetFileName(path)}:\n{ex.Message}");
                 return;
             }
 
-            Items.Clear();
+            var songs = new List<(Song Song, string Key)>();
             foreach (var entry in setlist.Songs)
-                if (LoadSong(entry.Path, entry.Key) is { } item)
-                    Items.Add(item);
-            Name = setlist.Name;
-            FilePath = path;
-            IsDirty = false;
-        }
+            {
+                try
+                {
+                    songs.Add((SongFile.Load(entry.Path), entry.Key));
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                {
+                    _dialogs.ShowError("Import setlist", $"Couldn't open {Path.GetFileName(entry.Path)}:\n{ex.Message}");
+                }
+            }
 
-        /// <summary>Saves to the setlist's file, asking for one the first time. Returns false if cancelled or failed.</summary>
-        public bool Save()
-        {
-            string? path = FilePath ?? _dialogs.PickSetlistSavePath(string.Concat(Name.Split(Path.GetInvalidFileNameChars())));
-            if (path == null)
-                return false;
+            IReadOnlyList<long> ids;
             try
             {
-                SetlistFile.Save(path, new Setlist(Name, Items.Select(i => new SetlistEntry(i.FilePath, i.Key)).ToList()));
+                ids = _library.AddSongs(songs.Select(s => s.Song));
             }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            catch (SqliteException ex)
             {
-                _dialogs.ShowError("Save setlist", $"Couldn't save {Path.GetFileName(path)}:\n{ex.Message}");
-                return false;
+                _dialogs.ShowError("Import setlist", $"Couldn't add the songs to the library:\n{ex.Message}");
+                return;
             }
-            FilePath = path;
-            IsDirty = false;
-            return true;
+            Show(null, setlist.Name, songs.Select((s, i) => new SetlistItemViewModel(s.Song, ids[i], s.Key)));
+            Save();
         }
 
         public void Export()
@@ -196,16 +282,40 @@ namespace SongCreator.ViewModels
             };
         }
 
-        private SetlistItemViewModel? LoadSong(string path, string key)
+        private SetlistItemViewModel? LoadSong(long songId, string key)
         {
             try
             {
-                return new SetlistItemViewModel(SongFile.Load(path), path, key);
+                return _library.LoadSong(songId) is { } song ? new SetlistItemViewModel(song, songId, key) : null;
             }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            catch (SqliteException ex)
             {
-                _dialogs.ShowError("Setlist", $"Couldn't open {Path.GetFileName(path)}:\n{ex.Message}");
+                _dialogs.ShowError("Setlist", $"Couldn't read a song from the library:\n{ex.Message}");
                 return null;
+            }
+        }
+
+        private void Show(long? id, string name, IEnumerable<SetlistItemViewModel> items)
+        {
+            Items.Clear();
+            foreach (var item in items)
+                Items.Add(item);
+            Name = name;
+            SetlistId = id;
+            IsDirty = false;
+        }
+
+        private void RefreshSetlists()
+        {
+            Setlists.Clear();
+            try
+            {
+                foreach (var setlist in _library.ListSetlists())
+                    Setlists.Add(setlist);
+            }
+            catch (SqliteException ex)
+            {
+                _dialogs.ShowError("Setlists", $"Couldn't read the setlists from the library:\n{ex.Message}");
             }
         }
 

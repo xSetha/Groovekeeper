@@ -9,22 +9,12 @@ namespace SongCreator.IO
     public record Setlist(string Name, IReadOnlyList<SetlistEntry> Songs);
 
     /// <summary>
-    /// Reads and writes .setlist files (JSON). Song paths are stored relative to the setlist file,
-    /// so a folder of songs and its setlists can be moved together.
+    /// Reads .setlist files (JSON), the setlist format from before the library, so they can be imported.
+    /// Song paths are stored relative to the setlist file.
     /// </summary>
     public static class SetlistFile
     {
-        private static readonly JsonSerializerOptions Options = new() { WriteIndented = true, PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
-
-        public static void Save(string path, Setlist setlist)
-        {
-            string folder = System.IO.Path.GetDirectoryName(System.IO.Path.GetFullPath(path))!;
-            var relative = setlist with
-            {
-                Songs = setlist.Songs.Select(song => song with { Path = System.IO.Path.GetRelativePath(folder, song.Path) }).ToList(),
-            };
-            File.WriteAllText(path, JsonSerializer.Serialize(relative, Options));
-        }
+        private static readonly JsonSerializerOptions Options = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
 
         /// <summary>
         /// Reads a setlist with full song paths. Throws <see cref="IOException"/>, <see cref="UnauthorizedAccessException"/>

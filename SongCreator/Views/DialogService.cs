@@ -62,23 +62,33 @@ namespace SongCreator.Views
             window.ShowDialog();
         }
 
-        public string? PickSetlistToOpen()
+        public string? PickSetlistToImport()
         {
-            var dialog = new OpenFileDialog { Title = "Open setlist", Filter = SetlistFilter };
+            var dialog = new OpenFileDialog { Title = "Import setlist", Filter = SetlistFilter };
             return dialog.ShowDialog(ActiveWindow) == true ? dialog.FileName : null;
         }
 
-        public string? PickSetlistSavePath(string suggestedFileName)
+        public IReadOnlyList<SongSummary> PickLibrarySongs(SongLibrary library)
+        {
+            var viewModel = new LibraryViewModel(library, this);
+            var window = new LibraryPickerWindow { Owner = ActiveWindow, DataContext = viewModel };
+            return window.ShowDialog() == true ? window.PickedSongs : [];
+        }
+
+        public string? PickBackupPath(string suggestedFileName)
         {
             var dialog = new SaveFileDialog
             {
-                Title = "Save setlist",
-                Filter = SetlistFilter,
-                DefaultExt = ".setlist",
+                Title = "Back up library",
+                Filter = "Library backup (*.db)|*.db",
+                DefaultExt = ".db",
                 FileName = suggestedFileName,
             };
-            return dialog.ShowDialog(ActiveWindow) == true ? dialog.FileName : null;
+            return dialog.ShowDialog(owner) == true ? dialog.FileName : null;
         }
+
+        public bool Confirm(string title, string message) =>
+            MessageBox.Show(ActiveWindow, message, title, MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes;
 
         public void ShowSetlist(SetlistViewModel viewModel)
         {
