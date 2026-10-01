@@ -7,7 +7,8 @@ namespace SongCreator.IO
 {
     /// <summary>
     /// Reads the text format written by <see cref="SongTextWriter"/>: title and artist lines, a
-    /// "Key: …" line, then "[Section]" headings with chord lines above lyric lines.
+    /// "Key: …" line, then "[Section]" headings with chord lines above lyric lines. A heading followed by
+    /// "(Repeat)" is a repeat of that section.
     /// Files from older versions have "Tuning: … · Key: …" there; the tuning is ignored.
     /// </summary>
     public static partial class SongTextReader
@@ -68,7 +69,11 @@ namespace SongCreator.IO
                         song.Sections.Add(section);
                     }
 
-                    if (IsChordLine(line))
+                    if (section.Lines.Count == 0 && line.Trim() == SongTextWriter.RepeatMarker)
+                    {
+                        section.IsRepeat = true;
+                    }
+                    else if (IsChordLine(line))
                     {
                         pendingChords = new SongLine();
                         foreach (Match token in TokenRegex().Matches(line))
@@ -93,7 +98,7 @@ namespace SongCreator.IO
                 song.Artist = headerLines[1];
 
             // Every section needs a line to type into.
-            foreach (var empty in song.Sections.Where(s => s.Lines.Count == 0))
+            foreach (var empty in song.Sections.Where(s => s.Lines.Count == 0 && !s.IsRepeat))
                 empty.Lines.Add(new SongLine());
 
             return song;

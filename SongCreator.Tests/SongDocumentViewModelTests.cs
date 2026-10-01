@@ -81,6 +81,49 @@ namespace SongCreator.Tests
             Assert.Equal(["startone", "two", "end"], verse.Lines.Select(l => l.Text));
         }
 
+        [Fact]
+        public void SectionsMoveUpAndDownWithinTheSong()
+        {
+            var intro = AddSection("Intro", "a");
+            var verse = AddSection("Verse", "b");
+
+            _document.MoveSectionUpCommand.Execute(verse);
+            Assert.Equal([verse, intro], _song.Sections);
+            _document.MoveSectionUpCommand.Execute(verse);
+            _document.MoveSectionDownCommand.Execute(intro);
+            Assert.Equal([verse, intro], _song.Sections);
+        }
+
+        [Fact]
+        public void DuplicateInsertsAnIndependentCopyBelow()
+        {
+            var chorus = AddSection("Chorus", "la la");
+            chorus.Lines[0].Chords.Add(new ChordPlacement(0, "G"));
+            AddSection("Verse", "b");
+
+            _document.DuplicateSectionCommand.Execute(chorus);
+            var copy = _song.Sections[1];
+            copy.Lines[0].Chords[0].Name = "D";
+
+            Assert.Equal(["Chorus", "Chorus", "Verse"], _song.Sections.Select(s => s.Name));
+            Assert.Equal("la la", copy.Lines[0].Text);
+            Assert.Equal("G", chorus.Lines[0].Chords[0].Name);
+        }
+
+        [Fact]
+        public void RepeatAddsAMarkerAtTheEnd()
+        {
+            var chorus = AddSection("Chorus", "la la");
+            AddSection("Verse", "b");
+
+            _document.RepeatSectionCommand.Execute(chorus);
+
+            var repeat = _song.Sections[2];
+            Assert.Equal("Chorus", repeat.Name);
+            Assert.True(repeat.IsRepeat);
+            Assert.Empty(repeat.Lines);
+        }
+
         [Theory]
         [MemberData(nameof(AllKeys))]
         public void TransposingKeepsTheKeyInTheKeyDropdown(string key)

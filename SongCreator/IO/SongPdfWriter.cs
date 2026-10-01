@@ -93,6 +93,16 @@ namespace SongCreator.IO
 
                 foreach (var section in song.Sections)
                 {
+                    if (section.IsRepeat)
+                    {
+                        column.Item().PaddingTop(12).Text(text =>
+                        {
+                            text.Span($"[{section.Name}]").FontFamily(SongFont).FontSize(SongFontSize).Bold().FontColor(MutedColor);
+                            text.Span("  (repeat)").FontSize(9).Italic().FontColor(MutedColor);
+                        });
+                        continue;
+                    }
+
                     var lines = section.Lines.Where(l => l.Text.Trim().Length > 0 || l.Chords.Count > 0).ToList();
                     if (lines.Count == 0)
                         continue;

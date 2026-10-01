@@ -8,6 +8,9 @@ namespace SongCreator.IO
     /// </summary>
     public static class SongTextWriter
     {
+        /// <summary>The line under a heading that marks the section as a repeat.</summary>
+        public const string RepeatMarker = "(Repeat)";
+
         public static string ToText(Song song)
         {
             var text = new StringBuilder();
@@ -25,6 +28,15 @@ namespace SongCreator.IO
 
             foreach (var section in song.Sections)
             {
+                if (section.IsRepeat)
+                {
+                    if (text.Length > 0)
+                        text.AppendLine();
+                    text.AppendLine($"[{section.Name}]");
+                    text.AppendLine(RepeatMarker);
+                    continue;
+                }
+
                 var lines = section.Lines.Where(l => l.Text.Trim().Length > 0 || l.Chords.Count > 0).ToList();
                 if (lines.Count == 0)
                     continue;

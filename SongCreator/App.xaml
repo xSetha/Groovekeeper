@@ -22,6 +22,8 @@
             <Setter Property="Foreground" Value="{DynamicResource TextForeground}" />
             <Setter Property="CaretBrush" Value="{DynamicResource TextForeground}" />
             <Setter Property="SelectionBrush" Value="{DynamicResource SelectionBrush}" />
+            <!-- The song has its own undo history (Ctrl+Z) -->
+            <Setter Property="IsUndoEnabled" Value="False" />
         </Style>
 
         <!-- BareTextBox that shows its Tag as a hint while empty -->

@@ -19,6 +19,14 @@ namespace SongCreator.Models
 
         public ObservableCollection<ChordPlacement> Chords { get; } = new();
 
+        public SongLine Clone()
+        {
+            var copy = new SongLine(Text);
+            foreach (var chord in Chords)
+                copy.Chords.Add(new ChordPlacement(chord.Position, chord.Name));
+            return copy;
+        }
+
         public SongLine WithChord(int position, string name)
         {
             Chords.Add(new ChordPlacement(position, name));

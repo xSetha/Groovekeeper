@@ -50,6 +50,9 @@ namespace SongCreator.ViewModels
         /// <summary>Forwards <see cref="SongDocumentViewModel.FocusRequested"/> from every open song.</summary>
         public event EventHandler<FocusRequest>? FocusLineRequested;
 
+        /// <summary>Forwards <see cref="FindReplaceViewModel.MatchFound"/> from every open song.</summary>
+        public event EventHandler<FindMatch>? FindMatchFound;
+
         public void NewSong()
         {
             Add(new SongDocumentViewModel(Song.CreateTemplate()));
@@ -132,6 +135,7 @@ namespace SongCreator.ViewModels
         private void Add(SongDocumentViewModel document)
         {
             document.FocusRequested += (_, request) => FocusLineRequested?.Invoke(this, request);
+            document.Find.MatchFound += (_, match) => FindMatchFound?.Invoke(this, match);
             Documents.Add(document);
             ActiveDocument = document;
         }

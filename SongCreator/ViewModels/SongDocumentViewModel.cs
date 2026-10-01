@@ -19,22 +19,34 @@ namespace SongCreator.ViewModels
         {
             Song = song;
             Palette = new ChordPaletteViewModel(song);
+            History = new UndoHistory(song);
+            Find = new FindReplaceViewModel(song, Edit);
             if (filePath != null)
             {
                 FilePath = filePath;
                 _savedText = SongTextWriter.ToText(song);
             }
 
-            AddSectionCommand = new RelayCommand(AddSection);
-            DeleteSectionCommand = new RelayCommand<Section>(section => Song.Sections.Remove(section));
-            AddLineCommand = new RelayCommand<Section>(AddLine);
-            TransposeUpCommand = new RelayCommand(() => Song.Transpose(1));
-            TransposeDownCommand = new RelayCommand(() => Song.Transpose(-1));
+            AddSectionCommand = new RelayCommand(() => Edit(AddSection));
+            DeleteSectionCommand = new RelayCommand<Section>(section => Edit(() => Song.Sections.Remove(section)));
+            MoveSectionUpCommand = new RelayCommand<Section>(section => Edit(() => MoveSection(section, -1)));
+            MoveSectionDownCommand = new RelayCommand<Section>(section => Edit(() => MoveSection(section, 1)));
+            DuplicateSectionCommand = new RelayCommand<Section>(section => Edit(() => DuplicateSection(section)));
+            RepeatSectionCommand = new RelayCommand<Section>(section => Edit(() => Song.Sections.Add(new Section(section.Name, isRepeat: true))));
+            AddLineCommand = new RelayCommand<Section>(section => Edit(() => AddLine(section)));
+            TransposeUpCommand = new RelayCommand(() => Edit(() => Song.Transpose(1)));
+            TransposeDownCommand = new RelayCommand(() => Edit(() => Song.Transpose(-1)));
+            UndoCommand = new RelayCommand(History.Undo);
+            RedoCommand = new RelayCommand(History.Redo);
         }
 
         public Song Song { get; }
 
         public ChordPaletteViewModel Palette { get; }
+
+        public UndoHistory History { get; }
+
+        public FindReplaceViewModel Find { get; }
 
         /// <summary>The .txt file this song was opened from or last saved to, if any.</summary>
         public string? FilePath { get; private set; }
@@ -46,9 +58,16 @@ namespace SongCreator.ViewModels
 
         public ICommand AddSectionCommand { get; }
         public ICommand DeleteSectionCommand { get; }
+        public ICommand MoveSectionUpCommand { get; }
+        public ICommand MoveSectionDownCommand { get; }
+        public ICommand DuplicateSectionCommand { get; }
+        /// <summary>Adds a repeat of the section at the end of the song.</summary>
+        public ICommand RepeatSectionCommand { get; }
         public ICommand AddLineCommand { get; }
         public ICommand TransposeUpCommand { get; }
         public ICommand TransposeDownCommand { get; }
+        public ICommand UndoCommand { get; }
+        public ICommand RedoCommand { get; }
 
         public void SaveTo(string path)
         {
@@ -74,9 +93,35 @@ namespace SongCreator.ViewModels
             Focus(line, 0);
         }
 
+        private void MoveSection(Section section, int direction)
+        {
+            int index = Song.Sections.IndexOf(section);
+            int target = index + direction;
+            if (target >= 0 && target < Song.Sections.Count)
+                Song.Sections.Move(index, target);
+        }
+
+        private void DuplicateSection(Section section)
+        {
+            var copy = section.Clone();
+            Song.Sections.Insert(Song.Sections.IndexOf(section) + 1, copy);
+            if (copy.Lines.Count > 0)
+                Focus(copy.Lines[0], 0);
+        }
+
+        /// <summary>Makes <paramref name="change"/> its own undo step, apart from any typing just before it.</summary>
+        private void Edit(Action change)
+        {
+            History.Commit();
+            change();
+            History.Commit(mergeable: false);
+        }
+
         // ---- Line editing ----
 
-        public void SplitLine(SongLine line, int caret)
+        public void SplitLine(SongLine line, int caret) => Edit(() => Split(line, caret));
+
+        private void Split(SongLine line, int caret)
         {
             var section = SectionOf(line);
             var tail = line.SplitAt(caret);
@@ -87,7 +132,9 @@ namespace SongCreator.ViewModels
         /// <summary>
         /// Backspace at the start of a line: joins it onto the previous line, or removes it if it's an empty first line.
         /// </summary>
-        public void MergeWithPrevious(SongLine line)
+        public void MergeWithPrevious(SongLine line) => Edit(() => Merge(line));
+
+        private void Merge(SongLine line)
         {
             var section = SectionOf(line);
             int index = section.Lines.IndexOf(line);
@@ -118,7 +165,9 @@ namespace SongCreator.ViewModels
         /// <summary>
         /// Pastes multi-line text: each row becomes a lyric line, a "[Name]" row starts a new section.
         /// </summary>
-        public void PasteLines(SongLine line, int caret, string text)
+        public void PasteLines(SongLine line, int caret, string text) => Edit(() => Paste(line, caret, text));
+
+        private void Paste(SongLine line, int caret, string text)
         {
             var section = SectionOf(line);
             var tail = line.SplitAt(caret);

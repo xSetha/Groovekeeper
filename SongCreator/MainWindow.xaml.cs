@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
 using SongCreator.Controls;
@@ -26,6 +27,7 @@ namespace SongCreator
             _viewModel = new MainViewModel(new DialogService(this)) { Themes = new ThemesViewModel() };
             _viewModel.FocusTitleRequested += (_, _) => Dispatcher.BeginInvoke(DispatcherPriority.Loaded, () => TitleBox.Focus());
             _viewModel.FocusLineRequested += (_, request) => FocusLine(request.Line, request.Caret);
+            _viewModel.FindMatchFound += (_, match) => FindLineControl(this, match.Line)?.BringIntoView();
             DataContext = _viewModel;
 
             ThemePopup.CustomPopupPlacementCallback = AlignPopupRight;
@@ -37,6 +39,68 @@ namespace SongCreator
         private void Window_Closing(object? sender, CancelEventArgs e) => e.Cancel = !_viewModel.CloseAll();
 
         private void Exit_Click(object sender, RoutedEventArgs e) => Close();
+
+        // ---- Undo, redo and find ----
+
+        // Window-wide, ahead of the text boxes: the song's history replaces their own undo.
+        private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            if (_viewModel.ActiveDocument == null || Keyboard.Modifiers.HasFlag(ModifierKeys.Alt) || !Keyboard.Modifiers.HasFlag(ModifierKeys.Control))
+                return;
+            bool shift = Keyboard.Modifiers.HasFlag(ModifierKeys.Shift);
+            switch (e.Key)
+            {
+                case Key.Z when !shift && !FindBar.IsKeyboardFocusWithin:
+                    Undo_Click(sender, e);
+                    break;
+                case Key.Y when !shift && !FindBar.IsKeyboardFocusWithin:
+                case Key.Z when shift && !FindBar.IsKeyboardFocusWithin:
+                    Redo_Click(sender, e);
+                    break;
+                case Key.F or Key.H when !shift:
+                    Find_Click(sender, e);
+                    break;
+                default:
+                    return;
+            }
+            e.Handled = true;
+        }
+
+        private void Undo_Click(object sender, RoutedEventArgs e) => KeepingCaretLine(Document.History.Undo);
+
+        private void Redo_Click(object sender, RoutedEventArgs e) => KeepingCaretLine(Document.History.Redo);
+
+        // Undo replaces the song's lines, so put the caret back in the line at the same place.
+        private void KeepingCaretLine(Action change)
+        {
+            var control = FindAncestor<SongLineControl>(Keyboard.FocusedElement as DependencyObject);
+            var lines = Document.Song.Sections.SelectMany(s => s.Lines).ToList();
+            int index = control?.DataContext is SongLine line ? lines.IndexOf(line) : -1;
+            int caret = control?.Caret ?? 0;
+
+            change();
+
+            lines = Document.Song.Sections.SelectMany(s => s.Lines).ToList();
+            if (index >= 0 && lines.Count > 0)
+                FocusLine(lines[Math.Min(index, lines.Count - 1)], caret);
+        }
+
+        private void Find_Click(object sender, RoutedEventArgs e)
+        {
+            Document.Find.IsOpen = true;
+            Dispatcher.BeginInvoke(DispatcherPriority.Loaded, () =>
+            {
+                FindBox.Focus();
+                FindBox.SelectAll();
+            });
+        }
+
+        private static T? FindAncestor<T>(DependencyObject? element) where T : DependencyObject
+        {
+            while (element != null && element is not T)
+                element = element is Visual ? VisualTreeHelper.GetParent(element) : LogicalTreeHelper.GetParent(element);
+            return element as T;
+        }
 
         private void TabStrip_SelectionChanged(object sender, SelectionChangedEventArgs e) => EditorScroll.ScrollToTop();
 

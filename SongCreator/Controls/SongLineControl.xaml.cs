@@ -5,9 +5,11 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Shapes;
 using System.Windows.Threading;
 using SongCreator.Models;
 using SongCreator.Themes;
+using SongCreator.ViewModels;
 
 namespace SongCreator.Controls
 {
@@ -57,6 +59,28 @@ namespace SongCreator.Controls
 
         public int Caret => LyricBox.CaretIndex;
 
+        /// <summary>Lyric text to highlight (the find bar's search), or empty.</summary>
+        public string HighlightText
+        {
+            get => (string)GetValue(HighlightTextProperty);
+            set => SetValue(HighlightTextProperty, value);
+        }
+
+        public static readonly DependencyProperty HighlightTextProperty = DependencyProperty.Register(
+            nameof(HighlightText), typeof(string), typeof(SongLineControl),
+            new PropertyMetadata("", (d, _) => ((SongLineControl)d).RenderHighlights()));
+
+        /// <summary>The find bar's current match: highlighted more strongly when it is in this line.</summary>
+        public FindMatch? CurrentMatch
+        {
+            get => (FindMatch?)GetValue(CurrentMatchProperty);
+            set => SetValue(CurrentMatchProperty, value);
+        }
+
+        public static readonly DependencyProperty CurrentMatchProperty = DependencyProperty.Register(
+            nameof(CurrentMatch), typeof(FindMatch), typeof(SongLineControl),
+            new PropertyMetadata(null, (d, _) => ((SongLineControl)d).RenderHighlights()));
+
         // A theme can change the monospace font, so re-measure columns once the new font is laid out.
         private void OnThemeChanged(object? sender, EventArgs e)
         {
@@ -98,7 +122,10 @@ namespace SongCreator.Controls
         private void Line_PropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
             if (e.PropertyName == nameof(SongLine.Text))
+            {
                 SyncTextFromModel();
+                RenderHighlights();
+            }
         }
 
         private void SyncTextFromModel()
@@ -212,6 +239,30 @@ namespace SongCreator.Controls
                 };
                 _tags[chord] = tag;
                 ChordLayer.Children.Add(tag);
+            }
+            RenderHighlights();
+        }
+
+        private void RenderHighlights()
+        {
+            HighlightLayer.Children.Clear();
+            if (_line == null)
+                return;
+
+            foreach (int start in FindReplaceViewModel.MatchesIn(_line.Text, HighlightText))
+            {
+                bool current = CurrentMatch is { } match && match.Line == _line && match.Start == start;
+                var mark = new Rectangle
+                {
+                    Width = HighlightText.Length * CharWidth,
+                    Height = LyricBox.ActualHeight,
+                    RadiusX = 2,
+                    RadiusY = 2,
+                    Opacity = current ? 0.65 : 0.25,
+                };
+                mark.SetResourceReference(Shape.FillProperty, "AccentFill");
+                Canvas.SetLeft(mark, ColumnX(start));
+                HighlightLayer.Children.Add(mark);
             }
         }
 

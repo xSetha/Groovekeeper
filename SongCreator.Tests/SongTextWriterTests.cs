@@ -45,5 +45,13 @@ namespace SongCreator.Tests
             ];
             Assert.Equal(expected, SongTextWriter.ToText(song).Split(Environment.NewLine));
         }
+
+        [Fact]
+        public void WritesARepeatAsAMarkerUnderItsHeading()
+        {
+            var song = new Song();
+            song.Sections.Add(new Section("Chorus", isRepeat: true));
+            Assert.Equal($"[Chorus]{Environment.NewLine}(Repeat){Environment.NewLine}", SongTextWriter.ToText(song));
+        }
     }
 }

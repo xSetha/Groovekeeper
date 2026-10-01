@@ -79,5 +79,24 @@ namespace SongCreator.Tests
             Assert.Equal("Title", song.Title);
             Assert.Equal(["first lyric", "second lyric"], Assert.Single(song.Sections).Lines.Select(l => l.Text));
         }
+
+        [Fact]
+        public void ReadsARepeatMarker()
+        {
+            var song = SongTextReader.Parse("[Chorus]\nG\nla la\n\n[Chorus]\n(Repeat)\n");
+
+            Assert.False(song.Sections[0].IsRepeat);
+            Assert.True(song.Sections[1].IsRepeat);
+            Assert.Empty(song.Sections[1].Lines);
+        }
+
+        [Fact]
+        public void RepeatsSurviveSavingAndReading()
+        {
+            var song = SongTextReader.Parse(Sample);
+            song.Sections.Add(new Section("Intro", isRepeat: true));
+            string text = SongTextWriter.ToText(song);
+            Assert.Equal(text, SongTextWriter.ToText(SongTextReader.Parse(text)));
+        }
     }
 }
