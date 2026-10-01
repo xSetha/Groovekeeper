@@ -145,7 +145,7 @@ namespace SongCreator.Tests
 
             History.Redo();
             Line(0).Chords[0].Name = "C";
-            Assert.Equal(["C"], _document.Palette.UsedChords);
+            Assert.Equal(["C"], _document.Palette.UsedChords.Select(c => c.Name));
         }
     }
 }

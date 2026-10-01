@@ -2,6 +2,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using SongCreator.Controls;
+using SongCreator.ViewModels;
 
 namespace SongCreator.Views
 {
@@ -20,7 +21,7 @@ namespace SongCreator.Views
 
         private void Chip_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
-            _pressedChord = ((FrameworkElement)sender).DataContext as string;
+            _pressedChord = (((FrameworkElement)sender).DataContext as PaletteChord)?.Name;
             _pressedAt = e.GetPosition(this);
         }
 

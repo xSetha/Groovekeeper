@@ -2,18 +2,30 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <UserControl.Resources>
-        <!-- A draggable chord, drawn like the chord tags in the editor -->
+        <!-- A draggable chord, drawn like the chord tags in the editor, with its Roman numeral in the song's key.
+             Chords built on the key's scale are underlined with the accent. -->
         <DataTemplate x:Key="ChordChip">
             <Border x:Name="Chip" Background="{DynamicResource ChordTagBackground}" CornerRadius="4" Padding="7,3" Margin="0,0,6,6"
+                    BorderThickness="0,0,0,2" BorderBrush="Transparent"
                     Cursor="SizeAll" ToolTip="Drag onto a lyric line"
                     PreviewMouseLeftButtonDown="Chip_PreviewMouseLeftButtonDown" MouseMove="Chip_MouseMove">
-                <TextBlock Text="{Binding}" FontFamily="{DynamicResource SongFont}" FontSize="13" FontWeight="Bold"
-                           Foreground="{DynamicResource ChordTagForeground}" />
+                <StackPanel>
+                    <TextBlock Text="{Binding Name}" FontFamily="{DynamicResource SongFont}" FontSize="13" FontWeight="Bold"
+                               Foreground="{DynamicResource ChordTagForeground}" HorizontalAlignment="Center" />
+                    <TextBlock x:Name="Numeral" Text="{Binding Numeral}" FontFamily="{DynamicResource SongFont}" FontSize="10"
+                               Foreground="{DynamicResource MutedForeground}" HorizontalAlignment="Center" />
+                </StackPanel>
             </Border>
             <DataTemplate.Triggers>
                 <Trigger SourceName="Chip" Property="IsMouseOver" Value="True">
                     <Setter TargetName="Chip" Property="Opacity" Value="0.8" />
                 </Trigger>
+                <DataTrigger Binding="{Binding InKey}" Value="True">
+                    <Setter TargetName="Chip" Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Numeral}" Value="{x:Null}">
+                    <Setter TargetName="Numeral" Property="Visibility" Value="Collapsed" />
+                </DataTrigger>
             </DataTemplate.Triggers>
         </DataTemplate>
 
@@ -59,6 +71,13 @@
                 <TextBlock Text="CHORDS" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource MutedForeground}" />
                 <TextBlock Margin="0,4,0,0" FontSize="11.5" TextWrapping="Wrap" Foreground="{DynamicResource MutedForeground}"
                            Text="Drag a chord above a letter or onto a word. Drop it on a chord to replace that chord." />
+
+                <!-- Chords that usually follow the last one placed -->
+                <TextBlock Style="{StaticResource GroupLabel}" Text="{Binding SuggestionsTitle}"
+                           Visibility="{Binding HasSuggestions, Converter={StaticResource BoolToVisible}}" />
+                <ItemsControl ItemsSource="{Binding SuggestedChords}" ItemTemplate="{StaticResource ChordChip}"
+                              ItemsPanel="{StaticResource Wrap}"
+                              Visibility="{Binding HasSuggestions, Converter={StaticResource BoolToVisible}}" />
 
                 <!-- Chords in the song's key -->
                 <TextBlock Style="{StaticResource GroupLabel}" Text="{Binding KeyTitle}"
