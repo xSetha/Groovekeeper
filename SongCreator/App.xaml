@@ -260,6 +260,8 @@
         <!-- A plain list row: no system highlight colors, hover and selection from the theme -->
         <Style x:Key="LibrarySongItem" TargetType="ListBoxItem">
             <Setter Property="Foreground" Value="{DynamicResource TextForeground}" />
+            <!-- Screen readers would otherwise read the record's ToString() -->
+            <Setter Property="AutomationProperties.Name" Value="{Binding DisplayTitle}" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ListBoxItem">
