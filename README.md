@@ -3,9 +3,9 @@
 A Windows desktop app for writing chord sheets: type the lyrics, drop each chord exactly on the
 syllable where it changes, then transpose, print, and build setlists for a gig.
 
-Songs are plain `.txt` files with the chords on the line above the lyrics, so they stay readable
-in any text editor. The app also opens and saves songs in the ChordPro format used by many other
-chord apps.
+Songs live in the app's library, with search, and you can still open and save song files:
+plain `.txt` with the chords on the line above the lyrics, or the ChordPro format used by many
+other chord apps.
 
 ## Features
 
@@ -18,8 +18,19 @@ chord apps.
 - Undo and redo for everything: typing, chords, sections and transposing.
 - Find and replace in the lyrics (matches are highlighted) or in the chords, by exact name.
 - Several songs open at once, each in its own tab.
-- Open and save ChordPro files (`.cho`, `.chopro`, `.chordpro`, `.pro`) as well as `.txt`.
-  A song keeps its format when saved; Save as can switch it.
+
+**Library**
+- Every song you save goes into the library. It's listed on the start page and in a side panel
+  next to the editor (Ctrl+B), sorted by title, with a search over title, artist and key.
+- Double-click a song to open it, right-click to delete it (it is also taken out of its setlists).
+- Import `.txt` and ChordPro files into the library; the files themselves aren't changed.
+- Back up the whole library to a single file (File → Back Up Library…).
+
+**Song files**
+- Open `.txt` and ChordPro files (`.cho`, `.chopro`, `.chordpro`, `.pro`) and edit them in place:
+  Save writes the file, in its own format.
+- Save As File writes a `.txt` or ChordPro file. For a library song it's a copy, and the song
+  stays in the library.
 
 **Music**
 - Transpose up or down by semitones. The key and every chord are respelled to match.
@@ -32,9 +43,10 @@ chord apps.
 **Printing and gigs**
 - Export one or many songs to a single PDF songbook, with an optional table of contents
   and an option to print the chords as Roman numerals.
-- Setlists: songs in playing order, each in the key you'll play it in, saved as a
-  `.setlist` file and exported to one PDF. The song files are never changed. Each transposed
+- Setlists: library songs in playing order, each in the key you'll play it in, saved in the
+  library and exported to one PDF. The songs themselves are never changed. Each transposed
   song is marked in the PDF, e.g. `[Key of E (+4 semitones from the original)]`.
+  Older `.setlist` files can be imported, together with their songs.
 
 **Looks**
 - Three themes: Studio (dark), Aurora (ink blue) and Paper (light).
@@ -48,8 +60,9 @@ dotnet run --project SongCreator     # start the app
 dotnet test                          # run the tests
 ```
 
-To try the app with some public-domain songs, copy the samples from `samples/songs` into a
-songs folder (by default `Documents\SongCreator\Songs`):
+To try the app with some public-domain songs, import the files in `samples/songs` into the
+library (File → Import Songs into Library…). The seed script copies them to a songs folder
+first (by default `Documents\SongCreator\Songs`), if you'd rather import them from there:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\seed-songs.ps1
@@ -61,8 +74,9 @@ powershell -ExecutionPolicy Bypass -File scripts\seed-songs.ps1
 | --- | --- |
 | Ctrl+N | New song |
 | Ctrl+O | Open songs |
-| Ctrl+S | Save (asks where only for a new song) |
-| Ctrl+Shift+S | Save as |
+| Ctrl+S | Save (to the library, or to the song's file if it was opened from one) |
+| Ctrl+Shift+S | Save as file |
+| Ctrl+B | Show or hide the library panel |
 | Ctrl+E | Export PDF |
 | Ctrl+L | Setlist |
 | Ctrl+Z | Undo |
@@ -115,9 +129,12 @@ That [G]saved a wretch like [D]me
 {comment: Verse 1}
 ```
 
-**Setlists (`.setlist`)**: JSON with the setlist's name and its songs in order, each with
-the key to play it in. Song paths are relative to the setlist file, so a folder of songs and
-its setlists can be moved together.
+**Library (`%AppData%\SongCreator\library.db`)**: a SQLite database with the songs and the
+setlists. Each song is stored as its `.txt` text. Don't keep it in a folder that a cloud service
+syncs while the app is open; use File → Back Up Library… to make a copy instead.
+
+**Older setlists (`.setlist`)**: setlists used to be JSON files that point to song files. They can
+be imported in the setlist window (Import…), which adds their songs to the library.
 
 ```json
 {
@@ -135,8 +152,8 @@ its setlists can be moved together.
 | --- | --- |
 | `SongCreator/Models` | Song, sections, lines and chord placements |
 | `SongCreator/Music` | Chord parsing, keys, transposing, key detection, Roman numerals |
-| `SongCreator/IO` | Song text files, setlist files, PDF export (QuestPDF) |
-| `SongCreator/ViewModels` | Editor, palette, undo history, find/replace, export and setlist logic |
+| `SongCreator/IO` | Song library (SQLite), song files, setlist import, PDF export (QuestPDF) |
+| `SongCreator/ViewModels` | Editor, library, palette, undo history, find/replace, export and setlist logic |
 | `SongCreator/Views`, `Controls` | WPF windows and the lyric line editor |
 | `SongCreator/Themes` | The three themes |
 | `SongCreator.Tests` | xUnit tests |
