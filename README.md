@@ -23,6 +23,7 @@ other chord apps.
 **Library**
 - Every song you save goes into the library. It's listed on the start page and in a side panel
   next to the editor (Ctrl+B), sorted by title, with a search over title, artist and key.
+  The app remembers whether the panel was open, and the window's size.
 - Double-click a song to open it, right-click to delete it (it is also taken out of its setlists).
 - Import `.txt` and ChordPro files into the library; the files themselves aren't changed.
 - Back up the whole library to a single file (File → Back Up Library…).

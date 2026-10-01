@@ -4,7 +4,7 @@
         xmlns:controls="clr-namespace:SongCreator.Controls"
         xmlns:views="clr-namespace:SongCreator.Views"
         xmlns:music="clr-namespace:SongCreator.Music"
-        Title="SongCreator" Height="900" Width="900"
+        Title="SongCreator" MinWidth="900" MinHeight="600" WindowStartupLocation="CenterScreen"
         Icon="Assets/SongCreator.ico"
         Background="{DynamicResource WindowBackground}"
         Foreground="{DynamicResource TextForeground}"

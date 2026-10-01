@@ -32,6 +32,7 @@ namespace SongCreator
             _viewModel.FocusLineRequested += (_, request) => FocusLine(request.Line, request.Caret);
             _viewModel.FindMatchFound += (_, match) => FindLineControl(this, match.Line)?.BringIntoView();
             DataContext = _viewModel;
+            ApplySettings(WindowSettings.Load(WindowSettings.DefaultPath));
 
             ThemePopup.CustomPopupPlacementCallback = AlignPopupRight;
             SourceInitialized += (_, _) => ThemeManager.ApplyTitleBar(this);
@@ -55,7 +56,27 @@ namespace SongCreator
             }
         }
 
-        private void Window_Closing(object? sender, CancelEventArgs e) => e.Cancel = !_viewModel.CloseAll();
+        private void Window_Closing(object? sender, CancelEventArgs e)
+        {
+            e.Cancel = !_viewModel.CloseAll();
+            if (!e.Cancel)
+                CurrentSettings().Save(WindowSettings.DefaultPath);
+        }
+
+        /// <summary>The remembered size, kept between the minimum size and the screen's work area.</summary>
+        private void ApplySettings(WindowSettings settings)
+        {
+            Width = Math.Clamp(settings.Width, MinWidth, Math.Max(MinWidth, SystemParameters.WorkArea.Width));
+            Height = Math.Clamp(settings.Height, MinHeight, Math.Max(MinHeight, SystemParameters.WorkArea.Height));
+            _viewModel.IsLibraryPanelOpen = settings.IsLibraryPanelOpen;
+        }
+
+        private WindowSettings CurrentSettings()
+        {
+            // A maximized or minimized window remembers the size it goes back to.
+            var size = WindowState == WindowState.Normal ? new Size(ActualWidth, ActualHeight) : RestoreBounds.Size;
+            return new WindowSettings(size.Width, size.Height, _viewModel.IsLibraryPanelOpen);
+        }
 
         private void Exit_Click(object sender, RoutedEventArgs e) => Close();
 
