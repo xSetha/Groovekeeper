@@ -35,5 +35,22 @@ namespace SongCreator.Tests
             int pages = Regex.Matches(Encoding.ASCII.GetString(pdf), @"/Type\s*/Page\b").Count;
             Assert.True(pages >= 3, $"expected several pages, got {pages}");
         }
+
+        [Theory]
+        [InlineData("E", 4, "[Key of E (+4 semitones from the original)]")]
+        [InlineData("Bb", -1, "[Key of Bb (−1 semitone from the original)]")]
+        [InlineData("G", 0, null)]
+        public void NotesATransposedKey(string key, int semitones, string? note)
+        {
+            Assert.Equal(note, SongPdfWriter.KeyChangeNote(key, semitones));
+        }
+
+        [Fact]
+        public void CreatesAPdfWithTransposedSongs()
+        {
+            var songs = Enumerable.Range(0, 2).Select(_ => SongTextReader.Parse(Constantine)).ToList();
+            byte[] pdf = SongPdfWriter.Create(songs, tableOfContents: true, semitones: [0, 4]);
+            Assert.Equal("%PDF", Encoding.ASCII.GetString(pdf, 0, 4));
+        }
     }
 }

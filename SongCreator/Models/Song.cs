@@ -36,6 +36,14 @@ namespace SongCreator.Models
                 chord.Name = ChordTransposer.Transpose(chord.Name, semitones, useFlats);
         }
 
+        public Song Clone()
+        {
+            var copy = new Song { Title = Title, Artist = Artist, Key = Key };
+            foreach (var section in Sections)
+                copy.Sections.Add(section.Clone());
+            return copy;
+        }
+
         public bool HasContent =>
             Title.Length > 0 || Artist.Length > 0 ||
             Sections.SelectMany(s => s.Lines).Any(l => l.Text.Length > 0 || l.Chords.Count > 0);

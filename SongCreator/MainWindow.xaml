@@ -14,6 +14,7 @@
         <KeyBinding Key="N" Modifiers="Control" Command="{Binding NewSongCommand}" />
         <KeyBinding Key="O" Modifiers="Control" Command="{Binding OpenSongCommand}" />
         <KeyBinding Key="E" Modifiers="Control" Command="{Binding ExportPdfCommand}" />
+        <KeyBinding Key="L" Modifiers="Control" Command="{Binding SetlistCommand}" />
     </Window.InputBindings>
 
     <DockPanel>
@@ -82,6 +83,7 @@
                     <MenuItem Header="_Open Song…" InputGestureText="Ctrl+O" Command="{Binding OpenSongCommand}" />
                     <Separator />
                     <MenuItem Header="_Export PDF…" InputGestureText="Ctrl+E" Command="{Binding ExportPdfCommand}" />
+                    <MenuItem Header="Set_list…" InputGestureText="Ctrl+L" Command="{Binding SetlistCommand}" />
                     <Separator />
                     <MenuItem Header="E_xit" InputGestureText="Alt+F4" Click="Exit_Click" />
                 </MenuItem>

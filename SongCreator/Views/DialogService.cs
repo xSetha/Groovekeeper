@@ -12,6 +12,7 @@ namespace SongCreator.Views
     public class DialogService(Window owner) : IDialogService
     {
         private const string TextFilter = "Text file (*.txt)|*.txt";
+        private const string SetlistFilter = "Setlist (*.setlist)|*.setlist";
 
         public IReadOnlyList<string> PickSongsToOpen()
         {
@@ -44,12 +45,39 @@ namespace SongCreator.Views
             return dialog.ShowDialog(ActiveWindow) == true ? dialog.FileName : null;
         }
 
-        public SaveChoice AskToSave(string songTitle) => SaveChangesDialog.Ask(owner, songTitle);
+        public SaveChoice AskToSave(string songTitle) => SaveChangesDialog.Ask(ActiveWindow, songTitle);
+
+        public SaveChoice AskToSaveSetlist(string name) =>
+            SaveChangesDialog.Ask(ActiveWindow, name, "The setlist keeps its songs' order and keys. If you don't save, your changes are lost.");
 
         public void ShowExportPdf(ExportPdfViewModel viewModel)
         {
             var window = new ExportPdfWindow { Owner = owner, DataContext = viewModel };
             viewModel.Exported += (_, _) => window.Close();
+            window.ShowDialog();
+        }
+
+        public string? PickSetlistToOpen()
+        {
+            var dialog = new OpenFileDialog { Title = "Open setlist", Filter = SetlistFilter };
+            return dialog.ShowDialog(ActiveWindow) == true ? dialog.FileName : null;
+        }
+
+        public string? PickSetlistSavePath(string suggestedFileName)
+        {
+            var dialog = new SaveFileDialog
+            {
+                Title = "Save setlist",
+                Filter = SetlistFilter,
+                DefaultExt = ".setlist",
+                FileName = suggestedFileName,
+            };
+            return dialog.ShowDialog(ActiveWindow) == true ? dialog.FileName : null;
+        }
+
+        public void ShowSetlist(SetlistViewModel viewModel)
+        {
+            var window = new SetlistWindow { Owner = owner, DataContext = viewModel };
             window.ShowDialog();
         }
 

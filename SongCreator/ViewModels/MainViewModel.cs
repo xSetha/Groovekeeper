@@ -24,6 +24,7 @@ namespace SongCreator.ViewModels
             OpenSongCommand = new RelayCommand(() => Open(_dialogs.PickSongsToOpen()));
             CloseSongCommand = new RelayCommand<SongDocumentViewModel>(document => Close(document));
             ExportPdfCommand = new RelayCommand(() => _dialogs.ShowExportPdf(new ExportPdfViewModel(Documents, _dialogs)));
+            SetlistCommand = new RelayCommand(() => _dialogs.ShowSetlist(new SetlistViewModel(_dialogs)));
         }
 
         public ObservableCollection<SongDocumentViewModel> Documents { get; } = new();
@@ -43,6 +44,7 @@ namespace SongCreator.ViewModels
         public ICommand OpenSongCommand { get; }
         public ICommand CloseSongCommand { get; }
         public ICommand ExportPdfCommand { get; }
+        public ICommand SetlistCommand { get; }
 
         /// <summary>Asks the view to focus the active song's title.</summary>
         public event EventHandler? FocusTitleRequested;

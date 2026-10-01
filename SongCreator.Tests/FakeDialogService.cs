@@ -9,12 +9,15 @@ namespace SongCreator.Tests
         public IReadOnlyList<string> FilesToOpen { get; set; } = [];
         public string? SavePath { get; set; }
         public string? PdfPath { get; set; }
+        public string? SetlistToOpen { get; set; }
+        public string? SetlistSavePath { get; set; }
         public SaveChoice SaveAnswer { get; set; } = SaveChoice.Cancel;
 
         public List<string> AskedToSave { get; } = [];
         public List<string> Errors { get; } = [];
         public List<string> Opened { get; } = [];
         public ExportPdfViewModel? ShownExport { get; private set; }
+        public SetlistViewModel? ShownSetlist { get; private set; }
 
         public IReadOnlyList<string> PickSongsToOpen() => FilesToOpen;
 
@@ -26,11 +29,19 @@ namespace SongCreator.Tests
             return SaveAnswer;
         }
 
+        public SaveChoice AskToSaveSetlist(string name) => AskToSave(name);
+
         public string? PickPdfSavePath(string suggestedFileName) => PdfPath;
 
         public void ShowError(string title, string message) => Errors.Add(message);
 
         public void ShowExportPdf(ExportPdfViewModel viewModel) => ShownExport = viewModel;
+
+        public string? PickSetlistToOpen() => SetlistToOpen;
+
+        public string? PickSetlistSavePath(string suggestedFileName) => SetlistSavePath;
+
+        public void ShowSetlist(SetlistViewModel viewModel) => ShownSetlist = viewModel;
 
         public void OpenWithDefaultApp(string path) => Opened.Add(path);
     }

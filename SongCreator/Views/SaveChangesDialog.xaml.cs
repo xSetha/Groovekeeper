@@ -14,9 +14,12 @@ namespace SongCreator.Views
             SongTitle.Text = songTitle;
         }
 
-        public static SaveChoice Ask(Window owner, string songTitle)
+        /// <param name="detail">Replaces the text about saving a song (e.g. for a setlist).</param>
+        public static SaveChoice Ask(Window owner, string songTitle, string? detail = null)
         {
             var dialog = new SaveChangesDialog(songTitle) { Owner = owner };
+            if (detail != null)
+                dialog.Detail.Text = detail;
             dialog.ShowDialog();
             return dialog._choice;
         }

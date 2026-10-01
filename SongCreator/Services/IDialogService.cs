@@ -25,10 +25,21 @@ namespace SongCreator.Services
 
         SaveChoice AskToSave(string songTitle);
 
+        SaveChoice AskToSaveSetlist(string name);
+
         void ShowError(string title, string message);
 
         /// <summary>Shows the export window (modal) for the given view model.</summary>
         void ShowExportPdf(ExportPdfViewModel viewModel);
+
+        /// <summary>Returns the chosen .setlist file, or null if cancelled.</summary>
+        string? PickSetlistToOpen();
+
+        /// <summary>Returns the chosen .setlist path, or null if cancelled.</summary>
+        string? PickSetlistSavePath(string suggestedFileName);
+
+        /// <summary>Shows the setlist window (modal) for the given view model.</summary>
+        void ShowSetlist(SetlistViewModel viewModel);
 
         /// <summary>Opens a file with its default app (e.g. the PDF viewer).</summary>
         void OpenWithDefaultApp(string path);

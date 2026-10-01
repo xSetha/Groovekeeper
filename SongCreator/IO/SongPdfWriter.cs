@@ -25,7 +25,9 @@ namespace SongCreator.IO
         }
 
         /// <param name="romanNumerals">Write chords as Roman numerals in each song's key (songs without a key keep chord names).</param>
-        public static byte[] Create(IReadOnlyList<Song> songs, bool tableOfContents, bool romanNumerals = false)
+        /// <param name="semitones">How far each song was transposed for this PDF (e.g. by a setlist), noted next to its title.</param>
+        public static byte[] Create(IReadOnlyList<Song> songs, bool tableOfContents, bool romanNumerals = false,
+            IReadOnlyList<int>? semitones = null)
         {
             return Document.Create(document =>
             {
@@ -48,7 +50,7 @@ namespace SongCreator.IO
                             if (i > 0)
                                 column.Item().PaddingVertical(22).LineHorizontal(0.75f).LineColor(Colors.Grey.Lighten2);
                             // Keep a song's title from being stranded at the bottom of a page.
-                            column.Item().Section(SectionId(i)).EnsureSpace(110).Element(container => ComposeSong(container, songs[i], romanNumerals));
+                            column.Item().Section(SectionId(i)).EnsureSpace(110).Element(container => ComposeSong(container, songs[i], romanNumerals, semitones?[i] ?? 0));
                         }
                     });
                 });
@@ -82,7 +84,16 @@ namespace SongCreator.IO
             });
         }
 
-        private static void ComposeSong(IContainer container, Song song, bool romanNumerals)
+        /// <summary>E.g. "[Key of E (+4 semitones from the original)]", or null when the song wasn't transposed.</summary>
+        public static string? KeyChangeNote(string key, int semitones)
+        {
+            if (semitones == 0)
+                return null;
+            string unit = Math.Abs(semitones) == 1 ? "semitone" : "semitones";
+            return $"[Key of {key} ({semitones:+0;−0} {unit} from the original)]";
+        }
+
+        private static void ComposeSong(IContainer container, Song song, bool romanNumerals, int semitones)
         {
             Func<string, string>? display = romanNumerals && MusicKeys.TryParse(song.Key, out _, out _)
                 ? name => RomanNumerals.Of(name, song.Key) ?? name
@@ -90,7 +101,12 @@ namespace SongCreator.IO
 
             container.Column(column =>
             {
-                column.Item().Text(song.DisplayTitle).FontSize(18).Bold();
+                column.Item().Text(text =>
+                {
+                    text.Span(song.DisplayTitle).FontSize(18).Bold();
+                    if (KeyChangeNote(song.Key, semitones) is { } note)
+                        text.Span("   " + note).FontSize(11).FontColor(MutedColor);
+                });
                 if (song.Artist.Length > 0)
                     column.Item().Text(song.Artist).FontSize(11).FontColor(MutedColor);
 
