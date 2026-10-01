@@ -185,7 +185,8 @@
                             <KeyBinding Key="Escape" Command="{Binding Find.CloseCommand}" />
                         </Border.InputBindings>
                         <StackPanel Orientation="Horizontal">
-                            <Border Background="{DynamicResource CardBackground}" CornerRadius="4" Padding="6,3" Width="180">
+                            <Border Background="{DynamicResource CardBackground}" BorderBrush="{DynamicResource KeyCapBorder}" BorderThickness="1"
+                                    CornerRadius="4" Padding="6,3" Width="180">
                                 <TextBox x:Name="FindBox" Style="{StaticResource HintTextBox}" Tag="Find" IsUndoEnabled="True"
                                          Text="{Binding Find.FindText, UpdateSourceTrigger=PropertyChanged}">
                                     <TextBox.InputBindings>
@@ -193,7 +194,8 @@
                                     </TextBox.InputBindings>
                                 </TextBox>
                             </Border>
-                            <Border Background="{DynamicResource CardBackground}" CornerRadius="4" Padding="6,3" Width="180" Margin="6,0,0,0">
+                            <Border Background="{DynamicResource CardBackground}" BorderBrush="{DynamicResource KeyCapBorder}" BorderThickness="1"
+                                    CornerRadius="4" Padding="6,3" Width="180" Margin="6,0,0,0">
                                 <TextBox Style="{StaticResource HintTextBox}" Tag="Replace with" IsUndoEnabled="True"
                                          Text="{Binding Find.ReplaceText, UpdateSourceTrigger=PropertyChanged}" />
                             </Border>
