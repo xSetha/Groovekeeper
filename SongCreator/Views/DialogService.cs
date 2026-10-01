@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Windows;
 using Microsoft.Win32;
+using SongCreator.IO;
 using SongCreator.Services;
 using SongCreator.ViewModels;
 
@@ -12,11 +13,14 @@ namespace SongCreator.Views
     public class DialogService(Window owner) : IDialogService
     {
         private const string TextFilter = "Text file (*.txt)|*.txt";
+        private static readonly string ChordProPatterns = string.Join(";", SongFile.ChordProExtensions.Select(e => "*" + e));
+        private static readonly string ChordProFilter = $"ChordPro ({ChordProPatterns})|{ChordProPatterns}";
+        private static readonly string OpenSongFilter = $"Songs (*.txt;{ChordProPatterns})|*.txt;{ChordProPatterns}|{TextFilter}|{ChordProFilter}";
         private const string SetlistFilter = "Setlist (*.setlist)|*.setlist";
 
         public IReadOnlyList<string> PickSongsToOpen()
         {
-            var dialog = new OpenFileDialog { Title = "Open song", Filter = TextFilter, Multiselect = true };
+            var dialog = new OpenFileDialog { Title = "Open song", Filter = OpenSongFilter, Multiselect = true };
             return dialog.ShowDialog(ActiveWindow) == true ? dialog.FileNames : [];
         }
 
@@ -25,7 +29,8 @@ namespace SongCreator.Views
             var dialog = new SaveFileDialog
             {
                 Title = "Save song",
-                Filter = TextFilter,
+                Filter = $"{TextFilter}|{ChordProFilter}",
+                FilterIndex = SongFile.IsChordPro(suggestedFileName) ? 2 : 1,
                 DefaultExt = ".txt",
                 FileName = suggestedFileName,
                 InitialDirectory = initialDirectory ?? "",

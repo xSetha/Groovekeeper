@@ -38,14 +38,14 @@ namespace SongCreator.Tests
         [Fact]
         public void KeyOptionsAreTheTwelveKeysOfTheSameMode()
         {
-            var item = new SetlistItemViewModel(SongTextReader.Load(Sample("House of the Rising Sun")), "x");
+            var item = new SetlistItemViewModel(IO.SongFile.Load(Sample("House of the Rising Sun")), "x");
             Assert.Equal(["Cm", "C#m", "Dm", "Ebm", "Em", "Fm", "F#m", "Gm", "G#m", "Am", "Bbm", "Bm"], item.KeyOptions);
         }
 
         [Fact]
         public void ChangingTheKeyTransposesACopyForTheGig()
         {
-            var song = SongTextReader.Load(Sample("Amazing Grace"));
+            var song = IO.SongFile.Load(Sample("Amazing Grace"));
             var item = new SetlistItemViewModel(song, "x") { Key = "Bb" };
 
             Assert.Equal(3, item.Semitones);

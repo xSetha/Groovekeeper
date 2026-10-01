@@ -87,7 +87,7 @@ namespace SongCreator.ViewModels
         /// <summary>The key chords are shown as numerals in, or empty to show chord names.</summary>
         public string NumeralKey => ShowNumerals ? Song.Key : "";
 
-        /// <summary>The .txt file this song was opened from or last saved to, if any.</summary>
+        /// <summary>The song file (.txt or ChordPro) this song was opened from or last saved to, if any.</summary>
         public string? FilePath { get; private set; }
 
         public bool HasUnsavedChanges => _savedText == null ? Song.HasContent : SongTextWriter.ToText(Song) != _savedText;
@@ -110,10 +110,9 @@ namespace SongCreator.ViewModels
 
         public void SaveTo(string path)
         {
-            string text = SongTextWriter.ToText(Song);
-            File.WriteAllText(path, text);
+            File.WriteAllText(path, SongFile.ToText(Song, path));
             FilePath = path;
-            _savedText = text;
+            _savedText = SongTextWriter.ToText(Song);
         }
 
         private void AddSection()

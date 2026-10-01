@@ -34,7 +34,7 @@ namespace SongCreator.Tests
         [MemberData(nameof(SampleSongsTests.SampleFiles), MemberType = typeof(SampleSongsTests))]
         public void FindsTheKeyOfEverySample(string fileName)
         {
-            var song = SongTextReader.Load(Path.Combine(AppContext.BaseDirectory, "samples", fileName));
+            var song = SongFile.Load(Path.Combine(AppContext.BaseDirectory, "samples", fileName));
             var chords = song.Sections.SelectMany(s => s.Lines).SelectMany(l => l.Chords.OrderBy(c => c.Position)).Select(c => c.Name).ToList();
             Assert.Equal(song.Key, KeyDetector.Detect(chords));
         }

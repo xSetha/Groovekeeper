@@ -208,6 +208,36 @@ namespace SongCreator.Tests
         }
 
         [Fact]
+        public void OpensAChordProSongAndSavesItBackAsChordPro()
+        {
+            string path = WriteSong("song.cho", "{title: Old title}\n{start_of_verse}\n[G]Hello\n{end_of_verse}\n");
+            _vm.Open([path]);
+            var document = _vm.ActiveDocument!;
+            Assert.Equal("Old title", document.Song.Title);
+            Assert.False(document.HasUnsavedChanges);
+
+            document.Song.Title = "New title";
+            _vm.SaveCommand.Execute(null);
+
+            Assert.StartsWith("{title: New title}", File.ReadAllText(path));
+            Assert.Contains("[G]Hello", File.ReadAllText(path));
+            Assert.False(document.HasUnsavedChanges);
+        }
+
+        [Fact]
+        public void SaveAsTextConvertsAChordProSong()
+        {
+            _vm.Open([WriteSong("song.cho", "{title: Song}\n[G]Hello\n")]);
+            var document = _vm.ActiveDocument!;
+            _dialogs.SavePath = Path.Combine(_dir, "song.txt");
+
+            _vm.SaveAsCommand.Execute(null);
+
+            Assert.Equal(["song.cho"], _dialogs.AskedForSavePath);
+            Assert.Equal("Song\r\n\r\n[Verse 1]\r\nG\r\nHello\r\n", File.ReadAllText(_dialogs.SavePath));
+        }
+
+        [Fact]
         public void SaveAsWritesANewFileAndKeepsTheOldOne()
         {
             var document = OpenSong();

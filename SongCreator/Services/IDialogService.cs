@@ -14,10 +14,13 @@ namespace SongCreator.Services
     /// </summary>
     public interface IDialogService
     {
-        /// <summary>Returns the chosen .txt files, or an empty list if cancelled.</summary>
+        /// <summary>Returns the chosen song files (.txt or ChordPro), or an empty list if cancelled.</summary>
         IReadOnlyList<string> PickSongsToOpen();
 
-        /// <summary>Returns the chosen path, or null if cancelled.</summary>
+        /// <summary>
+        /// Returns the chosen path, or null if cancelled. The file type starts on the one
+        /// <paramref name="suggestedFileName"/>'s extension names.
+        /// </summary>
         string? PickSavePath(string suggestedFileName, string? initialDirectory);
 
         /// <summary>Returns the chosen .pdf path, or null if cancelled.</summary>

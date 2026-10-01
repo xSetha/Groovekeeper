@@ -88,7 +88,7 @@ namespace SongCreator.ViewModels
                     continue;
                 try
                 {
-                    Items.Add(new ExportItemViewModel(SongTextReader.Load(path), Path.GetFileName(path), path));
+                    Items.Add(new ExportItemViewModel(SongFile.Load(path), Path.GetFileName(path), path));
                 }
                 catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
                 {

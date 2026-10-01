@@ -200,7 +200,7 @@ namespace SongCreator.ViewModels
         {
             try
             {
-                return new SetlistItemViewModel(SongTextReader.Load(path), path, key);
+                return new SetlistItemViewModel(SongFile.Load(path), path, key);
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {

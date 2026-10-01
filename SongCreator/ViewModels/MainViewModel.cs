@@ -80,7 +80,7 @@ namespace SongCreator.ViewModels
                 Song song;
                 try
                 {
-                    song = SongTextReader.Load(path);
+                    song = SongFile.Load(path);
                 }
                 catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
                 {

@@ -1,4 +1,3 @@
-using System.IO;
 using System.Text.RegularExpressions;
 using SongCreator.Models;
 using SongCreator.Music;
@@ -18,18 +17,6 @@ namespace SongCreator.IO
 
         [GeneratedRegex(@"\S+")]
         private static partial Regex TokenRegex();
-
-        /// <summary>
-        /// Reads a song file; a song without a title line is named after the file.
-        /// Throws <see cref="IOException"/> or <see cref="UnauthorizedAccessException"/> if the file can't be read.
-        /// </summary>
-        public static Song Load(string path)
-        {
-            var song = Parse(File.ReadAllText(path));
-            if (song.Title.Length == 0)
-                song.Title = Path.GetFileNameWithoutExtension(path);
-            return song;
-        }
 
         public static Song Parse(string text)
         {
