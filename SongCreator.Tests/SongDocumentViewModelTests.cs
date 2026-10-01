@@ -181,5 +181,42 @@ namespace SongCreator.Tests
             Assert.Equal("A", _document.NumeralKey);
             Assert.Equal(2, changed.Count(name => name == nameof(SongDocumentViewModel.NumeralKey)));
         }
+
+        [Fact]
+        public void PastingChordsOverLyricsPlacesTheChords()
+        {
+            var blank = AddSection("Verse 1", "");
+            _document.PasteLines(blank.Lines[0], 0,
+                "[Verse 1]\r\n G\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0C\r\nAmazing grace\r\n\r\n[Chorus]\r\nAm  F\r\n\r\nla la");
+
+            var verse = Assert.Single(_song.Sections[0].Lines);
+            Assert.Equal("Amazing grace", verse.Text);
+            Assert.Equal([(1, "G"), (8, "C")], verse.Chords.Select(c => (c.Position, c.Name)));
+
+            // A chord row followed by a blank row stays a chord-only line.
+            Assert.Equal(["", "la la"], _song.Sections[1].Lines.Select(l => l.Text));
+            Assert.Equal(["Am", "F"], _song.Sections[1].Lines[0].Chords.Select(c => c.Name));
+        }
+
+        [Fact]
+        public void PastedChordsStartingABlankLineGoIntoIt()
+        {
+            var verse = AddSection("Verse", "");
+            _document.PasteLines(verse.Lines[0], 0, "D    G\nhello there\nworld");
+
+            Assert.Equal(["hello there", "world"], verse.Lines.Select(l => l.Text));
+            Assert.Equal(["D", "G"], verse.Lines[0].Chords.Select(c => c.Name));
+            Assert.Empty(verse.Lines[1].Chords);
+        }
+
+        [Fact]
+        public void PastedChordsAfterTextStartANewLine()
+        {
+            var verse = AddSection("Verse", "keep me");
+            _document.PasteLines(verse.Lines[0], 7, "\nEm\nla");
+
+            Assert.Equal(["keep me", "la"], verse.Lines.Select(l => l.Text));
+            Assert.Equal("Em", Assert.Single(verse.Lines[1].Chords).Name);
+        }
     }
 }

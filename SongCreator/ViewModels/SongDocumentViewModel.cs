@@ -183,7 +183,8 @@ namespace SongCreator.ViewModels
         }
 
         /// <summary>
-        /// Pastes multi-line text: each row becomes a lyric line, a "[Name]" row starts a new section.
+        /// Pastes multi-line text: each row becomes a lyric line, a "[Name]" row starts a new section, and a row of
+        /// chords (chords over lyrics, as on chord sites) puts those chords above the lyric row below it.
         /// </summary>
         public void PasteLines(SongLine line, int caret, string text) => Edit(() => Paste(line, caret, text));
 
@@ -193,18 +194,16 @@ namespace SongCreator.ViewModels
             var tail = line.SplitAt(caret);
             int insertAt = section.Lines.IndexOf(line) + 1;
             SongLine last = line;
+            SongLine? pendingChords = null;   // a chord row waiting for the lyric row below it
 
-            var rows = text.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
+            // Chord sites often line chords up with non-breaking spaces.
+            var rows = text.Replace(' ', ' ').Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
             for (int i = 0; i < rows.Length; i++)
             {
                 string row = rows[i].TrimEnd();
                 var heading = Regex.Match(row.Trim(), @"^\[(.+)\]$");
 
-                if (i == 0 && !heading.Success)
-                {
-                    line.Text += row;
-                }
-                else if (heading.Success)
+                if (heading.Success)
                 {
                     // Lines after the insertion point belong after the new heading.
                     var newSection = new Section(heading.Groups[1].Value);
@@ -217,11 +216,41 @@ namespace SongCreator.ViewModels
                     Song.Sections.Insert(Song.Sections.IndexOf(section) + 1, newSection);
                     section = newSection;
                     insertAt = 0;
+                    pendingChords = null;
+                }
+                else if (row.Trim().Length > 0 && SongTextReader.IsChordLine(row))
+                {
+                    // The first chord row goes into the line pasted into, if that line is still blank.
+                    if (i == 0 && line.Text.Length == 0 && line.Chords.Count == 0)
+                    {
+                        last = line;
+                    }
+                    else
+                    {
+                        last = new SongLine();
+                        section.Lines.Insert(insertAt++, last);
+                    }
+                    foreach (Match token in Regex.Matches(row, @"\S+"))
+                        last.Chords.Add(new ChordPlacement(token.Index, token.Value));
+                    pendingChords = last;
+                }
+                else if (pendingChords != null && row.Trim().Length > 0)
+                {
+                    pendingChords.Text = row;
+                    pendingChords = null;
+                }
+                else if (i == 0)
+                {
+                    line.Text += row;
                 }
                 else if (row.Trim().Length > 0)
                 {
                     last = new SongLine(row);
                     section.Lines.Insert(insertAt++, last);
+                }
+                else
+                {
+                    pendingChords = null;   // a blank row: the chords above were a chord-only line
                 }
             }
 
