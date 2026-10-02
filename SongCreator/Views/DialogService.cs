@@ -52,9 +52,6 @@ namespace SongCreator.Views
 
         public SaveChoice AskToSave(string songTitle) => SaveChangesDialog.Ask(ActiveWindow, songTitle);
 
-        public SaveChoice AskToSaveSetlist(string name) =>
-            SaveChangesDialog.Ask(ActiveWindow, name, "The setlist keeps its songs' order and keys. If you don't save, your changes are lost.");
-
         public void ShowExportPdf(ExportPdfViewModel viewModel)
         {
             var window = new ExportPdfWindow { Owner = owner, DataContext = viewModel };
@@ -89,12 +86,6 @@ namespace SongCreator.Views
 
         public bool Confirm(string title, string question, string detail, string confirmText) =>
             ConfirmDialog.Ask(ActiveWindow, title, question, detail, confirmText);
-
-        public void ShowSetlist(SetlistViewModel viewModel)
-        {
-            var window = new SetlistWindow { Owner = owner, DataContext = viewModel };
-            window.ShowDialog();
-        }
 
         public void ShowWebImport(WebImportViewModel viewModel)
         {

@@ -13,7 +13,7 @@
                        TextWrapping="Wrap">
                 <Run Text="Save “" /><Run x:Name="SongTitle" /><Run Text="” before closing?" />
             </TextBlock>
-            <TextBlock x:Name="Detail" Margin="0,10,0,24" Foreground="{DynamicResource MutedForeground}" TextWrapping="Wrap"
+            <TextBlock Margin="0,10,0,24" Foreground="{DynamicResource MutedForeground}" TextWrapping="Wrap"
                        Text="The song will be saved as a text file with the chords above the lyrics. If you don't save, your changes are lost." />
             <DockPanel LastChildFill="False">
                 <Button DockPanel.Dock="Left" Content="Don't save" Style="{StaticResource FlatButton}"

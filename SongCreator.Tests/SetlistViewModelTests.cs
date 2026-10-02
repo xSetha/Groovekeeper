@@ -36,18 +36,229 @@ namespace SongCreator.Tests
             return path;
         }
 
-        private SetlistViewModel Create() => new(_dialogs, _library);
+        private SetlistViewModel Create() => new(_dialogs, new LibraryViewModel(_library, _dialogs));
 
-        [Fact]
-        public void AddedSongsStartInTheirOwnKey()
+        /// <summary>A view model with a new, selected setlist holding the given library songs.</summary>
+        private SetlistViewModel CreateWith(params SongSummary[] songs)
         {
             var setlist = Create();
-            setlist.AddSongs([LibrarySample("Amazing Grace"), LibrarySample("House of the Rising Sun")]);
+            setlist.New();
+            foreach (var song in songs)
+                setlist.AddSongCommand.Execute(song);
+            return setlist;
+        }
+
+        private LibrarySetlist Saved(SetlistViewModel setlist) => _library.LoadSetlist(setlist.SelectedSetlist!.Id)!;
+
+        [Fact]
+        public void ANewSetlistIsSavedInTheLibraryAndSelected()
+        {
+            var setlist = Create();
+            int focusRequests = 0;
+            setlist.FocusNameRequested += (_, _) => focusRequests++;
+
+            setlist.New();
+
+            var saved = Assert.Single(_library.ListSetlists());
+            Assert.Equal("New setlist", saved.Name);
+            Assert.Equal(saved.Id, setlist.SelectedSetlist?.Id);
+            Assert.Equal("New setlist", setlist.Name);
+            Assert.True(setlist.IsEmpty);
+            Assert.Equal(1, focusRequests);
+        }
+
+        [Fact]
+        public void AddedSongsStartInTheirOwnKeyAndAreSavedRightAway()
+        {
+            var grace = LibrarySample("Amazing Grace");
+            var sun = LibrarySample("House of the Rising Sun");
+            var setlist = CreateWith(grace, sun);
 
             Assert.Equal([1, 2], setlist.Items.Select(i => i.Position));
             Assert.Equal(["G", "Am"], setlist.Items.Select(i => i.Key));
             Assert.Equal("original key", setlist.Items[0].KeyNote);
-            Assert.True(setlist.IsDirty);
+            Assert.Equal([grace.Id, sun.Id], Saved(setlist).Songs.Select(s => s.SongId));
+        }
+
+        [Fact]
+        public void ASongCanBeAddedAtAPlace()
+        {
+            var grace = LibrarySample("Amazing Grace");
+            var sun = LibrarySample("House of the Rising Sun");
+            var setlist = CreateWith(grace, grace);
+
+            setlist.AddSong(sun, 1);
+
+            Assert.Equal([grace.Id, sun.Id, grace.Id], setlist.Items.Select(i => i.SongId));
+            Assert.Equal([grace.Id, sun.Id, grace.Id], Saved(setlist).Songs.Select(s => s.SongId));
+        }
+
+        [Fact]
+        public void NoSongIsAddedWithoutASelectedSetlist()
+        {
+            var setlist = Create();
+            setlist.AddSongCommand.Execute(LibrarySample("Amazing Grace"));
+            Assert.Empty(setlist.Items);
+            Assert.Empty(_library.ListSetlists());
+        }
+
+        [Fact]
+        public void KeysOrderAndRemovalsAreSavedRightAway()
+        {
+            var grace = LibrarySample("Amazing Grace");
+            var sun = LibrarySample("House of the Rising Sun");
+            var graceCopy = LibrarySample("Amazing Grace");
+            var setlist = CreateWith(grace, sun, graceCopy);
+
+            setlist.Items[1].Key = "Em";
+            setlist.MoveUpCommand.Execute(setlist.Items[1]);
+            setlist.Move(2, 0);
+            setlist.RemoveCommand.Execute(setlist.Items[2]);
+
+            Assert.Equal([1, 2], setlist.Items.Select(i => i.Position));
+            Assert.Equal([new LibrarySetlistEntry(graceCopy.Id, "G"), new LibrarySetlistEntry(sun.Id, "Em")], Saved(setlist).Songs);
+        }
+
+        [Fact]
+        public void MovingPastTheEndsDoesNothing()
+        {
+            var grace = LibrarySample("Amazing Grace");
+            var sun = LibrarySample("House of the Rising Sun");
+            var setlist = CreateWith(grace, sun);
+
+            setlist.MoveUpCommand.Execute(setlist.Items[0]);
+            setlist.MoveDownCommand.Execute(setlist.Items[1]);
+            setlist.Move(0, 5);
+
+            Assert.Equal([grace.Id, sun.Id], setlist.Items.Select(i => i.SongId));
+        }
+
+        [Fact]
+        public void RenamingSavesSortsAndKeepsTheSetlistSelected()
+        {
+            var setlist = Create();
+            setlist.New();
+            setlist.Name = "Friday";
+            setlist.New();
+            long id = setlist.SelectedSetlist!.Id;
+
+            setlist.Name = "  Concert  ";
+
+            Assert.Equal(["Concert", "Friday"], setlist.Setlists.Select(s => s.Name));
+            Assert.Equal(id, setlist.SelectedSetlist?.Id);
+            Assert.Equal("Concert", setlist.Name);
+            Assert.Equal("Concert", Saved(setlist).Name);
+        }
+
+        [Fact]
+        public void ABlankNameIsIgnored()
+        {
+            var setlist = Create();
+            setlist.New();
+            setlist.Name = "   ";
+            Assert.Equal("New setlist", setlist.Name);
+            Assert.Equal("New setlist", Saved(setlist).Name);
+        }
+
+        [Fact]
+        public void SelectingASetlistShowsItsSongsAndKeys()
+        {
+            var grace = LibrarySample("Amazing Grace");
+            var sun = LibrarySample("House of the Rising Sun");
+            var setlist = CreateWith(sun);
+            setlist.Name = "Friday";
+            setlist.Items[0].Key = "Em";
+            setlist.New();
+            setlist.Name = "Sunday";
+            setlist.AddSongCommand.Execute(grace);
+
+            var reopened = Create();
+            reopened.SelectedSetlist = reopened.Setlists.Single(s => s.Name == "Friday");
+
+            Assert.Equal("Friday", reopened.Name);
+            Assert.Equal([sun.Id], reopened.Items.Select(i => i.SongId));
+            Assert.Equal(["Em"], reopened.Items.Select(i => i.Key));
+            Assert.Equal(sun.Id, Assert.Single(Saved(reopened).Songs).SongId);   // showing it didn't change it
+        }
+
+        [Fact]
+        public void TheSameSongCanBeInTwoSetlistsInDifferentKeys()
+        {
+            var grace = LibrarySample("Amazing Grace");
+            var setlist = CreateWith(grace);
+            setlist.Items[0].Key = "A";
+            long first = setlist.SelectedSetlist!.Id;
+            setlist.New();
+            setlist.AddSongCommand.Execute(grace);
+            setlist.Items[0].Key = "Bb";
+
+            Assert.Equal("A", Assert.Single(_library.LoadSetlist(first)!.Songs).Key);
+            Assert.Equal("Bb", Assert.Single(Saved(setlist).Songs).Key);
+            Assert.Equal(2, _library.SetlistCountFor(grace.Id));
+        }
+
+        [Fact]
+        public void RefreshShowsSongsChangedOrDeletedInTheLibrary()
+        {
+            var grace = LibrarySample("Amazing Grace");
+            var sun = LibrarySample("House of the Rising Sun");
+            var setlist = CreateWith(grace, sun);
+            var song = _library.LoadSong(grace.Id)!;
+            song.Title = "Grace (live)";
+            _library.UpdateSong(grace.Id, song);
+            _library.DeleteSong(sun.Id);
+
+            setlist.Refresh();
+
+            Assert.Equal(["Grace (live)"], setlist.Items.Select(i => i.Song.Title));
+        }
+
+        [Fact]
+        public void OpeningASongAsksForTheSongEditor()
+        {
+            var grace = LibrarySample("Amazing Grace");
+            var setlist = CreateWith(grace);
+            long? opened = null;
+            setlist.OpenSongRequested += (_, id) => opened = id;
+
+            setlist.OpenSongCommand.Execute(setlist.Items[0]);
+
+            Assert.Equal(grace.Id, opened);
+        }
+
+        [Fact]
+        public void DeletingASetlistKeepsItsSongsAndSelectsTheNextOne()
+        {
+            var setlist = CreateWith(LibrarySample("Amazing Grace"));
+            setlist.Name = "A";
+            setlist.New();
+            setlist.Name = "B";
+            setlist.SelectedSetlist = setlist.Setlists[0];
+
+            setlist.Delete();
+
+            Assert.Single(_dialogs.Confirmations);
+            Assert.Equal(["B"], _library.ListSetlists().Select(s => s.Name));
+            Assert.Equal("B", setlist.Name);
+            Assert.Empty(setlist.Items);
+            Assert.Single(_library.ListSongs());
+
+            setlist.Delete();
+            Assert.Null(setlist.SelectedSetlist);
+            Assert.False(setlist.HasSetlists);
+        }
+
+        [Fact]
+        public void ASetlistIsKeptWhenTheDeleteIsCancelled()
+        {
+            var setlist = Create();
+            setlist.New();
+            _dialogs.ConfirmAnswer = false;
+
+            setlist.Delete();
+
+            Assert.Single(_library.ListSetlists());
+            Assert.NotNull(setlist.SelectedSetlist);
         }
 
         [Fact]
@@ -96,57 +307,6 @@ namespace SongCreator.Tests
         }
 
         [Fact]
-        public void SavesAndOpensTheOrderAndKeys()
-        {
-            var grace = LibrarySample("Amazing Grace");
-            var sun = LibrarySample("House of the Rising Sun");
-            var setlist = Create();
-            setlist.Name = "Friday gig";
-            setlist.AddSongs([grace, sun]);
-            setlist.Items[1].Key = "Em";
-            setlist.MoveUpCommand.Execute(setlist.Items[1]);
-
-            Assert.True(setlist.Save());
-            Assert.False(setlist.IsDirty);
-            Assert.Equal(["Friday gig"], setlist.Setlists.Select(s => s.Name));
-
-            var reopened = Create();
-            reopened.OpenCommand.Execute(Assert.Single(reopened.Setlists));
-            Assert.Equal("Friday gig", reopened.Name);
-            Assert.Equal([sun.Id, grace.Id], reopened.Items.Select(i => i.SongId));
-            Assert.Equal(["Em", "G"], reopened.Items.Select(i => i.Key));
-            Assert.False(reopened.IsDirty);
-        }
-
-        [Fact]
-        public void SavingAgainUpdatesTheSameSetlist()
-        {
-            var setlist = Create();
-            setlist.AddSongs([LibrarySample("Amazing Grace")]);
-            setlist.Save();
-            setlist.Name = "Renamed";
-            setlist.Save();
-
-            Assert.Equal(["Renamed"], _library.ListSetlists().Select(s => s.Name));
-        }
-
-        [Fact]
-        public void DeletingASetlistKeepsItsSongs()
-        {
-            var setlist = Create();
-            setlist.AddSongs([LibrarySample("Amazing Grace")]);
-            setlist.Save();
-
-            setlist.Delete();
-
-            Assert.Single(_dialogs.Confirmations);
-            Assert.Empty(_library.ListSetlists());
-            Assert.Empty(setlist.Items);
-            Assert.False(setlist.IsSaved);
-            Assert.Single(_library.ListSongs());
-        }
-
-        [Fact]
         public void ImportsASetlistFileAndItsSongsIntoTheLibrary()
         {
             SongFile("Grace", File.ReadAllText(Sample("Amazing Grace")));
@@ -161,8 +321,9 @@ namespace SongCreator.Tests
             Assert.Equal(["House of the Rising Sun", "Amazing Grace"], setlist.Items.Select(i => i.Song.Title));
             Assert.Equal(["Em", "G"], setlist.Items.Select(i => i.Key));
             Assert.Equal(2, _library.ListSongs().Count);
-            Assert.True(setlist.IsSaved);
+            Assert.Equal(2, setlist.Library.Songs.Count);
             Assert.Equal(["Friday"], _library.ListSetlists().Select(s => s.Name));
+            Assert.Equal("Friday", setlist.SelectedSetlist?.Name);
         }
 
         [Fact]
@@ -191,25 +352,10 @@ namespace SongCreator.Tests
         }
 
         [Fact]
-        public void ClosingAsksToSaveOnlyWhenChanged()
-        {
-            var setlist = Create();
-            Assert.True(setlist.ConfirmClose());
-            Assert.Empty(_dialogs.AskedToSave);
-
-            setlist.AddSongs([LibrarySample("Amazing Grace")]);
-            _dialogs.SaveAnswer = SaveChoice.Cancel;
-            Assert.False(setlist.ConfirmClose());
-            _dialogs.SaveAnswer = SaveChoice.DontSave;
-            Assert.True(setlist.ConfirmClose());
-        }
-
-        [Fact]
         public void ExportsThePdfInTheChosenKeys()
         {
-            var setlist = Create();
+            var setlist = CreateWith(LibrarySample("Amazing Grace"));
             setlist.OpenWhenDone = true;
-            setlist.AddSongs([LibrarySample("Amazing Grace")]);
             setlist.Items[0].Key = "A";
             _dialogs.PdfPath = Path.Combine(_dir, "set.pdf");
 
@@ -220,10 +366,49 @@ namespace SongCreator.Tests
         }
 
         [Fact]
-        public void MainWindowOpensTheSetlist()
+        public void TheSetlistsTabShowsTheLatestSongs()
         {
-            new MainViewModel(_dialogs, _library).SetlistCommand.Execute(null);
-            Assert.NotNull(_dialogs.ShownSetlist);
+            var main = new MainViewModel(_dialogs, _library);
+            main.Setlists.New();
+            main.Setlists.AddSongCommand.Execute(LibrarySample("Amazing Grace"));
+            main.IsSetlistsViewActive = false;
+            var song = _library.LoadSong(main.Setlists.Items[0].SongId)!;
+            song.Title = "Renamed";
+            _library.UpdateSong(main.Setlists.Items[0].SongId, song);
+
+            main.ShowSetlistsCommand.Execute(null);
+
+            Assert.True(main.IsSetlistsViewActive);
+            Assert.Equal("Renamed", main.Setlists.Items[0].Song.Title);
+        }
+
+        [Fact]
+        public void ASongOpenedFromASetlistIsEditedInTheSongEditor()
+        {
+            var main = new MainViewModel(_dialogs, _library);
+            main.ShowSetlistsCommand.Execute(null);
+            var grace = LibrarySample("Amazing Grace");
+            main.Setlists.New();
+            main.Setlists.AddSongCommand.Execute(grace);
+
+            main.Setlists.OpenSongCommand.Execute(main.Setlists.Items[0]);
+
+            Assert.False(main.IsSetlistsViewActive);
+            Assert.True(main.IsEditingSong);
+            Assert.Equal(grace.Id, main.ActiveDocument?.LibraryId);
+        }
+
+        [Fact]
+        public void SongShortcutsDoNothingOnTheSetlistsTab()
+        {
+            var main = new MainViewModel(_dialogs, _library);
+            main.NewSong();
+            main.ShowSetlistsCommand.Execute(null);
+
+            main.SaveCommand.Execute(null);
+
+            Assert.False(main.IsEditingSong);
+            Assert.Empty(_library.ListSongs());
         }
     }
 }

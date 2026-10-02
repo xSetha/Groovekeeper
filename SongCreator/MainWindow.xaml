@@ -16,7 +16,7 @@
         <KeyBinding Key="S" Modifiers="Control" Command="{Binding SaveCommand}" />
         <KeyBinding Key="S" Modifiers="Control+Shift" Command="{Binding SaveAsCommand}" />
         <KeyBinding Key="E" Modifiers="Control" Command="{Binding ExportPdfCommand}" />
-        <KeyBinding Key="L" Modifiers="Control" Command="{Binding SetlistCommand}" />
+        <KeyBinding Key="L" Modifiers="Control" Command="{Binding ShowSetlistsCommand}" />
         <KeyBinding Key="B" Modifiers="Control" Command="{Binding ToggleLibraryPanelCommand}" />
         <KeyBinding Key="I" Modifiers="Control" Command="{Binding ImportFromWebCommand}" />
     </Window.InputBindings>
@@ -81,253 +81,271 @@
                 </Border>
             </Popup>
 
-            <Menu>
+            <Menu DockPanel.Dock="Left">
                 <MenuItem Header="_File">
                     <MenuItem Header="_New Song" InputGestureText="Ctrl+N" Command="{Binding NewSongCommand}" />
                     <MenuItem Header="_Open Song…" InputGestureText="Ctrl+O" Command="{Binding OpenSongCommand}" />
                     <MenuItem Header="_Save" InputGestureText="Ctrl+S" Command="{Binding SaveCommand}"
-                              IsEnabled="{Binding HasDocuments}" />
+                              IsEnabled="{Binding IsEditingSong}" />
                     <MenuItem Header="Save _As File…" InputGestureText="Ctrl+Shift+S" Command="{Binding SaveAsCommand}"
-                              IsEnabled="{Binding HasDocuments}" />
+                              IsEnabled="{Binding IsEditingSong}" />
                     <Separator />
                     <MenuItem Header="_Import Songs into Library…" Command="{Binding Library.ImportCommand}" />
                     <MenuItem Header="Import from _Web…" InputGestureText="Ctrl+I" Command="{Binding ImportFromWebCommand}" />
                     <MenuItem Header="_Back Up Library…" Command="{Binding BackupLibraryCommand}" />
                     <Separator />
                     <MenuItem Header="_Export PDF…" InputGestureText="Ctrl+E" Command="{Binding ExportPdfCommand}" />
-                    <MenuItem Header="Set_list…" InputGestureText="Ctrl+L" Command="{Binding SetlistCommand}" />
                     <Separator />
                     <MenuItem Header="E_xit" InputGestureText="Alt+F4" Click="Exit_Click" />
                 </MenuItem>
-                <MenuItem Header="_Edit" IsEnabled="{Binding HasDocuments}">
+                <MenuItem Header="_Edit" IsEnabled="{Binding IsEditingSong}">
                     <MenuItem Header="_Undo" InputGestureText="Ctrl+Z" Click="Undo_Click" />
                     <MenuItem Header="_Redo" InputGestureText="Ctrl+Y" Click="Redo_Click" />
                     <Separator />
                     <MenuItem Header="_Find and Replace…" InputGestureText="Ctrl+F" Click="Find_Click" />
                 </MenuItem>
                 <MenuItem Header="_View">
+                    <MenuItem Header="_Songs" Command="{Binding ShowSongsCommand}" />
+                    <MenuItem Header="Set_lists" InputGestureText="Ctrl+L" Command="{Binding ShowSetlistsCommand}" />
+                    <Separator />
                     <MenuItem Header="_Library" InputGestureText="Ctrl+B" IsCheckable="True"
                               IsChecked="{Binding IsLibraryPanelOpen}" />
                 </MenuItem>
-                <MenuItem Header="_Song" IsEnabled="{Binding HasDocuments}">
+                <MenuItem Header="_Song" IsEnabled="{Binding IsEditingSong}">
                     <MenuItem Header="Add _Section" Command="{Binding ActiveDocument.AddSectionCommand}" />
                     <Separator />
                     <MenuItem Header="Transpose _Up" Command="{Binding ActiveDocument.TransposeUpCommand}" />
                     <MenuItem Header="Transpose _Down" Command="{Binding ActiveDocument.TransposeDownCommand}" />
                 </MenuItem>
             </Menu>
+
+            <!-- Songs or Setlists (Ctrl+L) -->
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                <RadioButton Content="Songs" Style="{StaticResource ViewTab}"
+                             IsChecked="{Binding IsSetlistsViewActive, Converter={StaticResource InverseBoolean}}" />
+                <RadioButton Content="Setlists" Style="{StaticResource ViewTab}" ToolTip="Setlists (Ctrl+L)"
+                             IsChecked="{Binding IsSetlistsViewActive}" />
+            </StackPanel>
         </DockPanel>
 
+        <!-- The Setlists tab and the Songs tab share the space below the menu bar -->
         <Grid>
-            <!-- Shown while no song is open -->
-            <views:StartPage Visibility="{Binding HasDocuments, Converter={StaticResource BoolToCollapsed}}" />
+            <!-- The Setlists tab -->
+            <views:SetlistsView DataContext="{Binding Setlists}"
+                                Visibility="{Binding DataContext.IsSetlistsViewActive, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BoolToVisible}}" />
 
-            <DockPanel Visibility="{Binding HasDocuments, Converter={StaticResource BoolToVisible}}">
-                <!-- The library, next to the open songs (Ctrl+B) -->
-                <Border DockPanel.Dock="Left" Width="260" Background="{DynamicResource ToolbarBackground}"
-                        BorderBrush="{DynamicResource CardBorder}" BorderThickness="0,0,1,0" Padding="12"
-                        Visibility="{Binding IsLibraryPanelOpen, Converter={StaticResource BoolToVisible}}">
-                    <views:LibraryPanel DataContext="{Binding Library}" />
-                </Border>
+            <!-- The Songs tab -->
+            <Grid Visibility="{Binding IsSetlistsViewActive, Converter={StaticResource BoolToCollapsed}}">
+                <!-- Shown while no song is open -->
+                <views:StartPage Visibility="{Binding HasDocuments, Converter={StaticResource BoolToCollapsed}}" />
 
-                <!-- One tab per open song -->
-                <ListBox x:Name="TabStrip" DockPanel.Dock="Top" Background="{DynamicResource TabStripBackground}"
-                         BorderThickness="0" Padding="0" ItemContainerStyle="{StaticResource SongTab}"
-                         ScrollViewer.HorizontalScrollBarVisibility="Hidden"
-                         ItemsSource="{Binding Documents}" SelectedItem="{Binding ActiveDocument}"
-                         SelectionChanged="TabStrip_SelectionChanged">
-                    <ListBox.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <StackPanel Orientation="Horizontal" />
-                        </ItemsPanelTemplate>
-                    </ListBox.ItemsPanel>
-                    <ListBox.ItemTemplate>
-                        <DataTemplate>
-                            <StackPanel Orientation="Horizontal" ToolTip="{Binding HomeDescription}">
-                                <TextBlock Style="{StaticResource SongHomeIcon}" Margin="0,0,8,0" />
-                                <TextBlock Text="{Binding Song.DisplayTitle}" MaxWidth="200" TextTrimming="CharacterEllipsis"
-                                           VerticalAlignment="Center" />
-                                <Button Content="✕" Style="{StaticResource FlatButton}" Padding="6,2" Margin="10,0,0,0"
-                                        FontSize="10" Foreground="{DynamicResource MutedForeground}" ToolTip="Close song"
-                                        Command="{Binding DataContext.CloseSongCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
-                                        CommandParameter="{Binding}" />
-                            </StackPanel>
-                        </DataTemplate>
-                    </ListBox.ItemTemplate>
-                </ListBox>
+                <DockPanel Visibility="{Binding HasDocuments, Converter={StaticResource BoolToVisible}}">
+                    <!-- The library, next to the open songs (Ctrl+B) -->
+                    <Border DockPanel.Dock="Left" Width="260" Background="{DynamicResource ToolbarBackground}"
+                            BorderBrush="{DynamicResource CardBorder}" BorderThickness="0,0,1,0" Padding="12"
+                            Visibility="{Binding IsLibraryPanelOpen, Converter={StaticResource BoolToVisible}}">
+                        <views:LibraryPanel DataContext="{Binding Library}" />
+                    </Border>
 
-                <!-- Editor for the active song -->
-                <DockPanel x:Name="EditorPanel" DataContext="{Binding ActiveDocument}">
-                    <Border DockPanel.Dock="Top" Background="{DynamicResource ToolbarBackground}" Padding="8,6">
-                        <DockPanel>
-                            <!-- Where the song is saved, and Save (same as Ctrl+S) -->
-                            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Margin="12,0,0,0">
-                                <StackPanel Orientation="Horizontal" ToolTip="{Binding HomeDescription}" Margin="0,0,12,0">
-                                    <TextBlock Style="{StaticResource SongHomeIcon}" Margin="0,0,6,0" />
-                                    <TextBlock Text="{Binding HomeLabel}" VerticalAlignment="Center" MaxWidth="220"
-                                               TextTrimming="CharacterEllipsis" Foreground="{DynamicResource MutedForeground}" />
+                    <!-- One tab per open song -->
+                    <ListBox x:Name="TabStrip" DockPanel.Dock="Top" Background="{DynamicResource TabStripBackground}"
+                             BorderThickness="0" Padding="0" ItemContainerStyle="{StaticResource SongTab}"
+                             ScrollViewer.HorizontalScrollBarVisibility="Hidden"
+                             ItemsSource="{Binding Documents}" SelectedItem="{Binding ActiveDocument}"
+                             SelectionChanged="TabStrip_SelectionChanged">
+                        <ListBox.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel Orientation="Horizontal" />
+                            </ItemsPanelTemplate>
+                        </ListBox.ItemsPanel>
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal" ToolTip="{Binding HomeDescription}">
+                                    <TextBlock Style="{StaticResource SongHomeIcon}" Margin="0,0,8,0" />
+                                    <TextBlock Text="{Binding Song.DisplayTitle}" MaxWidth="200" TextTrimming="CharacterEllipsis"
+                                               VerticalAlignment="Center" />
+                                    <Button Content="✕" Style="{StaticResource FlatButton}" Padding="6,2" Margin="10,0,0,0"
+                                            FontSize="10" Foreground="{DynamicResource MutedForeground}" ToolTip="Close song"
+                                            Command="{Binding DataContext.CloseSongCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
+                                            CommandParameter="{Binding}" />
                                 </StackPanel>
-                                <Button Style="{StaticResource FlatButton}" ToolTip="Save (Ctrl+S)" AutomationProperties.Name="Save"
-                                        Command="{Binding DataContext.SaveCommand, RelativeSource={RelativeSource AncestorType=Window}}">
-                                    <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="&#xE74E;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14"
-                                                   VerticalAlignment="Center" Margin="0,0,6,0" />
-                                        <TextBlock Text="Save" VerticalAlignment="Center" />
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+
+                    <!-- Editor for the active song -->
+                    <DockPanel x:Name="EditorPanel" DataContext="{Binding ActiveDocument}">
+                        <Border DockPanel.Dock="Top" Background="{DynamicResource ToolbarBackground}" Padding="8,6">
+                            <DockPanel>
+                                <!-- Where the song is saved, and Save (same as Ctrl+S) -->
+                                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Margin="12,0,0,0">
+                                    <StackPanel Orientation="Horizontal" ToolTip="{Binding HomeDescription}" Margin="0,0,12,0">
+                                        <TextBlock Style="{StaticResource SongHomeIcon}" Margin="0,0,6,0" />
+                                        <TextBlock Text="{Binding HomeLabel}" VerticalAlignment="Center" MaxWidth="220"
+                                                   TextTrimming="CharacterEllipsis" Foreground="{DynamicResource MutedForeground}" />
                                     </StackPanel>
-                                </Button>
-                            </StackPanel>
-                            <StackPanel Orientation="Horizontal">
-                                <Button Content="+ Section" Style="{StaticResource FlatButton}" Command="{Binding AddSectionCommand}" />
-                                <TextBlock Text="Transpose" Margin="24,0,6,0" VerticalAlignment="Center"
-                                           Foreground="{DynamicResource MutedForeground}" />
-                                <Button Content="−" Style="{StaticResource FlatButton}" Command="{Binding TransposeDownCommand}" ToolTip="Down one semitone" />
-                                <Button Content="+" Style="{StaticResource FlatButton}" Command="{Binding TransposeUpCommand}" ToolTip="Up one semitone" />
-                                <!-- Transposing updates the key -->
-                                <TextBlock Text="Key" Margin="20,0,6,0" VerticalAlignment="Center"
-                                           Foreground="{DynamicResource MutedForeground}" />
-                                <ComboBox Style="{StaticResource DarkComboBox}" ItemsSource="{x:Static music:MusicKeys.All}"
-                                          SelectedItem="{Binding KeyChoice}" FontWeight="SemiBold" MinHeight="26"
-                                          MaxDropDownHeight="540" ToolTip="Key">
-                                    <ComboBox.ItemsPanel>
-                                        <ItemsPanelTemplate>
-                                            <UniformGrid Columns="2" />
-                                        </ItemsPanelTemplate>
-                                    </ComboBox.ItemsPanel>
-                                </ComboBox>
-                                <ToggleButton Style="{StaticResource IconToggle}" Width="56" Margin="12,0,0,0"
-                                              FontFamily="{DynamicResource UiFont}" FontSize="12" Content="I IV V"
-                                              ToolTip="Show chords as Roman numerals in the song's key"
-                                              IsChecked="{Binding ShowNumerals}" />
-                                <!-- Key guessed from the chords, offered when the song isn't in it -->
-                                <Button Style="{StaticResource FlatButton}" Margin="6,0,0,0" Padding="8,4"
-                                        ToolTip="Set the song's key (chords stay as they are)"
-                                        Command="{Binding Palette.UseDetectedKeyCommand}"
-                                        Visibility="{Binding Palette.ShowKeySuggestion, Converter={StaticResource BoolToVisible}}">
-                                    <TextBlock>
-                                        <Run Text="Looks like" Foreground="{DynamicResource MutedForeground}" />
-                                        <Run Text="{Binding Palette.DetectedKey, Mode=OneWay}" FontWeight="SemiBold" />
-                                        <Run Text="· Use" Foreground="{DynamicResource AccentBrush}" />
-                                    </TextBlock>
-                                </Button>
-                            </StackPanel>
-                        </DockPanel>
-                    </Border>
-
-                    <!-- Find and replace, opened with Ctrl+F -->
-                    <Border x:Name="FindBar" DockPanel.Dock="Top" Background="{DynamicResource ToolbarBackground}"
-                            BorderBrush="{DynamicResource CardBorder}" BorderThickness="0,1,0,0" Padding="8,6"
-                            Visibility="{Binding Find.IsOpen, Converter={StaticResource BoolToVisible}}">
-                        <Border.InputBindings>
-                            <KeyBinding Key="Escape" Command="{Binding Find.CloseCommand}" />
-                        </Border.InputBindings>
-                        <StackPanel Orientation="Horizontal">
-                            <Border Background="{DynamicResource CardBackground}" BorderBrush="{DynamicResource KeyCapBorder}" BorderThickness="1"
-                                    CornerRadius="4" Padding="6,3" Width="180">
-                                <TextBox x:Name="FindBox" Style="{StaticResource HintTextBox}" Tag="Find" IsUndoEnabled="True"
-                                         Text="{Binding Find.FindText, UpdateSourceTrigger=PropertyChanged}">
-                                    <TextBox.InputBindings>
-                                        <KeyBinding Key="Enter" Command="{Binding Find.FindNextCommand}" />
-                                    </TextBox.InputBindings>
-                                </TextBox>
-                            </Border>
-                            <Border Background="{DynamicResource CardBackground}" BorderBrush="{DynamicResource KeyCapBorder}" BorderThickness="1"
-                                    CornerRadius="4" Padding="6,3" Width="180" Margin="6,0,0,0">
-                                <TextBox Style="{StaticResource HintTextBox}" Tag="Replace with" IsUndoEnabled="True"
-                                         Text="{Binding Find.ReplaceText, UpdateSourceTrigger=PropertyChanged}" />
-                            </Border>
-                            <ToggleButton Style="{StaticResource IconToggle}" Width="64" Margin="6,0,0,0"
-                                          FontFamily="{DynamicResource UiFont}" FontSize="12" Content="Chords"
-                                          ToolTip="Search chord names instead of lyrics" IsChecked="{Binding Find.SearchChords}" />
-                            <Button Content="Next" Style="{StaticResource FlatButton}" Margin="6,0,0,0" ToolTip="Find next (Enter)"
-                                    Command="{Binding Find.FindNextCommand}"
-                                    Visibility="{Binding Find.SearchChords, Converter={StaticResource BoolToCollapsed}}" />
-                            <Button Content="Replace all" Style="{StaticResource FlatButton}" Command="{Binding Find.ReplaceAllCommand}" />
-                            <TextBlock Text="{Binding Find.Summary}" Margin="10,0,0,0" VerticalAlignment="Center"
-                                       Foreground="{DynamicResource MutedForeground}" />
-                            <Button Content="✕" Style="{StaticResource FlatButton}" Padding="6,2" Margin="10,0,0,0" FontSize="10"
-                                    Foreground="{DynamicResource MutedForeground}" ToolTip="Close (Esc)" Command="{Binding Find.CloseCommand}" />
-                        </StackPanel>
-                    </Border>
-
-                    <views:ChordPalette DockPanel.Dock="Right" DataContext="{Binding Palette}" />
-
-                    <ScrollViewer x:Name="EditorScroll" VerticalScrollBarVisibility="Auto">
-                        <StackPanel Margin="40,24,40,40">
-                            <TextBox x:Name="TitleBox" Text="{Binding Song.Title, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource HintTextBox}" Tag="Song title"
-                                     FontSize="26" FontWeight="SemiBold" />
-                            <TextBox Text="{Binding Song.Artist, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource HintTextBox}" Tag="Artist"
-                                     FontSize="16" Foreground="{DynamicResource MutedForeground}" Margin="0,2,0,6" />
-
-                            <ItemsControl ItemsSource="{Binding Song.Sections}" Margin="0,12,0,0">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <StackPanel Margin="0,16,0,0">
-                                            <StackPanel Orientation="Horizontal" TextElement.FontFamily="{DynamicResource SongFont}"
-                                                        TextElement.FontSize="16">
-                                                <TextBlock Text="[" />
-                                                <TextBox Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}"
-                                                         Style="{StaticResource BareTextBox}"
-                                                         FontFamily="{DynamicResource SongFont}" FontSize="16" MinWidth="20" Margin="-2,0" />
-                                                <TextBlock Text="]" />
-                                                <TextBlock Text="(repeat)" Margin="8,0,0,0" FontStyle="Italic"
-                                                           FontFamily="{DynamicResource UiFont}" FontSize="13" VerticalAlignment="Center"
-                                                           Foreground="{DynamicResource MutedForeground}"
-                                                           Visibility="{Binding IsRepeat, Converter={StaticResource BoolToVisible}}" />
-                                                <StackPanel Orientation="Horizontal" Margin="12,0,0,0"
-                                                            TextElement.FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
-                                                            TextElement.FontSize="11">
-                                                    <Button Content="&#xE70E;" Style="{StaticResource FlatButton}" Padding="6,2"
-                                                            Foreground="{DynamicResource MutedForeground}" ToolTip="Move up"
-                                                            Command="{Binding DataContext.MoveSectionUpCommand, ElementName=EditorPanel}"
-                                                            CommandParameter="{Binding}" />
-                                                    <Button Content="&#xE70D;" Style="{StaticResource FlatButton}" Padding="6,2"
-                                                            Foreground="{DynamicResource MutedForeground}" ToolTip="Move down"
-                                                            Command="{Binding DataContext.MoveSectionDownCommand, ElementName=EditorPanel}"
-                                                            CommandParameter="{Binding}" />
-                                                    <Button Content="&#xE8C8;" Style="{StaticResource FlatButton}" Padding="6,2"
-                                                            Foreground="{DynamicResource MutedForeground}" ToolTip="Duplicate section"
-                                                            Command="{Binding DataContext.DuplicateSectionCommand, ElementName=EditorPanel}"
-                                                            CommandParameter="{Binding}" />
-                                                    <Button Content="&#xE8EE;" Style="{StaticResource FlatButton}" Padding="6,2"
-                                                            Foreground="{DynamicResource MutedForeground}" ToolTip="Repeat at the end of the song"
-                                                            Command="{Binding DataContext.RepeatSectionCommand, ElementName=EditorPanel}"
-                                                            CommandParameter="{Binding}"
-                                                            Visibility="{Binding IsRepeat, Converter={StaticResource BoolToCollapsed}}" />
-                                                </StackPanel>
-                                                <Button Content="✕" Style="{StaticResource FlatButton}" Padding="6,0" Margin="12,0,0,0"
-                                                        FontSize="11" Foreground="{DynamicResource MutedForeground}" ToolTip="Delete section"
-                                                        Command="{Binding DataContext.DeleteSectionCommand, ElementName=EditorPanel}"
-                                                        CommandParameter="{Binding}" />
-                                            </StackPanel>
-                                            <!-- A repeat has no lines of its own -->
-                                            <ItemsControl ItemsSource="{Binding Lines}"
-                                                          Visibility="{Binding IsRepeat, Converter={StaticResource BoolToCollapsed}}">
-                                                <ItemsControl.ItemTemplate>
-                                                    <DataTemplate>
-                                                        <controls:SongLineControl NumeralKey="{Binding DataContext.NumeralKey, ElementName=EditorPanel}"
-                                                                                  HighlightText="{Binding DataContext.Find.HighlightText, ElementName=EditorPanel}"
-                                                                                  CurrentMatch="{Binding DataContext.Find.CurrentMatch, ElementName=EditorPanel}"
-                                                                                  SplitRequested="Line_SplitRequested"
-                                                                                  MergeRequested="Line_MergeRequested"
-                                                                                  MoveFocusRequested="Line_MoveFocusRequested"
-                                                                                  PasteLinesRequested="Line_PasteLinesRequested" />
-                                                    </DataTemplate>
-                                                </ItemsControl.ItemTemplate>
-                                            </ItemsControl>
-                                            <Button Content="+ Line" Style="{StaticResource FlatButton}" HorizontalAlignment="Left"
-                                                    Padding="6,1" Margin="0,4,0,0" FontSize="12"
-                                                    Foreground="{DynamicResource MutedForeground}"
-                                                    Command="{Binding DataContext.AddLineCommand, ElementName=EditorPanel}"
-                                                    CommandParameter="{Binding}"
-                                                    Visibility="{Binding IsRepeat, Converter={StaticResource BoolToCollapsed}}" />
+                                    <Button Style="{StaticResource FlatButton}" ToolTip="Save (Ctrl+S)" AutomationProperties.Name="Save"
+                                            Command="{Binding DataContext.SaveCommand, RelativeSource={RelativeSource AncestorType=Window}}">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="&#xE74E;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14"
+                                                       VerticalAlignment="Center" Margin="0,0,6,0" />
+                                            <TextBlock Text="Save" VerticalAlignment="Center" />
                                         </StackPanel>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                        </StackPanel>
-                    </ScrollViewer>
+                                    </Button>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <Button Content="+ Section" Style="{StaticResource FlatButton}" Command="{Binding AddSectionCommand}" />
+                                    <TextBlock Text="Transpose" Margin="24,0,6,0" VerticalAlignment="Center"
+                                               Foreground="{DynamicResource MutedForeground}" />
+                                    <Button Content="−" Style="{StaticResource FlatButton}" Command="{Binding TransposeDownCommand}" ToolTip="Down one semitone" />
+                                    <Button Content="+" Style="{StaticResource FlatButton}" Command="{Binding TransposeUpCommand}" ToolTip="Up one semitone" />
+                                    <!-- Transposing updates the key -->
+                                    <TextBlock Text="Key" Margin="20,0,6,0" VerticalAlignment="Center"
+                                               Foreground="{DynamicResource MutedForeground}" />
+                                    <ComboBox Style="{StaticResource DarkComboBox}" ItemsSource="{x:Static music:MusicKeys.All}"
+                                              SelectedItem="{Binding KeyChoice}" FontWeight="SemiBold" MinHeight="26"
+                                              MaxDropDownHeight="540" ToolTip="Key">
+                                        <ComboBox.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <UniformGrid Columns="2" />
+                                            </ItemsPanelTemplate>
+                                        </ComboBox.ItemsPanel>
+                                    </ComboBox>
+                                    <ToggleButton Style="{StaticResource IconToggle}" Width="56" Margin="12,0,0,0"
+                                                  FontFamily="{DynamicResource UiFont}" FontSize="12" Content="I IV V"
+                                                  ToolTip="Show chords as Roman numerals in the song's key"
+                                                  IsChecked="{Binding ShowNumerals}" />
+                                    <!-- Key guessed from the chords, offered when the song isn't in it -->
+                                    <Button Style="{StaticResource FlatButton}" Margin="6,0,0,0" Padding="8,4"
+                                            ToolTip="Set the song's key (chords stay as they are)"
+                                            Command="{Binding Palette.UseDetectedKeyCommand}"
+                                            Visibility="{Binding Palette.ShowKeySuggestion, Converter={StaticResource BoolToVisible}}">
+                                        <TextBlock>
+                                            <Run Text="Looks like" Foreground="{DynamicResource MutedForeground}" />
+                                            <Run Text="{Binding Palette.DetectedKey, Mode=OneWay}" FontWeight="SemiBold" />
+                                            <Run Text="· Use" Foreground="{DynamicResource AccentBrush}" />
+                                        </TextBlock>
+                                    </Button>
+                                </StackPanel>
+                            </DockPanel>
+                        </Border>
+
+                        <!-- Find and replace, opened with Ctrl+F -->
+                        <Border x:Name="FindBar" DockPanel.Dock="Top" Background="{DynamicResource ToolbarBackground}"
+                                BorderBrush="{DynamicResource CardBorder}" BorderThickness="0,1,0,0" Padding="8,6"
+                                Visibility="{Binding Find.IsOpen, Converter={StaticResource BoolToVisible}}">
+                            <Border.InputBindings>
+                                <KeyBinding Key="Escape" Command="{Binding Find.CloseCommand}" />
+                            </Border.InputBindings>
+                            <StackPanel Orientation="Horizontal">
+                                <Border Background="{DynamicResource CardBackground}" BorderBrush="{DynamicResource KeyCapBorder}" BorderThickness="1"
+                                        CornerRadius="4" Padding="6,3" Width="180">
+                                    <TextBox x:Name="FindBox" Style="{StaticResource HintTextBox}" Tag="Find" IsUndoEnabled="True"
+                                             Text="{Binding Find.FindText, UpdateSourceTrigger=PropertyChanged}">
+                                        <TextBox.InputBindings>
+                                            <KeyBinding Key="Enter" Command="{Binding Find.FindNextCommand}" />
+                                        </TextBox.InputBindings>
+                                    </TextBox>
+                                </Border>
+                                <Border Background="{DynamicResource CardBackground}" BorderBrush="{DynamicResource KeyCapBorder}" BorderThickness="1"
+                                        CornerRadius="4" Padding="6,3" Width="180" Margin="6,0,0,0">
+                                    <TextBox Style="{StaticResource HintTextBox}" Tag="Replace with" IsUndoEnabled="True"
+                                             Text="{Binding Find.ReplaceText, UpdateSourceTrigger=PropertyChanged}" />
+                                </Border>
+                                <ToggleButton Style="{StaticResource IconToggle}" Width="64" Margin="6,0,0,0"
+                                              FontFamily="{DynamicResource UiFont}" FontSize="12" Content="Chords"
+                                              ToolTip="Search chord names instead of lyrics" IsChecked="{Binding Find.SearchChords}" />
+                                <Button Content="Next" Style="{StaticResource FlatButton}" Margin="6,0,0,0" ToolTip="Find next (Enter)"
+                                        Command="{Binding Find.FindNextCommand}"
+                                        Visibility="{Binding Find.SearchChords, Converter={StaticResource BoolToCollapsed}}" />
+                                <Button Content="Replace all" Style="{StaticResource FlatButton}" Command="{Binding Find.ReplaceAllCommand}" />
+                                <TextBlock Text="{Binding Find.Summary}" Margin="10,0,0,0" VerticalAlignment="Center"
+                                           Foreground="{DynamicResource MutedForeground}" />
+                                <Button Content="✕" Style="{StaticResource FlatButton}" Padding="6,2" Margin="10,0,0,0" FontSize="10"
+                                        Foreground="{DynamicResource MutedForeground}" ToolTip="Close (Esc)" Command="{Binding Find.CloseCommand}" />
+                            </StackPanel>
+                        </Border>
+
+                        <views:ChordPalette DockPanel.Dock="Right" DataContext="{Binding Palette}" />
+
+                        <ScrollViewer x:Name="EditorScroll" VerticalScrollBarVisibility="Auto">
+                            <StackPanel Margin="40,24,40,40">
+                                <TextBox x:Name="TitleBox" Text="{Binding Song.Title, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource HintTextBox}" Tag="Song title"
+                                         FontSize="26" FontWeight="SemiBold" />
+                                <TextBox Text="{Binding Song.Artist, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource HintTextBox}" Tag="Artist"
+                                         FontSize="16" Foreground="{DynamicResource MutedForeground}" Margin="0,2,0,6" />
+
+                                <ItemsControl ItemsSource="{Binding Song.Sections}" Margin="0,12,0,0">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Margin="0,16,0,0">
+                                                <StackPanel Orientation="Horizontal" TextElement.FontFamily="{DynamicResource SongFont}"
+                                                            TextElement.FontSize="16">
+                                                    <TextBlock Text="[" />
+                                                    <TextBox Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}"
+                                                             Style="{StaticResource BareTextBox}"
+                                                             FontFamily="{DynamicResource SongFont}" FontSize="16" MinWidth="20" Margin="-2,0" />
+                                                    <TextBlock Text="]" />
+                                                    <TextBlock Text="(repeat)" Margin="8,0,0,0" FontStyle="Italic"
+                                                               FontFamily="{DynamicResource UiFont}" FontSize="13" VerticalAlignment="Center"
+                                                               Foreground="{DynamicResource MutedForeground}"
+                                                               Visibility="{Binding IsRepeat, Converter={StaticResource BoolToVisible}}" />
+                                                    <StackPanel Orientation="Horizontal" Margin="12,0,0,0"
+                                                                TextElement.FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                                                TextElement.FontSize="11">
+                                                        <Button Content="&#xE70E;" Style="{StaticResource FlatButton}" Padding="6,2"
+                                                                Foreground="{DynamicResource MutedForeground}" ToolTip="Move up"
+                                                                Command="{Binding DataContext.MoveSectionUpCommand, ElementName=EditorPanel}"
+                                                                CommandParameter="{Binding}" />
+                                                        <Button Content="&#xE70D;" Style="{StaticResource FlatButton}" Padding="6,2"
+                                                                Foreground="{DynamicResource MutedForeground}" ToolTip="Move down"
+                                                                Command="{Binding DataContext.MoveSectionDownCommand, ElementName=EditorPanel}"
+                                                                CommandParameter="{Binding}" />
+                                                        <Button Content="&#xE8C8;" Style="{StaticResource FlatButton}" Padding="6,2"
+                                                                Foreground="{DynamicResource MutedForeground}" ToolTip="Duplicate section"
+                                                                Command="{Binding DataContext.DuplicateSectionCommand, ElementName=EditorPanel}"
+                                                                CommandParameter="{Binding}" />
+                                                        <Button Content="&#xE8EE;" Style="{StaticResource FlatButton}" Padding="6,2"
+                                                                Foreground="{DynamicResource MutedForeground}" ToolTip="Repeat at the end of the song"
+                                                                Command="{Binding DataContext.RepeatSectionCommand, ElementName=EditorPanel}"
+                                                                CommandParameter="{Binding}"
+                                                                Visibility="{Binding IsRepeat, Converter={StaticResource BoolToCollapsed}}" />
+                                                    </StackPanel>
+                                                    <Button Content="✕" Style="{StaticResource FlatButton}" Padding="6,0" Margin="12,0,0,0"
+                                                            FontSize="11" Foreground="{DynamicResource MutedForeground}" ToolTip="Delete section"
+                                                            Command="{Binding DataContext.DeleteSectionCommand, ElementName=EditorPanel}"
+                                                            CommandParameter="{Binding}" />
+                                                </StackPanel>
+                                                <!-- A repeat has no lines of its own -->
+                                                <ItemsControl ItemsSource="{Binding Lines}"
+                                                              Visibility="{Binding IsRepeat, Converter={StaticResource BoolToCollapsed}}">
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <controls:SongLineControl NumeralKey="{Binding DataContext.NumeralKey, ElementName=EditorPanel}"
+                                                                                      HighlightText="{Binding DataContext.Find.HighlightText, ElementName=EditorPanel}"
+                                                                                      CurrentMatch="{Binding DataContext.Find.CurrentMatch, ElementName=EditorPanel}"
+                                                                                      SplitRequested="Line_SplitRequested"
+                                                                                      MergeRequested="Line_MergeRequested"
+                                                                                      MoveFocusRequested="Line_MoveFocusRequested"
+                                                                                      PasteLinesRequested="Line_PasteLinesRequested" />
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                                <Button Content="+ Line" Style="{StaticResource FlatButton}" HorizontalAlignment="Left"
+                                                        Padding="6,1" Margin="0,4,0,0" FontSize="12"
+                                                        Foreground="{DynamicResource MutedForeground}"
+                                                        Command="{Binding DataContext.AddLineCommand, ElementName=EditorPanel}"
+                                                        CommandParameter="{Binding}"
+                                                        Visibility="{Binding IsRepeat, Converter={StaticResource BoolToCollapsed}}" />
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </ScrollViewer>
+                    </DockPanel>
                 </DockPanel>
-            </DockPanel>
+            </Grid>
         </Grid>
     </DockPanel>
 </Window>

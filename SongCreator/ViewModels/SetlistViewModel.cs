@@ -10,8 +10,9 @@ using SongCreator.Services;
 namespace SongCreator.ViewModels
 {
     /// <summary>
-    /// The setlist window: library songs in playing order, each in the key chosen for the gig, saved in the
-    /// library and exported as one PDF. Older .setlist files can be imported.
+    /// The Setlists tab: the library's setlists, and the selected one's songs in playing order, each in the key chosen
+    /// for the gig. Every change is saved in the library right away. A setlist only refers to its songs: they are
+    /// edited in the song editor, and the same song can be in several setlists. Older .setlist files can be imported.
     /// </summary>
     public class SetlistViewModel : ObservableObject
     {
@@ -19,77 +20,94 @@ namespace SongCreator.ViewModels
 
         private readonly IDialogService _dialogs;
         private readonly SongLibrary _library;
-        private string _name = NewSetlistName;
-        private long? _setlistId;
-        private bool _isDirty;
+        private LibrarySetlist? _selectedSetlist;
+        private string _name = "";
+        // Set while a setlist is being shown, so filling the list doesn't save it again.
+        private bool _loading;
+        // Set while the setlist list is rebuilt, when the list view briefly clears its selection.
+        private bool _updatingSetlists;
         private bool _includeTableOfContents = true;
         private bool _romanNumerals;
         private bool _openWhenDone = true;
 
-        public SetlistViewModel(IDialogService dialogs, SongLibrary library)
+        public SetlistViewModel(IDialogService dialogs, LibraryViewModel library)
         {
             _dialogs = dialogs;
-            _library = library;
+            _library = library.Library;
+            Library = library;
             Items.CollectionChanged += (_, e) =>
             {
                 foreach (SetlistItemViewModel item in e.NewItems ?? Array.Empty<object>())
                     item.PropertyChanged += (_, change) =>
                     {
                         if (change.PropertyName == nameof(SetlistItemViewModel.Key))
-                            IsDirty = true;
+                            Save();
                     };
                 for (int i = 0; i < Items.Count; i++)
                     Items[i].Position = i + 1;
                 OnPropertyChanged(nameof(IsEmpty));
-                IsDirty = true;
+                Save();
             };
 
-            AddSongsCommand = new RelayCommand(() => AddSongs(_dialogs.PickLibrarySongs(_library)));
-            MoveUpCommand = new RelayCommand<SetlistItemViewModel>(item => Move(item, -1));
-            MoveDownCommand = new RelayCommand<SetlistItemViewModel>(item => Move(item, 1));
+            // A click on an empty part of a list sends no song.
+            AddSongCommand = new RelayCommand<SongSummary?>(song => { if (song != null) AddSong(song, Items.Count); });
+            MoveUpCommand = new RelayCommand<SetlistItemViewModel>(item => Move(Items.IndexOf(item), Items.IndexOf(item) - 1));
+            MoveDownCommand = new RelayCommand<SetlistItemViewModel>(item => Move(Items.IndexOf(item), Items.IndexOf(item) + 1));
             RemoveCommand = new RelayCommand<SetlistItemViewModel>(item => Items.Remove(item));
+            OpenSongCommand = new RelayCommand<SetlistItemViewModel>(item => OpenSongRequested?.Invoke(this, item.SongId));
             NewCommand = new RelayCommand(New);
-            OpenCommand = new RelayCommand<LibrarySetlist>(setlist => Open(setlist.Id));
-            SaveCommand = new RelayCommand(() => Save());
             DeleteCommand = new RelayCommand(Delete);
             ImportCommand = new RelayCommand(Import);
             ExportCommand = new RelayCommand(Export);
             RefreshSetlists();
-            IsDirty = false;
         }
 
-        /// <summary>The setlists saved in the library, to pick one to open.</summary>
+        /// <summary>The song library, to add songs from.</summary>
+        public LibraryViewModel Library { get; }
+
+        /// <summary>The setlists saved in the library, by name.</summary>
         public ObservableCollection<LibrarySetlist> Setlists { get; } = new();
+
+        /// <summary>The setlist being edited; its songs are in <see cref="Items"/>.</summary>
+        public LibrarySetlist? SelectedSetlist
+        {
+            get => _selectedSetlist;
+            set
+            {
+                if (_updatingSetlists)
+                    return;
+                long? previousId = _selectedSetlist?.Id;
+                _selectedSetlist = value;
+                OnPropertyChanged(nameof(SelectedSetlist));
+                OnPropertyChanged(nameof(HasSelection));
+                if (value?.Id != previousId)
+                    Load();
+            }
+        }
+
+        public bool HasSelection => SelectedSetlist != null;
+
+        public bool HasSetlists => Setlists.Count > 0;
 
         public ObservableCollection<SetlistItemViewModel> Items { get; } = new();
 
+        /// <summary>The selected setlist's name. Renaming saves it; a blank name is ignored.</summary>
         public string Name
         {
             get => _name;
             set
             {
-                if (SetProperty(ref _name, value))
-                    IsDirty = true;
+                string name = value.Trim();
+                if (name.Length == 0 || SelectedSetlist == null)
+                {
+                    OnPropertyChanged(nameof(Name));   // puts the old name back in the box
+                    return;
+                }
+                if (!SetProperty(ref _name, name) || _loading)
+                    return;
+                Save();
+                RefreshSetlists();
             }
-        }
-
-        /// <summary>The library setlist this is, or null if it hasn't been saved yet.</summary>
-        public long? SetlistId
-        {
-            get => _setlistId;
-            private set
-            {
-                if (SetProperty(ref _setlistId, value))
-                    OnPropertyChanged(nameof(IsSaved));
-            }
-        }
-
-        public bool IsSaved => SetlistId != null;
-
-        public bool IsDirty
-        {
-            get => _isDirty;
-            private set => SetProperty(ref _isDirty, value);
         }
 
         public bool IsEmpty => Items.Count == 0;
@@ -112,95 +130,87 @@ namespace SongCreator.ViewModels
             set => SetProperty(ref _openWhenDone, value);
         }
 
-        public ICommand AddSongsCommand { get; }
+        public ICommand AddSongCommand { get; }
         public ICommand MoveUpCommand { get; }
         public ICommand MoveDownCommand { get; }
         public ICommand RemoveCommand { get; }
+        public ICommand OpenSongCommand { get; }
         public ICommand NewCommand { get; }
-        public ICommand OpenCommand { get; }
-        public ICommand SaveCommand { get; }
         public ICommand DeleteCommand { get; }
         public ICommand ImportCommand { get; }
         public ICommand ExportCommand { get; }
 
-        public void AddSongs(IEnumerable<SongSummary> songs)
+        /// <summary>Asks the window to open a library song in the song editor, with its id.</summary>
+        public event EventHandler<long>? OpenSongRequested;
+
+        /// <summary>Asks the view to focus the setlist's name, e.g. after creating one.</summary>
+        public event EventHandler? FocusNameRequested;
+
+        /// <summary>
+        /// Reloads the setlists and the selected one's songs from the library, to show songs edited, renamed or deleted
+        /// since.
+        /// </summary>
+        public void Refresh()
         {
-            foreach (var song in songs)
-                if (LoadSong(song.Id, "") is { } item)
-                    Items.Add(item);
+            RefreshSetlists();
+            Load();
         }
 
-        /// <summary>Starts an empty setlist (after asking to save unsaved changes).</summary>
+        /// <summary>Adds a library song at <paramref name="index"/> in the selected setlist, in its own key.</summary>
+        public void AddSong(SongSummary song, int index)
+        {
+            if (SelectedSetlist != null && LoadSong(song.Id, "") is { } item)
+                Items.Insert(Math.Clamp(index, 0, Items.Count), item);
+        }
+
+        /// <summary>Moves a song to another place in the setlist; out-of-range places are ignored.</summary>
+        public void Move(int from, int to)
+        {
+            if (from >= 0 && from < Items.Count && to >= 0 && to < Items.Count && from != to)
+                Items.Move(from, to);
+        }
+
+        /// <summary>Creates an empty setlist in the library and selects it.</summary>
         public void New()
         {
-            if (!ConfirmClose())
-                return;
-            Show(null, NewSetlistName, []);
-        }
-
-        public void Open(long id)
-        {
-            if (!ConfirmClose())
-                return;
-
-            LibrarySetlist? setlist;
+            long id;
             try
             {
-                setlist = _library.LoadSetlist(id);
+                id = _library.SaveSetlist(null, NewSetlistName, []);
             }
             catch (SqliteException ex)
             {
-                _dialogs.ShowError("Open setlist", $"Couldn't read the setlist from the library:\n{ex.Message}");
+                _dialogs.ShowError("New setlist", $"Couldn't create the setlist in the library:\n{ex.Message}");
                 return;
             }
-            if (setlist == null)
-            {
-                RefreshSetlists();
-                return;
-            }
-            Show(setlist.Id, setlist.Name, setlist.Songs.Select(entry => LoadSong(entry.SongId, entry.Key)).OfType<SetlistItemViewModel>());
-        }
-
-        /// <summary>Saves the setlist in the library. Returns false if it failed.</summary>
-        public bool Save()
-        {
-            try
-            {
-                SetlistId = _library.SaveSetlist(SetlistId, Name, Items.Select(i => new LibrarySetlistEntry(i.SongId, i.Key)).ToList());
-            }
-            catch (SqliteException ex)
-            {
-                _dialogs.ShowError("Save setlist", $"Couldn't save the setlist in the library:\n{ex.Message}");
-                return false;
-            }
-            IsDirty = false;
             RefreshSetlists();
-            return true;
+            SelectedSetlist = Setlists.FirstOrDefault(s => s.Id == id);
+            FocusNameRequested?.Invoke(this, EventArgs.Empty);
         }
 
-        /// <summary>Deletes the setlist from the library (its songs stay) and starts an empty one.</summary>
+        /// <summary>Deletes the selected setlist from the library (its songs stay) and selects the next one.</summary>
         public void Delete()
         {
-            if (SetlistId is not long id || !_dialogs.Confirm("Delete setlist", $"Delete the setlist “{Name}”?", "Its songs stay in the library.", "Delete"))
+            if (SelectedSetlist is not { } setlist ||
+                !_dialogs.Confirm("Delete setlist", $"Delete the setlist “{Name}”?", "Its songs stay in the library.", "Delete"))
                 return;
             try
             {
-                _library.DeleteSetlist(id);
+                _library.DeleteSetlist(setlist.Id);
             }
             catch (SqliteException ex)
             {
                 _dialogs.ShowError("Delete setlist", $"Couldn't delete the setlist:\n{ex.Message}");
                 return;
             }
-            Show(null, NewSetlistName, []);
+            int index = Setlists.IndexOf(setlist);
             RefreshSetlists();
+            SelectedSetlist = Setlists.Count > 0 ? Setlists[Math.Clamp(index, 0, Setlists.Count - 1)] : null;
         }
 
-        /// <summary>Imports a .setlist file: its songs are added to the library and the setlist is saved there.</summary>
+        /// <summary>Imports a .setlist file: its songs are added to the library, and the setlist is saved there.</summary>
         public void Import()
         {
-            if (!ConfirmClose())
-                return;
             string? path = _dialogs.PickSetlistToImport();
             if (path != null)
                 ImportFile(path);
@@ -232,18 +242,22 @@ namespace SongCreator.ViewModels
                 }
             }
 
-            IReadOnlyList<long> ids;
+            long id;
             try
             {
-                ids = _library.AddSongs(songs.Select(s => s.Song));
+                var ids = _library.AddSongs(songs.Select(s => s.Song));
+                // The key is checked against the song's keys when the setlist is shown, like any saved key.
+                id = _library.SaveSetlist(null, setlist.Name.Trim().Length > 0 ? setlist.Name.Trim() : NewSetlistName,
+                    songs.Select((s, i) => new LibrarySetlistEntry(ids[i], s.Key)).ToList());
             }
             catch (SqliteException ex)
             {
-                _dialogs.ShowError("Import setlist", $"Couldn't add the songs to the library:\n{ex.Message}");
+                _dialogs.ShowError("Import setlist", $"Couldn't add the setlist to the library:\n{ex.Message}");
                 return;
             }
-            Show(null, setlist.Name, songs.Select((s, i) => new SetlistItemViewModel(s.Song, ids[i], s.Key)));
-            Save();
+            Library.Refresh();
+            RefreshSetlists();
+            SelectedSetlist = Setlists.FirstOrDefault(s => s.Id == id);
         }
 
         public void Export()
@@ -269,17 +283,46 @@ namespace SongCreator.ViewModels
                 _dialogs.OpenWithDefaultApp(path);
         }
 
-        /// <summary>Asks to save unsaved changes. Returns false if the user cancelled.</summary>
-        public bool ConfirmClose()
+        /// <summary>Shows the selected setlist's name and songs, as saved in the library.</summary>
+        private void Load()
         {
-            if (!IsDirty)
-                return true;
-            return _dialogs.AskToSaveSetlist(Name) switch
+            LibrarySetlist? setlist = null;
+            if (SelectedSetlist is { } selected)
             {
-                SaveChoice.Save => Save(),
-                SaveChoice.DontSave => true,
-                _ => false,
-            };
+                try
+                {
+                    setlist = _library.LoadSetlist(selected.Id);
+                }
+                catch (SqliteException ex)
+                {
+                    _dialogs.ShowError("Open setlist", $"Couldn't read the setlist from the library:\n{ex.Message}");
+                }
+            }
+
+            _loading = true;
+            Items.Clear();
+            if (setlist != null)
+            {
+                foreach (var item in setlist.Songs.Select(entry => LoadSong(entry.SongId, entry.Key)).OfType<SetlistItemViewModel>())
+                    Items.Add(item);
+            }
+            _name = setlist?.Name ?? "";
+            OnPropertyChanged(nameof(Name));
+            _loading = false;
+        }
+
+        private void Save()
+        {
+            if (_loading || SelectedSetlist is not { } setlist)
+                return;
+            try
+            {
+                _library.SaveSetlist(setlist.Id, Name, Items.Select(i => new LibrarySetlistEntry(i.SongId, i.Key)).ToList());
+            }
+            catch (SqliteException ex)
+            {
+                _dialogs.ShowError("Save setlist", $"Couldn't save the setlist in the library:\n{ex.Message}");
+            }
         }
 
         private SetlistItemViewModel? LoadSong(long songId, string key)
@@ -295,36 +338,41 @@ namespace SongCreator.ViewModels
             }
         }
 
-        private void Show(long? id, string name, IEnumerable<SetlistItemViewModel> items)
-        {
-            Items.Clear();
-            foreach (var item in items)
-                Items.Add(item);
-            Name = name;
-            SetlistId = id;
-            IsDirty = false;
-        }
-
+        /// <summary>Reloads the list of setlists, keeping the same one selected (if it is still there).</summary>
         private void RefreshSetlists()
         {
-            Setlists.Clear();
+            IReadOnlyList<LibrarySetlist> setlists;
             try
             {
-                foreach (var setlist in _library.ListSetlists())
-                    Setlists.Add(setlist);
+                setlists = _library.ListSetlists();
             }
             catch (SqliteException ex)
             {
                 _dialogs.ShowError("Setlists", $"Couldn't read the setlists from the library:\n{ex.Message}");
+                setlists = [];
             }
-        }
 
-        private void Move(SetlistItemViewModel item, int offset)
-        {
-            int from = Items.IndexOf(item);
-            int to = from + offset;
-            if (to >= 0 && to < Items.Count)
-                Items.Move(from, to);
+            long? selectedId = _selectedSetlist?.Id;
+            _updatingSetlists = true;
+            // Only changed entries are replaced: a rename is saved when the name box loses focus, which can be in the
+            // middle of a click on another setlist, and that click must still select it.
+            for (int i = 0; i < setlists.Count; i++)
+            {
+                if (i == Setlists.Count)
+                    Setlists.Add(setlists[i]);
+                else if (Setlists[i].Id != setlists[i].Id || Setlists[i].Name != setlists[i].Name)
+                    Setlists[i] = setlists[i];
+            }
+            while (Setlists.Count > setlists.Count)
+                Setlists.RemoveAt(Setlists.Count - 1);
+            _updatingSetlists = false;
+            OnPropertyChanged(nameof(HasSetlists));
+
+            _selectedSetlist = Setlists.FirstOrDefault(s => s.Id == selectedId);
+            OnPropertyChanged(nameof(SelectedSetlist));
+            OnPropertyChanged(nameof(HasSelection));
+            if (_selectedSetlist == null && selectedId != null)
+                Load();   // it was deleted: clear its songs
         }
     }
 }

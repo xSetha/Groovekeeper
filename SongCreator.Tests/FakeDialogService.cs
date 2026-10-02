@@ -22,7 +22,6 @@ namespace SongCreator.Tests
         public List<string> Confirmations { get; } = [];
         public List<string> Opened { get; } = [];
         public ExportPdfViewModel? ShownExport { get; private set; }
-        public SetlistViewModel? ShownSetlist { get; private set; }
 
         public IReadOnlyList<string> PickSongsToOpen() => FilesToOpen;
 
@@ -37,8 +36,6 @@ namespace SongCreator.Tests
             AskedToSave.Add(songTitle);
             return SaveAnswer;
         }
-
-        public SaveChoice AskToSaveSetlist(string name) => AskToSave(name);
 
         public string? PickPdfSavePath(string suggestedFileName) => PdfPath;
 
@@ -57,8 +54,6 @@ namespace SongCreator.Tests
             Confirmations.Add($"{question} {detail}");
             return ConfirmAnswer;
         }
-
-        public void ShowSetlist(SetlistViewModel viewModel) => ShownSetlist = viewModel;
 
         public void OpenWithDefaultApp(string path) => Opened.Add(path);
 

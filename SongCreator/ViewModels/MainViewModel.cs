@@ -18,6 +18,7 @@ namespace SongCreator.ViewModels
         private readonly SongLibrary _library;
         private SongDocumentViewModel? _activeDocument;
         private bool _isLibraryPanelOpen = true;
+        private bool _isSetlistsViewActive;
 
         public MainViewModel(IDialogService dialogs, SongLibrary library)
         {
@@ -27,19 +28,23 @@ namespace SongCreator.ViewModels
             Library.OpenRequested += (_, song) => OpenFromLibrary(song.Id);
             Library.ImportFromWebRequested += (_, _) => ImportFromWeb();
             Library.SongDeleted += (_, id) => Documents.FirstOrDefault(d => d.LibraryId == id)?.DetachFromLibrary();
-            Documents.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasDocuments));
+            Documents.CollectionChanged += (_, _) =>
+            {
+                OnPropertyChanged(nameof(HasDocuments));
+                OnPropertyChanged(nameof(IsEditingSong));
+            };
+            Setlists = new SetlistViewModel(dialogs, Library);
+            Setlists.OpenSongRequested += (_, id) => OpenFromLibrary(id);
 
             NewSongCommand = new RelayCommand(NewSong);
             OpenSongCommand = new RelayCommand(() => Open(_dialogs.PickSongsToOpen()));
-            SaveCommand = new RelayCommand(() => { if (ActiveDocument != null) Save(ActiveDocument); });
-            SaveAsCommand = new RelayCommand(() => { if (ActiveDocument != null) SaveAs(ActiveDocument); });
+            // The song shortcuts do nothing while the Setlists tab hides the editor.
+            SaveCommand = new RelayCommand(() => { if (IsEditingSong) Save(ActiveDocument!); });
+            SaveAsCommand = new RelayCommand(() => { if (IsEditingSong) SaveAs(ActiveDocument!); });
             CloseSongCommand = new RelayCommand<SongDocumentViewModel>(document => Close(document));
             ExportPdfCommand = new RelayCommand(() => _dialogs.ShowExportPdf(new ExportPdfViewModel(Documents, _dialogs, _library)));
-            SetlistCommand = new RelayCommand(() =>
-            {
-                _dialogs.ShowSetlist(new SetlistViewModel(_dialogs, _library));
-                Library.Refresh();   // importing a setlist adds songs
-            });
+            ShowSongsCommand = new RelayCommand(() => IsSetlistsViewActive = false);
+            ShowSetlistsCommand = new RelayCommand(() => IsSetlistsViewActive = true);
             BackupLibraryCommand = new RelayCommand(BackupLibrary);
             ImportFromWebCommand = new RelayCommand(ImportFromWeb);
             ToggleLibraryPanelCommand = new RelayCommand(() => IsLibraryPanelOpen = !IsLibraryPanelOpen);
@@ -57,6 +62,27 @@ namespace SongCreator.ViewModels
 
         public LibraryViewModel Library { get; }
 
+        /// <summary>The Setlists tab.</summary>
+        public SetlistViewModel Setlists { get; }
+
+        /// <summary>Whether the Setlists tab is shown instead of the songs (the editor or the start page).</summary>
+        public bool IsSetlistsViewActive
+        {
+            get => _isSetlistsViewActive;
+            set
+            {
+                if (!SetProperty(ref _isSetlistsViewActive, value))
+                    return;
+                OnPropertyChanged(nameof(IsEditingSong));
+                // Songs may have been edited, renamed or deleted on the Songs tab.
+                if (value)
+                    Setlists.Refresh();
+            }
+        }
+
+        /// <summary>Whether the song editor is shown, with a song in it.</summary>
+        public bool IsEditingSong => HasDocuments && !IsSetlistsViewActive;
+
         /// <summary>Whether the library panel is shown next to the editor.</summary>
         public bool IsLibraryPanelOpen
         {
@@ -73,7 +99,8 @@ namespace SongCreator.ViewModels
         public ICommand SaveAsCommand { get; }
         public ICommand CloseSongCommand { get; }
         public ICommand ExportPdfCommand { get; }
-        public ICommand SetlistCommand { get; }
+        public ICommand ShowSongsCommand { get; }
+        public ICommand ShowSetlistsCommand { get; }
         public ICommand BackupLibraryCommand { get; }
         public ICommand ToggleLibraryPanelCommand { get; }
         public ICommand ImportFromWebCommand { get; }
@@ -101,7 +128,7 @@ namespace SongCreator.ViewModels
                 var open = Documents.FirstOrDefault(d => string.Equals(d.FilePath, path, StringComparison.OrdinalIgnoreCase));
                 if (open != null)
                 {
-                    ActiveDocument = open;
+                    Show(open);
                     continue;
                 }
 
@@ -134,7 +161,7 @@ namespace SongCreator.ViewModels
             var open = Documents.FirstOrDefault(d => d.LibraryId == id);
             if (open != null)
             {
-                ActiveDocument = open;
+                Show(open);
                 return;
             }
 
@@ -164,7 +191,7 @@ namespace SongCreator.ViewModels
         {
             if (document.HasUnsavedChanges)
             {
-                ActiveDocument = document;
+                Show(document);
                 switch (_dialogs.AskToSave(document.Song.DisplayTitle))
                 {
                     case SaveChoice.Cancel:
@@ -256,7 +283,14 @@ namespace SongCreator.ViewModels
             document.FocusRequested += (_, request) => FocusLineRequested?.Invoke(this, request);
             document.Find.MatchFound += (_, match) => FindMatchFound?.Invoke(this, match);
             Documents.Add(document);
+            Show(document);
+        }
+
+        /// <summary>Makes the song the active one, on the Songs tab.</summary>
+        private void Show(SongDocumentViewModel document)
+        {
             ActiveDocument = document;
+            IsSetlistsViewActive = false;
         }
     }
 }

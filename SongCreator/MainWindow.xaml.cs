@@ -85,7 +85,7 @@ namespace SongCreator
         // Window-wide, ahead of the text boxes: the song's history replaces their own undo.
         private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
         {
-            if (_viewModel.ActiveDocument == null || Keyboard.Modifiers.HasFlag(ModifierKeys.Alt) || !Keyboard.Modifiers.HasFlag(ModifierKeys.Control))
+            if (!_viewModel.IsEditingSong || Keyboard.Modifiers.HasFlag(ModifierKeys.Alt) || !Keyboard.Modifiers.HasFlag(ModifierKeys.Control))
                 return;
             bool shift = Keyboard.Modifiers.HasFlag(ModifierKeys.Shift);
             switch (e.Key)

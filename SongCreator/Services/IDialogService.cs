@@ -29,8 +29,6 @@ namespace SongCreator.Services
 
         SaveChoice AskToSave(string songTitle);
 
-        SaveChoice AskToSaveSetlist(string name);
-
         void ShowError(string title, string message);
 
         /// <summary>Shows the export window (modal) for the given view model.</summary>
@@ -50,9 +48,6 @@ namespace SongCreator.Services
         /// below it, and a button labelled <paramref name="confirmText"/>. Returns true if the user pressed it.
         /// </summary>
         bool Confirm(string title, string question, string detail, string confirmText);
-
-        /// <summary>Shows the setlist window (modal) for the given view model.</summary>
-        void ShowSetlist(SetlistViewModel viewModel);
 
         /// <summary>Shows the Import from Web window (modal) for the given view model.</summary>
         void ShowWebImport(WebImportViewModel viewModel);
