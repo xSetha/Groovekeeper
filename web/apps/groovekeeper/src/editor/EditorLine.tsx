@@ -1,4 +1,5 @@
 import { memo, useLayoutEffect, useRef, useState, type ClipboardEvent, type KeyboardEvent, type PointerEvent } from 'react';
+import { romanNumeral } from '@groovekeeper/core';
 import { trackDrag } from './drag';
 import { editText, joinWithPrevious, moveChord, neighbourLine, pasteLines, removeChord, splitLine } from './edit';
 import { useEditor, useEditorStore } from './store';
@@ -22,6 +23,8 @@ export const EditorLine = memo(function EditorLine({ section, line: lineIndex, l
   const line = useEditor((s) => s.song.sections[section]?.lines[lineIndex]);
   const dropColumn = useEditor((s) => (s.drop?.lineId === lineId ? s.drop.column : null));
   const focus = useEditor((s) => (s.focus?.lineId === lineId ? s.focus : null));
+  // The key to show chords as Roman numerals in, or '' to show their names.
+  const numeralKey = useEditor((s) => (s.numerals ? s.song.key : ''));
   const input = useRef<HTMLInputElement>(null);
   // The chord tapped or clicked, which shows its Remove button (the way to remove one on a phone).
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -37,8 +40,9 @@ export const EditorLine = memo(function EditorLine({ section, line: lineIndex, l
 
   if (!line) return null;
   const { edit, editAndFocus } = store.getState();
+  const shown = (name: string) => (numeralKey ? (romanNumeral(name, numeralKey) ?? name) : name);
   // Wide enough for the lyrics, the chords past their end, and room to type.
-  const width = Math.max(line.text.length + 2, ...line.chords.map((c) => c.position + c.name.length + 1));
+  const width = Math.max(line.text.length + 2, ...line.chords.map((c) => c.position + shown(c.name).length + 1));
 
   function onText(text: string, caret: number) {
     // Typing in one line is one undo step per word: a space ends the step.
@@ -134,7 +138,7 @@ export const EditorLine = memo(function EditorLine({ section, line: lineIndex, l
                 if (event.key === 'Escape') setSelectedId(null);
               }}
             >
-              {chord.name}
+              {shown(chord.name)}
             </button>
             {selectedId === chord.id ? (
               // Floats above the chord, like a phone's Copy/Paste bubble, so it covers no other chord on the line.

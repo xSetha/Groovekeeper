@@ -18,6 +18,10 @@ export interface EditorState {
   focus: (Focus & { request: number }) | null;
   /** Where a chord dragged from the palette would land. */
   drop: { lineId: string; column: number } | null;
+  /** The chord last placed from the palette: the palette suggests what usually comes after it. */
+  lastPlaced: string | null;
+  /** Show the chords as Roman numerals in the song's key (only how they're shown; the song keeps chord names). */
+  numerals: boolean;
 
   /**
    * Changes the song as one undo step. Edits with the same `merge` key in a row make one step (typing in
@@ -30,6 +34,7 @@ export interface EditorState {
   redo: () => void;
   setFocus: (focus: Focus) => void;
   setDrop: (drop: EditorState['drop']) => void;
+  setNumerals: (numerals: boolean) => void;
 }
 
 export type EditorStore = StoreApi<EditorState>;
@@ -43,6 +48,8 @@ export function createEditorStore(song: KeyedSong): EditorStore {
     mergeKey: null,
     focus: null,
     drop: null,
+    lastPlaced: null,
+    numerals: false,
 
     edit: (change, options = {}) => {
       const { song: current, past, mergeKey } = get();
@@ -84,6 +91,7 @@ export function createEditorStore(song: KeyedSong): EditorStore {
 
     setFocus: (focus) => set({ focus: { ...focus, request: ++requests } }),
     setDrop: (drop) => set({ drop }),
+    setNumerals: (numerals) => set({ numerals }),
   }));
 }
 

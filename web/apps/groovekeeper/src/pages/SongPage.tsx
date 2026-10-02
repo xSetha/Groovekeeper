@@ -30,7 +30,7 @@ export function SongPage() {
   }
   return (
     <div className="flex min-h-0 flex-1">
-      <LibraryPanel activeId={id} className="hidden w-72 shrink-0 border-r border-line p-4 md:flex" />
+      <LibraryPanel activeId={id} className="hidden w-72 shrink-0 border-r border-line p-4 lg:flex" />
       <main className="flex min-w-0 flex-1 flex-col">
         {ready && !ready.song && <NotFound />}
         {ready?.song && <SongEditor key={id} id={id} initial={ready.song} isNew={isNew} />}

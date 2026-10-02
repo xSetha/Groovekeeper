@@ -1,5 +1,5 @@
 import {
-  ALL_KEYS, createTemplate, detectKey, displayTitle, hasContent, transposeSong, UNTITLED_TITLE, type Song,
+  ALL_KEYS, createTemplate, detectKey, displayTitle, hasContent, transposeKey, transposeSong, UNTITLED_TITLE, type Song,
 } from '@groovekeeper/core';
 import { useEffect, useMemo, useRef, useState, type PointerEvent, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router';
@@ -79,6 +79,7 @@ function EditorBody() {
             const at = findLine(s, target.lineId);
             return at ? placeChord(s, at, target.column, name) : s;
           });
+          store.setState({ lastPlaced: name });
         }
         setDrop(null);
         setGhost(null);
@@ -87,7 +88,7 @@ function EditorBody() {
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
+    <div className="flex min-h-0 flex-1 flex-col md:flex-row">
       <article aria-label="Song" className="min-h-0 min-w-0 flex-1 overflow-auto px-4 py-8 sm:px-10">
         <input
           value={title}
@@ -131,7 +132,7 @@ function EditorBody() {
       </article>
       <ChordPalette
         onStartDrag={startPaletteDrag}
-        className="order-first max-h-40 shrink-0 overflow-y-auto border-b border-line p-4 lg:order-last lg:max-h-none lg:w-64 lg:border-b-0 lg:border-l"
+        className="order-first max-h-40 shrink-0 overflow-y-auto border-b border-line p-4 md:order-last md:max-h-none md:w-64 md:border-b-0 md:border-l"
       />
       {ghost ? (
         <span
@@ -155,7 +156,10 @@ function Toolbar({ id, onDelete }: { id: string; onDelete: () => void }) {
   // The chords as a string change only when chords do, so the key isn't worked out again on every key.
   const chords = useEditor((s) => allChords(s.song).join(' '));
   const detected = useMemo(() => detectKey(chords ? chords.split(' ') : []), [chords]);
-  const { edit, undo, redo } = store.getState();
+  const numerals = useEditor((s) => s.numerals);
+  const { edit, undo, redo, setNumerals } = store.getState();
+  // Suggested only when it sounds different: C# and Db are the same key.
+  const suggestion = detected !== null && transposeKey(detected, 0) !== transposeKey(key, 0) ? detected : null;
 
   const saveFile = (format: SongFormat) => {
     const file = songFile(store.getState().song, format);
@@ -164,7 +168,7 @@ function Toolbar({ id, onDelete }: { id: string; onDelete: () => void }) {
 
   return (
     <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-line bg-toolbar px-4 py-1.5 text-sm">
-      <Link to="/" className="py-1.5 text-muted hover:text-fg md:hidden">
+      <Link to="/" className="py-1.5 text-muted hover:text-fg lg:hidden">
         ← Library
       </Link>
       <span className="flex items-center gap-1">
@@ -195,10 +199,21 @@ function Toolbar({ id, onDelete }: { id: string; onDelete: () => void }) {
           ))}
         </select>
       </label>
-      {detected && detected !== key ? (
-        <ToolButton onClick={() => edit((s) => setKey(s, detected))}>
+      {key ? (
+        <button
+          type="button"
+          aria-pressed={numerals}
+          title="Show the chords as Roman numerals in the song's key"
+          className="rounded px-2 py-1.5 hover:bg-hover aria-pressed:bg-accent-fill aria-pressed:text-on-accent pointer-coarse:min-h-11"
+          onClick={() => setNumerals(!numerals)}
+        >
+          I IV V
+        </button>
+      ) : null}
+      {suggestion ? (
+        <ToolButton onClick={() => edit((s) => setKey(s, suggestion))}>
           <span className="text-muted">The chords suggest </span>
-          <span className="font-semibold text-accent">{detected}</span>
+          <span className="font-semibold text-accent">{suggestion}</span>
         </ToolButton>
       ) : null}
       <span className="ml-auto flex items-center gap-1">

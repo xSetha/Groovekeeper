@@ -164,6 +164,67 @@ describe('the editor', () => {
   });
 });
 
+describe('the chord palette', () => {
+  const palette = () => within(screen.getByRole('complementary', { name: 'Chords' }));
+  const chipNames = (title: string) =>
+    within(palette().getByRole('heading', { name: title }).parentElement!)
+      .getAllByRole('button')
+      .map((chip) => chip.firstElementChild?.textContent);
+
+  it('suggests what usually follows the last chord, with Roman numerals in the key', async () => {
+    await openSong();
+    expect(chipNames('After C')).toEqual(['D', 'G', 'Am', 'D7']);
+    expect(chipNames('In G')).toEqual(['G', 'Am', 'Bm', 'C', 'D', 'Em', 'F#dim', 'D7']);
+    expect(chipNames('In this song')).toEqual(['G', 'C']);
+    expect(palette().getAllByText('vii°')).toHaveLength(1);
+  });
+
+  it('offers every chord type on a root, over a bass note', async () => {
+    const user = userEvent.setup();
+    await openSong();
+    await user.click(within(palette().getByRole('group', { name: 'Root' })).getByRole('button', { name: 'D' }));
+    await user.click(within(palette().getByRole('group', { name: 'Bass note' })).getByRole('button', { name: 'F#' }));
+
+    const all = chipNames('All chords');
+    expect(all).toContain('D/F#');
+    expect(all).toContain('Dsus4/F#');
+    expect(palette().getByText('V/7')).toBeInTheDocument();
+  });
+
+  it('shows the song\'s chords as Roman numerals with I IV V, without changing them', async () => {
+    const user = userEvent.setup();
+    await openSong();
+    await user.click(screen.getByRole('button', { name: 'I IV V' }));
+
+    expect(sheet().getByRole('button', { name: 'I' })).toBeInTheDocument();
+    expect(sheet().getByRole('button', { name: 'IV' })).toBeInTheDocument();
+    expect(await stored()).toBe(TEXT);
+  });
+});
+
+describe('the key suggestion', () => {
+  const open = async (key: string) => {
+    const text = `Song\n\nKey: ${key}\n\n[Verse]\nC#      F#      G#     C#\nla la la la la la la la la la la\n`;
+    await db.songs.add({ id: 'k', title: 'Song', artist: '', key, text, updatedAt: 0 });
+    render(
+      <MemoryRouter initialEntries={['/songs/k']}>
+        <App />
+      </MemoryRouter>,
+    );
+    await screen.findAllByRole('textbox', { name: 'Lyrics' });
+  };
+
+  it('is offered when the chords point to another key', async () => {
+    await open('A');
+    expect(screen.getByText('The chords suggest')).toBeInTheDocument();
+  });
+
+  it("isn't offered for the same key spelled differently (C# and Db)", async () => {
+    await open('C#');
+    expect(screen.queryByText('The chords suggest')).not.toBeInTheDocument();
+  });
+});
+
 describe('new songs', () => {
   const renderStart = () =>
     render(
