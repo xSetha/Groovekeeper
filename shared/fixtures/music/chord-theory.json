@@ -1,0 +1,36 @@
+{
+  "diatonicChords": [
+    { "key": "G", "expected": ["G", "Am", "Bm", "C", "D", "Em", "F#dim", "D7"] },
+    { "key": "C", "expected": ["C", "Dm", "Em", "F", "G", "Am", "Bdim", "G7"] },
+    { "key": "F", "expected": ["F", "Gm", "Am", "Bb", "C", "Dm", "Edim", "C7"] },
+    { "key": "Bb", "expected": ["Bb", "Cm", "Dm", "Eb", "F", "Gm", "Adim", "F7"] },
+    { "key": "Am", "expected": ["Am", "Bdim", "C", "Dm", "Em", "F", "G", "E7"] },
+    { "key": "Dm", "expected": ["Dm", "Edim", "F", "Gm", "Am", "Bb", "C", "A7"] },
+    { "key": "F#m", "expected": ["F#m", "G#dim", "A", "Bm", "C#m", "D", "E", "C#7"] },
+    { "key": "", "expected": [] },
+    { "key": "H", "expected": [] },
+    { "key": "Cb", "expected": [] },
+    { "key": "Gsus4", "expected": [] }
+  ],
+  "rootOf": [
+    { "key": "Am", "expected": "A" },
+    { "key": "A#m", "expected": "Bb" },
+    { "key": "Db", "expected": "C#" },
+    { "key": "", "expected": null }
+  ],
+  "fitsKey": [
+    { "chord": "Am7", "key": "G", "expected": true },
+    { "chord": "F#dim", "key": "G", "expected": true },
+    { "chord": "F", "key": "G", "expected": false },
+    { "chord": "Bm", "key": "G", "expected": true },
+    { "chord": "B", "key": "G", "expected": false },
+    { "chord": "E7", "key": "Am", "expected": true },
+    { "chord": "Am", "key": "", "expected": false }
+  ],
+  "suggestNext": [
+    { "chord": "G", "key": "G", "expected": ["C", "D", "Em", "Am"] },
+    { "chord": "D7", "key": "G", "expected": ["G", "Em", "C"] },
+    { "chord": "E", "key": "Am", "expected": ["Am", "F"] },
+    { "chord": "F", "key": "G", "expected": [] }
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "title": "", "artist": "", "key": "",
+  "sections": [
+    { "name": "Intro", "repeat": false, "lines": [{ "text": "", "chords": [{ "position": 0, "name": "Am" }, { "position": 3, "name": "E" }] }] },
+    { "name": "Verse 1", "repeat": false, "lines": [{ "text": "First verse", "chords": [{ "position": 0, "name": "Am" }] }, { "text": "still first", "chords": [] }] },
+    { "name": "Verse 2", "repeat": false, "lines": [{ "text": "Second verse", "chords": [] }] }
+  ]
+}

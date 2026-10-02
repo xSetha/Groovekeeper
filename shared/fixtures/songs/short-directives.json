@@ -1,0 +1,7 @@
+{
+  "title": "Song", "artist": "Someone", "key": "",
+  "sections": [
+    { "name": "Chorus", "repeat": false, "lines": [{ "text": "la", "chords": [{ "position": 0, "name": "C" }] }] },
+    { "name": "Chorus", "repeat": true, "lines": [] }
+  ]
+}

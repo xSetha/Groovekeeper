@@ -1,0 +1,6 @@
+{
+  "title": "", "artist": "", "key": "",
+  "sections": [
+    { "name": "Verse 1", "repeat": false, "lines": [{ "text": "Hello", "chords": [{ "position": 0, "name": "G" }] }] }
+  ]
+}

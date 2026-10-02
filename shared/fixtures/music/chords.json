@@ -1,0 +1,26 @@
+{
+  "parse": [
+    { "text": "Am", "root": "A", "quality": "m", "bass": null, "triad": "minor" },
+    { "text": "F#m7/C#", "root": "F#", "quality": "m7", "bass": "C#", "triad": "minor" },
+    { "text": "Bbmaj7", "root": "Bb", "quality": "maj7", "bass": null, "triad": "major" },
+    { "text": "G7(b9)", "root": "G", "quality": "7(b9)", "bass": null, "triad": "major" },
+    { "text": "D/F#", "root": "D", "quality": "", "bass": "F#", "triad": "major" },
+    { "text": "Ebsus4/Bb", "root": "Eb", "quality": "sus4", "bass": "Bb", "triad": "major" },
+    { "text": "Cmin7", "root": "C", "quality": "min7", "bass": null, "triad": "minor" },
+    { "text": "CM7", "root": "C", "quality": "M7", "bass": null, "triad": "major" },
+    { "text": "F#m7b5", "root": "F#", "quality": "m7b5", "bass": null, "triad": "diminished" },
+    { "text": "Bdim7", "root": "B", "quality": "dim7", "bass": null, "triad": "diminished" },
+    { "text": "B°", "root": "B", "quality": "°", "bass": null, "triad": "diminished" },
+    { "text": "Bø7", "root": "B", "quality": "ø7", "bass": null, "triad": "diminished" },
+    { "text": "Caug", "root": "C", "quality": "aug", "bass": null, "triad": "augmented" },
+    { "text": "C+", "root": "C", "quality": "+", "bass": null, "triad": "augmented" }
+  ],
+  "invalid": ["", "am", "H7", "N.C.", "Am-ish", "Every", "C/G/B", "x2"],
+  "pitchClass": [
+    { "note": "E#", "pitchClass": 5 },
+    { "note": "B#", "pitchClass": 0 },
+    { "note": "Fb", "pitchClass": 4 },
+    { "note": "Cb", "pitchClass": 11 },
+    { "note": "Bb", "pitchClass": 10 }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "title": "", "artist": "", "key": "",
+  "sections": [
+    { "name": "Intro", "repeat": false, "lines": [{ "text": "la", "chords": [] }] },
+    { "name": "Chorus", "repeat": false, "lines": [{ "text": "la", "chords": [] }] },
+    { "name": "Bridge", "repeat": false, "lines": [{ "text": "la", "chords": [] }] },
+    { "name": "Intro", "repeat": true, "lines": [] }
+  ]
+}

@@ -2,3 +2,6 @@
 
 # The sample tests compare these with the app's own output, which uses Windows line endings.
 samples/songs/*.txt text eol=crlf
+
+# Shared test fixtures are compared after normalising line endings; keep them as written.
+shared/fixtures/** text eol=lf

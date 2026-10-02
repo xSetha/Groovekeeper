@@ -1,0 +1,11 @@
+{
+  "title": "My Song", "artist": "", "key": "Am",
+  "sections": [
+    { "name": "Intro", "repeat": false, "lines": [{ "text": "", "chords": [] }] },
+    { "name": "Verse 1", "repeat": false, "lines": [{ "text": "Hello there", "chords": [{ "position": 6, "name": "Am" }] }] },
+    { "name": "Chorus", "repeat": false, "lines": [{ "text": "", "chords": [] }, { "text": "", "chords": [{ "position": 0, "name": "C" }, { "position": 4, "name": "G" }] }] },
+    { "name": "Verse 2", "repeat": false, "lines": [{ "text": "", "chords": [] }] },
+    { "name": "Bridge", "repeat": false, "lines": [{ "text": "", "chords": [] }] },
+    { "name": "Outro", "repeat": false, "lines": [{ "text": "", "chords": [] }] }
+  ]
+}

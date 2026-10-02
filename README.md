@@ -219,3 +219,4 @@ keep that name.
 | `SongCreator/Views`, `Controls` | WPF windows and the lyric line editor |
 | `SongCreator/Themes` | The four themes |
 | `SongCreator.Tests` | xUnit tests |
+| `shared/fixtures` | Test cases for the song formats and music rules, shared with the web app (see its README) |

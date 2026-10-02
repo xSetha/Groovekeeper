@@ -1,0 +1,10 @@
+[
+  { "chords": ["G", "C", "D", "G"], "expected": "G" },
+  { "chords": ["Am", "F", "C", "G", "Am"], "expected": "Am" },
+  { "chords": ["C", "Am", "F", "G"], "expected": "C" },
+  { "chords": ["Bb", "Eb", "F7", "Bb"], "expected": "Bb" },
+  { "chords": ["Am", "E7", "Am"], "expected": "Am" },
+  { "chords": [], "expected": null },
+  { "chords": ["hello"], "expected": null },
+  { "chords": ["C", "F#", "Bb", "E", "Ab", "D"], "expected": null }
+]

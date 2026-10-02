@@ -1,0 +1,6 @@
+{
+  "title": "Title", "artist": "Artist", "key": "",
+  "sections": [
+    { "name": "Verse 1", "repeat": false, "lines": [{ "text": "first lyric", "chords": [] }, { "text": "second lyric", "chords": [] }] }
+  ]
+}

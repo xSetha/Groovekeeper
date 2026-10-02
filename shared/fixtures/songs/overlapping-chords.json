@@ -1,0 +1,8 @@
+{
+  "title": "", "artist": "", "key": "",
+  "sections": [
+    { "name": "Verse", "repeat": false, "lines": [
+      { "text": "abc", "chords": [{ "position": 1, "name": "F#m7" }, { "position": 0, "name": "C" }, { "position": 2, "name": "G" }] }
+    ] }
+  ]
+}

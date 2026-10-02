@@ -18,6 +18,8 @@
   <ItemGroup>
     <!-- The seedable sample songs, checked by SampleSongsTests -->
     <None Include="..\samples\songs\*.txt" LinkBase="samples" CopyToOutputDirectory="PreserveNewest" />
+    <!-- The cases shared with the web app, checked by SharedFixturesTests -->
+    <None Include="..\shared\fixtures\**\*.json;..\shared\fixtures\**\*.txt;..\shared\fixtures\**\*.cho" LinkBase="fixtures" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

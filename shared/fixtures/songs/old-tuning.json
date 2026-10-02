@@ -1,0 +1,6 @@
+{
+  "title": "Old Song", "artist": "", "key": "Em",
+  "sections": [
+    { "name": "Verse", "repeat": false, "lines": [{ "text": "hello", "chords": [{ "position": 0, "name": "Em" }] }] }
+  ]
+}

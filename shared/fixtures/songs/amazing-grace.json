@@ -1,0 +1,14 @@
+{
+  "title": "Amazing Grace", "artist": "John Newton", "key": "G",
+  "sections": [
+    { "name": "Verse 1", "repeat": false, "lines": [
+      { "text": "Amazing grace, how sweet the sound", "chords": [{ "position": 1, "name": "G" }, { "position": 19, "name": "G7" }, { "position": 29, "name": "C" }] },
+      { "text": "That saved a wretch like me", "chords": [] }
+    ] },
+    { "name": "Chorus", "repeat": false, "lines": [
+      { "text": "", "chords": [{ "position": 0, "name": "G" }, { "position": 3, "name": "D" }] }
+    ] },
+    { "name": "Verse 1", "repeat": true, "lines": [] },
+    { "name": "Chorus", "repeat": true, "lines": [] }
+  ]
+}

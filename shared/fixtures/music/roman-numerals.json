@@ -1,0 +1,19 @@
+[
+  { "chord": "G", "key": "G", "expected": "I" },
+  { "chord": "Am7", "key": "G", "expected": "ii7" },
+  { "chord": "D7", "key": "G", "expected": "V7" },
+  { "chord": "Cmaj7", "key": "G", "expected": "IVmaj7" },
+  { "chord": "F#dim", "key": "G", "expected": "vii°" },
+  { "chord": "F#m7b5", "key": "G", "expected": "viiø7" },
+  { "chord": "F", "key": "G", "expected": "bVII" },
+  { "chord": "G/B", "key": "G", "expected": "I/3" },
+  { "chord": "Dsus4", "key": "G", "expected": "Vsus4" },
+  { "chord": "Caug", "key": "C", "expected": "I+" },
+  { "chord": "Am", "key": "Am", "expected": "i" },
+  { "chord": "C", "key": "Am", "expected": "bIII" },
+  { "chord": "E7", "key": "Am", "expected": "V7" },
+  { "chord": "Bdim7", "key": "Am", "expected": "ii°7" },
+  { "chord": "Db", "key": "C#", "expected": "I" },
+  { "chord": "G", "key": "", "expected": null },
+  { "chord": "hello", "key": "G", "expected": null }
+]

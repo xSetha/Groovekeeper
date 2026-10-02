@@ -1,0 +1,60 @@
+{
+  "chords": [
+    { "chord": "Dm", "semitones": 2, "useFlats": null, "expected": "Em" },
+    { "chord": "Bb", "semitones": -1, "useFlats": null, "expected": "A" },
+    { "chord": "F#m7/C#", "semitones": 1, "useFlats": null, "expected": "Gm7/D" },
+    { "chord": "Eb", "semitones": 1, "useFlats": null, "expected": "E" },
+    { "chord": "Eb", "semitones": 2, "useFlats": null, "expected": "F" },
+    { "chord": "Eb", "semitones": -2, "useFlats": null, "expected": "Db" },
+    { "chord": "Ab", "semitones": 1, "useFlats": null, "expected": "A" },
+    { "chord": "Db", "semitones": -1, "useFlats": null, "expected": "C" },
+    { "chord": "Gb", "semitones": 1, "useFlats": null, "expected": "G" },
+    { "chord": "Bb", "semitones": 1, "useFlats": null, "expected": "B" },
+    { "chord": "B", "semitones": 1, "useFlats": null, "expected": "C" },
+    { "chord": "C", "semitones": -1, "useFlats": null, "expected": "B" },
+    { "chord": "Asus4", "semitones": 12, "useFlats": null, "expected": "Asus4" },
+    { "chord": "Em", "semitones": -13, "useFlats": null, "expected": "D#m" },
+    { "chord": "A", "semitones": 1, "useFlats": true, "expected": "Bb" },
+    { "chord": "A", "semitones": 1, "useFlats": false, "expected": "A#" },
+    { "chord": "Bb", "semitones": 0, "useFlats": false, "expected": "A#" },
+    { "chord": "D/F#", "semitones": 1, "useFlats": true, "expected": "Eb/G" },
+    { "chord": "C/E", "semitones": -1, "useFlats": false, "expected": "B/D#" },
+    { "chord": "", "semitones": 3, "useFlats": null, "expected": "" },
+    { "chord": "N.C.", "semitones": 3, "useFlats": null, "expected": "N.C." },
+    { "chord": "x2", "semitones": 3, "useFlats": null, "expected": "x2" },
+    { "chord": "Am-ish", "semitones": 3, "useFlats": null, "expected": "Am-ish" }
+  ],
+  "keys": [
+    { "key": "C", "semitones": 1, "expected": "Db" },
+    { "key": "E", "semitones": 1, "expected": "F" },
+    { "key": "Bb", "semitones": 1, "expected": "B" },
+    { "key": "B", "semitones": -1, "expected": "Bb" },
+    { "key": "A#", "semitones": 0, "expected": "Bb" },
+    { "key": "F", "semitones": 1, "expected": "F#" },
+    { "key": "Am", "semitones": 1, "expected": "Bbm" },
+    { "key": "Dm", "semitones": 1, "expected": "Ebm" },
+    { "key": "Em", "semitones": -1, "expected": "Ebm" },
+    { "key": "G#m", "semitones": 12, "expected": "G#m" },
+    { "key": "", "semitones": 3, "expected": "" }
+  ],
+  "usesFlats": [
+    { "key": "F", "expected": true },
+    { "key": "Bb", "expected": true },
+    { "key": "Dm", "expected": true },
+    { "key": "Ebm", "expected": true },
+    { "key": "G", "expected": false },
+    { "key": "F#", "expected": false },
+    { "key": "Am", "expected": false },
+    { "key": "C#m", "expected": false },
+    { "key": "", "expected": null },
+    { "key": "E#", "expected": null }
+  ],
+  "songs": [
+    { "key": "Bb", "chords": ["Bb", "Eb", "F", "Gm/D", "Bbm7/F"], "steps": [1, -1], "expectedKey": "Bb", "expectedChords": ["Bb", "Eb", "F", "Gm/D", "Bbm7/F"] },
+    { "key": "E", "chords": ["E", "A", "B7", "C#m"], "steps": [1], "expectedKey": "F", "expectedChords": ["F", "Bb", "C7", "Dm"] },
+    { "key": "C", "chords": ["C", "F", "G", "Am"], "steps": [1], "expectedKey": "Db", "expectedChords": ["Db", "Gb", "Ab", "Bbm"] },
+    { "key": "G", "chords": ["G", "Bb", "Eb/G", "D/F#"], "steps": [1], "expectedKey": "Ab", "expectedChords": ["Ab", "B", "E/Ab", "Eb/G"] },
+    { "key": "", "chords": ["Bb", "F#m", "D/F#"], "steps": [2], "expectedKey": "", "expectedChords": ["C", "G#m", "E/G#"] },
+    { "key": "", "chords": ["E#", "B#m", "Fb7", "Cb"], "steps": [1], "expectedKey": "", "expectedChords": ["F#", "C#m", "F7", "C"] }
+  ]
+}
