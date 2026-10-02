@@ -8,7 +8,7 @@ import { useCharWidth } from '../components/useCharWidth';
 import { download, songFile, type SongFormat } from '../library/files';
 import { deleteSong, saveSong } from '../library/library';
 import { ChordPalette } from './ChordPalette';
-import { trackDrag } from './drag';
+import { trackDrag } from '../components/drag';
 import { addSection, allChords, findLine, placeChord, setArtist, setKey, setTitle, withIds } from './edit';
 import { SectionBlock } from './SectionBlock';
 import { createEditorStore, EditorContext, useEditor, useEditorStore, type EditorStore } from './store';

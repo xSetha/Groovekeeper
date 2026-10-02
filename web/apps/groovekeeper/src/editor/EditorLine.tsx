@@ -1,6 +1,6 @@
 import { memo, useLayoutEffect, useRef, useState, type ClipboardEvent, type KeyboardEvent, type PointerEvent } from 'react';
 import { romanNumeral } from '@groovekeeper/core';
-import { trackDrag } from './drag';
+import { trackDrag } from '../components/drag';
 import { editText, joinWithPrevious, moveChord, neighbourLine, pasteLines, removeChord, splitLine } from './edit';
 import { useEditor, useEditorStore } from './store';
 
