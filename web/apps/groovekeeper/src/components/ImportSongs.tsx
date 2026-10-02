@@ -22,7 +22,11 @@ export function ImportSongs({ className, children, onImported }: Props) {
       setError(`Couldn't read ${failed.map((f) => f.name).join(', ')}. Check that the file is still there, then import it again.`);
       return;
     }
-    onImported?.(await addSongs(read.flatMap((r) => (r.status === 'fulfilled' ? [r.value] : []))));
+    try {
+      onImported?.(await addSongs(read.flatMap((r) => (r.status === 'fulfilled' ? [r.value] : []))));
+    } catch {
+      setError("Couldn't add the songs to the library. Reload the page and import them again.");
+    }
   }
 
   return (

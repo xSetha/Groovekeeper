@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import amp from '../assets/amp.jpg';
 import { ImportSongs } from '../components/ImportSongs';
@@ -12,6 +12,7 @@ import { sampleSongs } from '../library/samples';
 export function StartPage() {
   const navigate = useNavigate();
   const songCount = useLiveQuery(() => db.songs.count());
+  const [sampleError, setSampleError] = useState(false);
   const openFirst = (ids: string[]) => ids.length === 1 && navigate(`/songs/${ids[0]}`);
 
   useEffect(() => {
@@ -46,12 +47,20 @@ export function StartPage() {
               <button
                 type="button"
                 className="rounded px-5 py-2.5 font-semibold hover:bg-hover"
-                onClick={() => void addSongs(sampleSongs())}
+                onClick={() => {
+                  setSampleError(false);
+                  addSongs(sampleSongs()).catch(() => setSampleError(true));
+                }}
               >
                 Try the sample songs
               </button>
             ) : null}
           </div>
+          {sampleError ? (
+            <p role="alert" className="mt-3 text-sm text-chord">
+              Couldn't add the sample songs. Reload the page and try again.
+            </p>
+          ) : null}
           <p className="mt-6 max-w-md text-sm text-muted">
             Import <code>.txt</code> and ChordPro files. Your songs are kept in this browser, on this device.
           </p>
