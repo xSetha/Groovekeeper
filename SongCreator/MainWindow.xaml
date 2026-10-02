@@ -268,7 +268,8 @@
 
                         <views:ChordPalette DockPanel.Dock="Right" DataContext="{Binding Palette}" />
 
-                        <ScrollViewer x:Name="EditorScroll" VerticalScrollBarVisibility="Auto"
+                        <!-- Scrolls sideways too, so a line wider than the editor (or a chord far to the right) is never hidden -->
+                        <ScrollViewer x:Name="EditorScroll" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"
                                       PreviewMouseLeftButtonDown="EditorScroll_PreviewMouseLeftButtonDown"
                                       PreviewMouseMove="EditorScroll_PreviewMouseMove"
                                       PreviewMouseLeftButtonUp="EditorScroll_PreviewMouseLeftButtonUp">

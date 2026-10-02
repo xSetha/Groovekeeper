@@ -49,6 +49,12 @@ namespace SongCreator.Controls
             };
             Unloaded += (_, _) => ThemeManager.ThemeChanged -= OnThemeChanged;
             LyricBox.SizeChanged += (_, _) => RenderChords();
+            // The editor scrolls sideways, not the text box, so keep the caret in view while typing past the edge.
+            LyricBox.SelectionChanged += (_, _) =>
+            {
+                if (LyricBox.IsKeyboardFocused && LyricBox.GetRectFromCharacterIndex(LyricBox.CaretIndex) is { IsEmpty: false } caret)
+                    LyricBox.BringIntoView(caret);
+            };
             DataObject.AddPastingHandler(LyricBox, OnPaste);
 
             // Chords dragged from the palette can be dropped anywhere on the line: above a letter or onto the word.
@@ -195,6 +201,7 @@ namespace SongCreator.Controls
                 return;
             ((TextBlock)tag.Child).Text = Display(chord);
             Canvas.SetLeft(tag, ColumnX(chord.Position) - TagPadding);
+            UpdateWidth();
         }
 
         // ---- Column geometry (monospace font) ----
@@ -271,7 +278,18 @@ namespace SongCreator.Controls
                 _tags[chord] = tag;
                 ChordLayer.Children.Add(tag);
             }
+            UpdateWidth();
             RenderHighlights();
+        }
+
+        /// <summary>
+        /// Makes the line at least as wide as its chords: they are drawn on a canvas, which takes no room of its own,
+        /// so a chord past the end of the lyrics would otherwise be cut off instead of scrolled to.
+        /// </summary>
+        private void UpdateWidth()
+        {
+            int end = _line?.Chords.Select(c => c.Position + Display(c).Length).DefaultIfEmpty(0).Max() ?? 0;
+            MinWidth = end > 0 ? ColumnX(end) + 2 * TagPadding : 0;
         }
 
         private void RenderHighlights()
