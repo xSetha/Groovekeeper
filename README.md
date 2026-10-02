@@ -220,4 +220,4 @@ keep that name.
 | `SongCreator/Themes` | The four themes |
 | `SongCreator.Tests` | xUnit tests |
 | `shared/fixtures` | Test cases for the song formats and music rules, shared with the web app (see its README) |
-| `web` | The web version, in progress (see its README) |
+| `web` | The web version, in progress (see its README and docs/WEB-PLAN.md) |
