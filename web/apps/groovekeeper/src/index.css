@@ -3,8 +3,8 @@
 /* A short screen: a phone turned sideways. */
 @custom-variant short (@media (max-height: 500px));
 
-/* The Amp theme: near-black with blood red, like a guitar amp on a dark stage (SongCreator/Themes/Amp.xaml).
-   Other themes will redefine these colors under a [data-theme] selector. */
+/* The themes come from the desktop app (SongCreator/Themes/*.xaml). Amp is the default, defined here; the
+   others redefine every color under a [data-theme] selector on <html>. A new color token goes in all four. */
 @theme {
   --font-sans: 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif;
   --font-mono: 'Cascadia Mono', Consolas, ui-monospace, monospace;
@@ -31,10 +31,110 @@
   --color-logo-label: #c4161c;
 }
 
+/* Amp: near-black with blood red, like a guitar amp on a dark stage. The colors repeat the defaults in
+   @theme above, so an element marked data-theme="amp" (a preview in the theme picker) shows Amp inside
+   another theme. */
+:root,
+[data-theme='amp'] {
+  --color-window: #0f0d0d;
+  --color-toolbar: #161313;
+  --color-card: #191515;
+  --color-line: #2a2222;
+  --color-hover: #221c1c;
+  --color-fg: #ece6e1;
+  --color-muted: #9a8f8a;
+  --color-hint: #5e5450;
+  --color-chip: #241b1b;
+  --color-chord: #e5534a;
+  --color-accent: #e5534a;
+  --color-accent-fill: #8e0e12;
+  --color-on-accent: #ffffff;
+  --color-selection: #b3262c;
+  --color-logo-tile: #141111;
+  --color-logo-record: #050404;
+  --color-logo-ring: #e5534a;
+  --color-logo-label: #c4161c;
+  /* The start page's photo, dimmed under the window color so the text stays readable. Only the current
+     theme's photo is downloaded. */
+  --start-photo: url('./assets/amp.jpg');
+  --start-dim: 0.84;
+  color-scheme: dark;
+}
+
+/* Backstage: warm charcoal with brass. */
+[data-theme='backstage'] {
+  --color-window: #1e1b18;
+  --color-toolbar: #24201d;
+  --color-card: #262220;
+  --color-line: #35302b;
+  --color-hover: #2e2925;
+  --color-fg: #e9e4da;
+  --color-muted: #9c948a;
+  --color-hint: #625b53;
+  --color-chip: #302a24;
+  --color-chord: #c9a227;
+  --color-accent: #c9a227;
+  --color-accent-fill: #c9a227;
+  --color-on-accent: #1e1b18;
+  --color-selection: #8c7a3a;
+  --color-logo-tile: #2a2420;
+  --color-logo-record: #120f0d;
+  --color-logo-ring: #c9a227;
+  --color-logo-label: #c9a227;
+  --start-photo: url('./assets/backstage.jpg');
+  --start-dim: 0.8;
+}
+
+/* Record Sleeve: forest green, cream and mustard. */
+[data-theme='record-sleeve'] {
+  --color-window: #1f2a24;
+  --color-toolbar: #24302a;
+  --color-card: #26332c;
+  --color-line: #34443a;
+  --color-hover: #2c3a32;
+  --color-fg: #efe6d2;
+  --color-muted: #a9b0a0;
+  --color-hint: #66705f;
+  --color-chip: #2e3d34;
+  --color-chord: #e0a526;
+  --color-accent: #e0a526;
+  --color-accent-fill: #c8572b;
+  --color-on-accent: #ffffff;
+  --color-selection: #a8743a;
+  --color-logo-tile: #2e3d34;
+  --color-logo-record: #121a15;
+  --color-logo-ring: #e0a526;
+  --color-logo-label: #c8572b;
+  --start-photo: url('./assets/record.jpg');
+  --start-dim: 0.74;
+}
+
+/* Songbook: cream paper with red ink chords, the one light theme. */
+[data-theme='songbook'] {
+  --color-window: #f6f1e7;
+  --color-toolbar: #fbf8f2;
+  --color-card: #fffdf8;
+  --color-line: #e2d9c6;
+  --color-hover: #f1ebe0;
+  --color-fg: #1c1a17;
+  --color-muted: #6b645a;
+  --color-hint: #a8a091;
+  --color-chip: #f3e6e1;
+  --color-chord: #9e2b25;
+  --color-accent: #9e2b25;
+  --color-accent-fill: #9e2b25;
+  --color-on-accent: #ffffff;
+  --color-selection: #d9a79f;
+  --color-logo-tile: #1c1a17;
+  --color-logo-record: #0b0a09;
+  --color-logo-ring: #f6f1e7;
+  --color-logo-label: #b8322b;
+  --start-photo: url('./assets/songbook.jpg');
+  --start-dim: 0.82;
+  color-scheme: light;
+}
+
 @layer base {
-  html {
-    color-scheme: dark;
-  }
   body {
     @apply bg-window text-fg font-sans antialiased;
   }

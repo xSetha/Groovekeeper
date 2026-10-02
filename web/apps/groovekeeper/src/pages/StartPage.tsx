@@ -1,7 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
-import amp from '../assets/amp.jpg';
 import { ImportSongs } from '../components/ImportSongs';
 import { LibraryPanel } from '../components/LibraryPanel';
 import { Logo } from '../components/TopBar';
@@ -57,9 +56,9 @@ export function StartPage() {
 
   return (
     <main className="relative min-h-0 flex-1 overflow-y-auto">
-      {/* The theme's photo, dimmed under the window color so the text stays readable. */}
-      <div className="pointer-events-none absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${amp})` }} />
-      <div className="pointer-events-none absolute inset-0 bg-window/85" />
+      {/* The theme's photo, dimmed under the window color so the text stays readable (index.css). */}
+      <div className="pointer-events-none absolute inset-0 bg-(image:--start-photo) bg-cover bg-center" />
+      <div className="pointer-events-none absolute inset-0 bg-window opacity-(--start-dim)" />
 
       <div className="relative mx-auto grid max-w-6xl items-center gap-10 px-4 py-10 sm:px-8 lg:min-h-full lg:grid-cols-[1fr_22rem]">
         <section>

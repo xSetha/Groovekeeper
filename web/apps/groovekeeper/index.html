@@ -7,6 +7,13 @@
     <meta name="theme-color" content="#0F0D0D" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <title>Groovekeeper</title>
+    <script>
+      // The chosen theme, applied before the page is drawn so it doesn't flash the default first (src/themes.ts).
+      try {
+        const theme = localStorage.getItem('groovekeeper.theme');
+        if (theme) document.documentElement.dataset.theme = theme;
+      } catch {}
+    </script>
   </head>
   <body>
     <div id="root"></div>
