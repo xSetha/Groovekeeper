@@ -54,6 +54,7 @@ Invoke-Checked dotnet vpk pack `
     --packTitle Groovekeeper `
     --packAuthors xSetha `
     --icon (Join-Path $root 'SongCreator\Assets\SongCreator.ico') `
+    --splashImage (Join-Path $root 'SongCreator\Assets\InstallerSplash.png') `
     --outputDir $releasesDir
 
 # Velopack names the installer and the zip after the package ID; give them the app's name. The updater

@@ -7,6 +7,8 @@ Songs live in the app's library, with search, and you can still open and save so
 plain `.txt` with the chords on the line above the lyrics, or the ChordPro format used by many
 other chord apps.
 
+![The song editor in the Amp theme: Amazing Grace with chords above the lyrics, the library on the left and the chord palette on the right](docs/screenshots/editor-amp.png)
+
 ## Install
 
 Download `Groovekeeper-Setup.exe` from the latest
@@ -88,6 +90,13 @@ The installer isn't code-signed yet, so Windows may warn that it "protected your
 - Four themes: Amp (black and blood red), Backstage (charcoal and brass), Record Sleeve (forest
   green, cream and mustard) and Songbook (cream paper with red ink chords). Each has its own photo
   behind the start page; [CREDITS.md](CREDITS.md) lists where they come from.
+
+| Theme | Start page | Editor |
+| --- | --- | --- |
+| Amp | ![Amp start page](docs/screenshots/start-amp.jpg) | ![Amp editor](docs/screenshots/editor-amp.png) |
+| Backstage | ![Backstage start page](docs/screenshots/start-backstage.jpg) | ![Backstage editor](docs/screenshots/editor-backstage.png) |
+| Record Sleeve | ![Record Sleeve start page](docs/screenshots/start-recordsleeve.jpg) | ![Record Sleeve editor](docs/screenshots/editor-recordsleeve.png) |
+| Songbook | ![Songbook start page](docs/screenshots/start-songbook.jpg) | ![Songbook editor](docs/screenshots/editor-songbook.png) |
 
 ## Getting started
 

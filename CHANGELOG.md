@@ -11,6 +11,7 @@ version's section here becomes the text of its GitHub release.
   updates keep coming as before. The shortcuts and the entry in Windows' Installed apps get the new
   name with this update.
 - A new icon: a record whose label is a keyhole.
+- The installer shows a Groovekeeper splash screen instead of a plain progress bar.
 - New themes: Amp (black and blood red, the new default), Backstage (charcoal and brass), Record
   Sleeve (forest green, cream and mustard) and Songbook (cream paper with red ink chords). They
   replace Studio, Aurora and Paper; if you used one of those, you get Backstage, Amp or Songbook.
