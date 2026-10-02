@@ -26,15 +26,16 @@ describe('the app', () => {
     // One song imported: it opens.
     expect(await screen.findByRole('heading', { level: 1, name: 'Amazing Grace' })).toBeInTheDocument();
     expect(screen.getByText('(repeat)')).toBeInTheDocument();
-    expect(screen.getByText('G7').parentElement?.style.left).toBe('19ch');
+    const sheet = within(screen.getByRole('article', { name: 'Song' }));
+    expect(sheet.getByText('G7').parentElement?.style.left).toBe('19ch');
     expect(screen.getByTestId('song-key')).toHaveTextContent('G');
 
     await user.click(screen.getByRole('button', { name: 'Transpose up' }));
 
     await waitFor(() => expect(screen.getByTestId('song-key')).toHaveTextContent('Ab'));
-    expect(screen.getByText('Ab7')).toBeInTheDocument();
+    expect(sheet.getByText('Ab7')).toBeInTheDocument();
     const library = screen.getByRole('navigation', { name: 'Library' });
-    expect(within(library).getByText('John Newton · Ab')).toBeInTheDocument();
+    expect(await within(library).findByText('John Newton · Ab')).toBeInTheDocument();
   });
 
   it('adds the sample songs to an empty library', async () => {
