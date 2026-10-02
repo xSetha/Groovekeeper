@@ -9,6 +9,12 @@ namespace SongCreator.ViewModels
 {
     public record FocusRequest(SongLine Line, int Caret);
 
+    /// <summary>A place in the lyrics: before the letter at <paramref name="Index"/> of <paramref name="Line"/>.</summary>
+    public record TextPosition(SongLine Line, int Index);
+
+    /// <summary>Lyrics from <paramref name="Start"/> to <paramref name="End"/>, in song order.</summary>
+    public record TextRange(TextPosition Start, TextPosition End);
+
     /// <summary>Where a song is saved.</summary>
     public enum SongHome
     {
@@ -28,6 +34,7 @@ namespace SongCreator.ViewModels
         private string? _filePath;
         private long? _libraryId;
         private bool _showNumerals;
+        private TextRange? _selection;
 
         public SongDocumentViewModel(Song song, string? filePath = null, long? libraryId = null)
         {
@@ -135,6 +142,31 @@ namespace SongCreator.ViewModels
 
         public bool HasUnsavedChanges => _savedText == null ? Song.HasContent : SongTextWriter.ToText(Song) != _savedText;
 
+        /// <summary>
+        /// Lyrics selected across lines with the mouse, or null. (A selection within one line is that line's own.)
+        /// </summary>
+        public TextRange? Selection
+        {
+            get => _selection;
+            private set => SetProperty(ref _selection, value);
+        }
+
+        /// <summary>
+        /// The sections whose headings the selection deletes: those after the section it starts in, up to the one it
+        /// ends in.
+        /// </summary>
+        public IReadOnlyList<Section> SectionsInSelection
+        {
+            get
+            {
+                if (Selection is not { } selection)
+                    return [];
+                int first = Song.Sections.IndexOf(SectionOf(selection.Start.Line));
+                int last = Song.Sections.IndexOf(SectionOf(selection.End.Line));
+                return Song.Sections.Skip(first + 1).Take(last - first).ToList();
+            }
+        }
+
         /// <summary>Asks the view to put the caret in a line (e.g. one that was just created).</summary>
         public event EventHandler<FocusRequest>? FocusRequested;
 
@@ -226,6 +258,65 @@ namespace SongCreator.ViewModels
             History.Commit();
             change();
             History.Commit(mergeable: false);
+        }
+
+        // ---- Selecting across lines ----
+
+        /// <summary>Selects the lyrics between two places, given in either order.</summary>
+        public void Select(TextPosition anchor, TextPosition active)
+        {
+            var lines = Song.Sections.SelectMany(s => s.Lines).ToList();
+            int anchorLine = lines.IndexOf(anchor.Line);
+            int activeLine = lines.IndexOf(active.Line);
+            if (anchorLine < 0 || activeLine < 0)
+                return;
+            bool backwards = activeLine < anchorLine || (activeLine == anchorLine && active.Index < anchor.Index);
+            Selection = backwards ? new TextRange(active, anchor) : new TextRange(anchor, active);
+        }
+
+        public void ClearSelection() => Selection = null;
+
+        /// <summary>
+        /// Deletes the selection and the chords above it, like deleting a selection in a text editor: the rest of its
+        /// last line joins its first line, and the lines and section headings in between are deleted (what is left of
+        /// the last section joins the first one).
+        /// </summary>
+        public void DeleteSelection()
+        {
+            if (Selection is not { } selection)
+                return;
+            // An undo since the selection was made may have replaced its lines.
+            var lines = Song.Sections.SelectMany(s => s.Lines).ToList();
+            if (lines.Contains(selection.Start.Line) && lines.Contains(selection.End.Line))
+                Edit(() => Delete(selection));
+            Selection = null;
+        }
+
+        private void Delete(TextRange range)
+        {
+            var (first, last) = (range.Start.Line, range.End.Line);
+            var firstSection = SectionOf(first);
+            var lastSection = SectionOf(last);
+            int caret = Math.Min(range.Start.Index, first.Text.Length);
+
+            // The first line keeps its head and gets the last line's tail. Everything after the first line in its
+            // section goes, and so do the sections up to the last one; the lines after the last line move up.
+            var kept = last.SplitAt(range.End.Index);
+            first.SplitAt(range.Start.Index);
+            first.Append(kept);
+            if (first != last)
+            {
+                int firstIndex = firstSection.Lines.IndexOf(first);
+                var rest = lastSection.Lines.Skip(lastSection.Lines.IndexOf(last) + 1).ToList();
+                int lastSectionIndex = Song.Sections.IndexOf(lastSection);
+                for (int i = lastSectionIndex; i > Song.Sections.IndexOf(firstSection); i--)
+                    Song.Sections.RemoveAt(i);
+                while (firstSection.Lines.Count > firstIndex + 1)
+                    firstSection.Lines.RemoveAt(firstIndex + 1);
+                foreach (var line in rest)
+                    firstSection.Lines.Add(line);
+            }
+            Focus(first, caret);
         }
 
         // ---- Line editing ----

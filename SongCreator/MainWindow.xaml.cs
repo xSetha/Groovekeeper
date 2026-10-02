@@ -5,6 +5,7 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Shapes;
 using System.Windows.Threading;
 using Microsoft.Data.Sqlite;
 using SongCreator.Controls;
@@ -22,7 +23,13 @@ namespace SongCreator
     /// </summary>
     public partial class MainWindow : Window
     {
+        // How close to the top or bottom of the editor a selection drag scrolls it.
+        private const double AutoScrollMargin = 24;
+
         private readonly MainViewModel _viewModel;
+        private SongDocumentViewModel? _watchedDocument;
+        // Where a mouse press in the lyrics started, while the button is down.
+        private TextPosition? _selectionAnchor;
 
         public MainWindow()
         {
@@ -31,6 +38,11 @@ namespace SongCreator
             _viewModel.FocusTitleRequested += (_, _) => Dispatcher.BeginInvoke(DispatcherPriority.Loaded, () => TitleBox.Focus());
             _viewModel.FocusLineRequested += (_, request) => FocusLine(request.Line, request.Caret);
             _viewModel.FindMatchFound += (_, match) => FindLineControl(this, match.Line)?.BringIntoView();
+            _viewModel.PropertyChanged += (_, e) =>
+            {
+                if (e.PropertyName == nameof(MainViewModel.ActiveDocument))
+                    WatchSelection(_viewModel.ActiveDocument);
+            };
             DataContext = _viewModel;
             ApplySettings(WindowSettings.Load(WindowSettings.DefaultPath));
 
@@ -85,6 +97,18 @@ namespace SongCreator
         // Window-wide, ahead of the text boxes: the song's history replaces their own undo.
         private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
         {
+            if (_viewModel.IsEditingSong && Document.Selection != null)
+            {
+                if (e.Key is Key.Delete or Key.Back)
+                {
+                    Document.DeleteSelection();
+                    e.Handled = true;
+                    return;
+                }
+                // Any other key (but a modifier on its own) ends the selection, and then does what it always does.
+                if (e.Key is not (Key.LeftCtrl or Key.RightCtrl or Key.LeftShift or Key.RightShift or Key.LeftAlt or Key.RightAlt or Key.System))
+                    Document.ClearSelection();
+            }
             if (!_viewModel.IsEditingSong || Keyboard.Modifiers.HasFlag(ModifierKeys.Alt) || !Keyboard.Modifiers.HasFlag(ModifierKeys.Control))
                 return;
             bool shift = Keyboard.Modifiers.HasFlag(ModifierKeys.Shift);
@@ -113,6 +137,7 @@ namespace SongCreator
         // Undo replaces the song's lines, so put the caret back in the line at the same place.
         private void KeepingCaretLine(Action change)
         {
+            Document.ClearSelection();
             var control = FindAncestor<SongLineControl>(Keyboard.FocusedElement as DependencyObject);
             var lines = Document.Song.Sections.SelectMany(s => s.Lines).ToList();
             int index = control?.DataContext is SongLine line ? lines.IndexOf(line) : -1;
@@ -147,6 +172,118 @@ namespace SongCreator
         // The theme button sits at the window's right edge, so open its popup leftwards.
         private static CustomPopupPlacement[] AlignPopupRight(Size popupSize, Size targetSize, Point offset) =>
             [new CustomPopupPlacement(new Point(targetSize.Width - popupSize.Width + 16, targetSize.Height - 10), PopupPrimaryAxis.Horizontal)];
+
+        // ---- Selecting across lines ----
+        // Each line is its own text box, which selects only within the line. Once a drag leaves the line it started
+        // in, the editor takes the mouse over and selects the lyrics in between (Document.Selection).
+
+        private void EditorScroll_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            Document.ClearSelection();
+            // Only a press in the lyrics: chord tags have a drag of their own.
+            var control = FindAncestor<SongLineControl>(e.OriginalSource as DependencyObject);
+            _selectionAnchor = control != null && FindAncestor<TextBox>(e.OriginalSource as DependencyObject) != null
+                ? new TextPosition(LineOf(control), control.IndexAt(e.GetPosition(control)))
+                : null;
+        }
+
+        private void EditorScroll_PreviewMouseMove(object sender, MouseEventArgs e)
+        {
+            if (_selectionAnchor is not { } anchor || e.LeftButton != MouseButtonState.Pressed || LineControlAt(e) is not { } control)
+                return;
+            var active = new TextPosition(LineOf(control), control.IndexAt(e.GetPosition(control)));
+            if (Document.Selection == null)
+            {
+                if (active.Line == anchor.Line)
+                    return;   // the line's text box is selecting
+                // Take the drag over from the text box, and drop the selection it started.
+                EditorScroll.CaptureMouse();
+                FindLineControl(this, anchor.Line)?.FocusText(anchor.Index);
+            }
+            Document.Select(anchor, active);
+            AutoScrollEditor(e);
+        }
+
+        private void EditorScroll_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+        {
+            _selectionAnchor = null;
+            if (EditorScroll.IsMouseCaptured)
+                EditorScroll.ReleaseMouseCapture();
+        }
+
+        /// <summary>The line at the mouse's height: the last one starting above it (so a heading counts as the line before).</summary>
+        private SongLineControl? LineControlAt(MouseEventArgs e)
+        {
+            var controls = LineControls().ToList();
+            return controls.LastOrDefault(control => e.GetPosition(control).Y >= 0) ?? controls.FirstOrDefault();
+        }
+
+        private void AutoScrollEditor(MouseEventArgs e)
+        {
+            double y = e.GetPosition(EditorScroll).Y;
+            if (y < AutoScrollMargin)
+                EditorScroll.LineUp();
+            else if (y > EditorScroll.ActualHeight - AutoScrollMargin)
+                EditorScroll.LineDown();
+        }
+
+        private void WatchSelection(SongDocumentViewModel? document)
+        {
+            if (_watchedDocument != null)
+                _watchedDocument.PropertyChanged -= Document_PropertyChanged;
+            _watchedDocument = document;
+            if (document != null)
+                document.PropertyChanged += Document_PropertyChanged;
+            // Wait for the editor to show the song's lines.
+            Dispatcher.BeginInvoke(DispatcherPriority.Loaded, ShowSelection);
+        }
+
+        private void Document_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == nameof(SongDocumentViewModel.Selection))
+                ShowSelection();
+        }
+
+        /// <summary>Marks the selected part of each line, and the section headings the selection would delete.</summary>
+        private void ShowSelection()
+        {
+            var selection = _viewModel.ActiveDocument?.Selection;
+            var lines = _viewModel.ActiveDocument?.Song.Sections.SelectMany(s => s.Lines).ToList() ?? [];
+            int first = selection == null ? -1 : lines.IndexOf(selection.Start.Line);
+            int last = selection == null ? -1 : lines.IndexOf(selection.End.Line);
+            foreach (var control in LineControls())
+            {
+                int index = lines.IndexOf(LineOf(control));
+                if (selection == null || index < first || index > last)
+                    control.HideSelection();
+                else
+                    control.ShowSelection(index == first ? selection.Start.Index : 0, index == last ? selection.End.Index : null);
+            }
+
+            var deletedSections = _viewModel.ActiveDocument?.SectionsInSelection ?? [];
+            for (int i = 0; i < SectionList.Items.Count; i++)
+            {
+                // A section the editor hasn't laid out yet (it was hidden until now) has no heading to mark yet.
+                if (SectionList.ItemContainerGenerator.ContainerFromIndex(i) is DependencyObject container &&
+                    FindDescendants<Rectangle>(container).FirstOrDefault(r => r.Name == "HeadingSelection") is { } mark)
+                    mark.Visibility = deletedSections.Contains(SectionList.Items[i]) ? Visibility.Visible : Visibility.Collapsed;
+            }
+        }
+
+        private IEnumerable<SongLineControl> LineControls() => FindDescendants<SongLineControl>(SectionList);
+
+        private static IEnumerable<T> FindDescendants<T>(DependencyObject parent) where T : DependencyObject
+        {
+            for (int i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
+            {
+                var child = VisualTreeHelper.GetChild(parent, i);
+                if (child is T match)
+                    yield return match;
+                else
+                    foreach (var descendant in FindDescendants<T>(child))
+                        yield return descendant;
+            }
+        }
 
         // ---- Line editing events → active document ----
 

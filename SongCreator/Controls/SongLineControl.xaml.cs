@@ -106,6 +106,25 @@ namespace SongCreator.Controls
             LyricBox.CaretIndex = Math.Clamp(caret, 0, LyricBox.Text.Length);
         }
 
+        /// <summary>The place in the lyrics nearest to <paramref name="point"/> (relative to this control): between two letters.</summary>
+        public int IndexAt(Point point) =>
+            Math.Clamp((int)Math.Round((TranslatePoint(point, Lane).X - Origin) / CharWidth), 0, LyricBox.Text.Length);
+
+        /// <summary>
+        /// Shows the lyrics from <paramref name="start"/> to <paramref name="end"/> as selected, with the chords above
+        /// them; a null <paramref name="end"/> selects to the end of the line, line break included.
+        /// </summary>
+        public void ShowSelection(int start, int? end)
+        {
+            int lineEnd = _line == null ? 0 : _line.Chords.Select(c => c.Position + c.Name.Length).Append(_line.Text.Length).Max();
+            int stop = end ?? lineEnd + 1;
+            SelectionMark.Margin = new Thickness(ColumnX(start), 0, 0, 0);
+            SelectionMark.Width = Math.Max(0, stop - start) * CharWidth;
+            SelectionMark.Visibility = Visibility.Visible;
+        }
+
+        public void HideSelection() => SelectionMark.Visibility = Visibility.Collapsed;
+
         // ---- Model binding ----
 
         private void OnDataContextChanged(object sender, DependencyPropertyChangedEventArgs e)

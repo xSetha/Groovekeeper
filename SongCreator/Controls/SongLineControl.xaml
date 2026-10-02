@@ -7,6 +7,10 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
+        <!-- This line's part of a selection across lines (the text box only selects within the line), chords included -->
+        <Rectangle x:Name="SelectionMark" Grid.RowSpan="2" HorizontalAlignment="Left" Fill="{DynamicResource SelectionBrush}"
+                   Opacity="0.4" Visibility="Collapsed" IsHitTestVisible="False" />
+
         <!-- Chord lane: highlights the drop column while a chord is dragged from the palette -->
         <Canvas x:Name="Lane" Grid.Row="0" Background="Transparent">
             <Rectangle x:Name="ColumnGhost" Height="20" Canvas.Top="1" RadiusX="2" RadiusY="2"
