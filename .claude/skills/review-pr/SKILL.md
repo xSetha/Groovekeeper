@@ -1,8 +1,8 @@
 ---
 name: review-pr
-description: Reviews code changes in the Groovekeeper repo (C#/WPF desktop app and the React/TypeScript web app) against the project's own rules, and reports findings by severity. Use when the user asks to review code, a diff, a commit, a branch or a PR, or asks "what do you think of this code". Read-only; never edits files.
+description: Reviews code changes in the Groovekeeper repo (C#/WPF desktop app and the React/TypeScript web app) against the project's own rules, and reports findings by severity. Use when the user asks to review code, a diff, a commit, a branch or a PR, or asks "what do you think of this code". Also use before committing whenever the change is more than 200 lines (added plus removed) outside tests, test fixtures and lock files. Read-only; never edits files.
 argument-hint: "[commit, range or branch - default: uncommitted changes]"
-allowed-tools: Bash(git status *) Bash(git diff *) Bash(git log *) Bash(git show *) Read Grep Glob
+allowed-tools: Bash(git status *) Bash(git diff *) Bash(git log *) Bash(git show *) Bash(git ls-files *) Bash(wc *) Read Grep Glob
 ---
 
 # Review
@@ -15,6 +15,27 @@ Branch: !`git branch --show-current`
 
 Uncommitted changes:
 !`git status --short`
+
+## Before a commit: is a review needed?
+
+Before committing, review the change when it is **more than 200 lines**, counting added plus removed lines
+and leaving out tests, test fixtures and lock files. Smaller changes are committed without a review unless
+the user asks for one.
+
+What doesn't count:
+- Tests: `SongCreator.Tests/`, any `test/` folder, `*.test.ts` and `*.test.tsx` files.
+- Test fixtures: `shared/fixtures/`.
+- Lock files: `package-lock.json` (generated; adding one package changes hundreds of its lines).
+
+Count tracked changes with:
+
+```bash
+git diff HEAD --numstat -- . ':(exclude)SongCreator.Tests/**' ':(exclude)**/test/**' ':(exclude)**/*.test.ts' \
+  ':(exclude)**/*.test.tsx' ':(exclude)shared/fixtures/**' ':(exclude)**/package-lock.json'
+```
+
+and add the lines of new, untracked files outside those paths (`git ls-files --others --exclude-standard`,
+then `wc -l`). Say the count and whether it's over the limit before reviewing or committing.
 
 ## 1. Pick what to review
 
