@@ -1,0 +1,49 @@
+# Builds a release when a version tag (v1.2.3) is pushed and publishes it on GitHub Releases,
+# where the installed apps find their updates. See docs/RELEASING.md.
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write   # create the release and upload its files
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Check the tag matches the version in SongCreator.csproj
+        id: version
+        shell: pwsh
+        run: |
+          $version = ([xml](Get-Content SongCreator/SongCreator.csproj -Raw)).Project.PropertyGroup.Version | Where-Object { $_ } | Select-Object -First 1
+          if ("v$version" -ne '${{ github.ref_name }}') {
+            throw "Tag ${{ github.ref_name }} doesn't match <Version>$version</Version> in SongCreator.csproj."
+          }
+          "version=$version" >> $env:GITHUB_OUTPUT
+
+      - name: Test
+        run: dotnet test
+
+      - name: Build the installer
+        shell: pwsh
+        run: scripts/release.ps1
+
+      - name: Publish the GitHub release
+        shell: pwsh
+        run: >
+          dotnet vpk upload github
+          --repoUrl https://github.com/${{ github.repository }}
+          --token ${{ secrets.GITHUB_TOKEN }}
+          --outputDir artifacts/releases
+          --tag ${{ github.ref_name }}
+          --releaseName "SongCreator ${{ steps.version.outputs.version }}"
+          --publish

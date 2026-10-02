@@ -13,3 +13,6 @@
 *.nupkg
 **/packages/*
 !**/packages/build/
+
+# Release builds (scripts/release.ps1)
+artifacts/
