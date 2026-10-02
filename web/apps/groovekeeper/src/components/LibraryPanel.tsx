@@ -1,3 +1,4 @@
+import { UNTITLED_TITLE } from '@groovekeeper/core';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router';
@@ -40,7 +41,7 @@ export function LibraryPanel({ className = '', activeId, canImport = true }: Pro
               className="flex items-center gap-3 rounded px-2.5 py-2 hover:bg-hover aria-[current=page]:bg-hover"
             >
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm font-semibold">{song.title}</span>
+                <span className="block truncate text-sm font-semibold">{song.title || UNTITLED_TITLE}</span>
                 {song.artist ? <span className="block truncate text-xs text-muted">{song.artist}</span> : null}
               </span>
               {song.key ? (

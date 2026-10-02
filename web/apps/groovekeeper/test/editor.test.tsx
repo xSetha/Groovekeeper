@@ -101,4 +101,101 @@ describe('the editor', () => {
     expect(sheet().queryByRole('button', { name: 'G' })).not.toBeInTheDocument();
     await waitFor(async () => expect(await stored()).toContain('[Verse 1]\n           C\nAmazing grace\n'));
   });
+
+  it('undoes typing with Ctrl+Z, a word at a time, and redoes it', async () => {
+    const user = userEvent.setup();
+    const [first] = await openSong();
+    await user.click(first!);
+    await user.keyboard('{End} how sweet');
+
+    await user.keyboard('{Control>}z{/Control}');
+    expect(first).toHaveValue('Amazing grace how ');
+    await user.keyboard('{Control>}z{/Control}');
+    expect(first).toHaveValue('Amazing grace ');
+    await user.keyboard('{Control>}y{/Control}');
+    expect(first).toHaveValue('Amazing grace how ');
+  });
+
+  it('moves, duplicates, repeats and deletes sections, and undoes them', async () => {
+    const user = userEvent.setup();
+    await openSong();
+    const sectionNames = () => screen.getAllByRole('textbox', { name: 'Section name' }).map((box) => (box as HTMLInputElement).value);
+
+    await user.click(screen.getByRole('button', { name: 'Duplicate section' }));
+    expect(sectionNames()).toEqual(['Verse 1', 'Verse 1']);
+    await user.clear(screen.getAllByRole('textbox', { name: 'Section name' })[1]!);
+    await user.type(screen.getAllByRole('textbox', { name: 'Section name' })[1]!, 'Chorus');
+    await user.click(screen.getAllByRole('button', { name: 'Move section up' })[1]!);
+    expect(sectionNames()).toEqual(['Chorus', 'Verse 1']);
+    await user.click(screen.getAllByRole('button', { name: 'Repeat section at the end' })[0]!);
+    expect(screen.getByRole('region', { name: 'Repeat of Chorus' })).toBeInTheDocument();
+
+    await user.click(screen.getAllByRole('button', { name: 'Delete section' })[0]!);
+    expect(sectionNames()).toEqual(['Verse 1']);
+    await user.click(screen.getByRole('button', { name: 'Undo' }));
+    expect(sectionNames()).toEqual(['Chorus', 'Verse 1']);
+  });
+
+  it('pastes a whole song: chord rows go above their lyrics and [Name] rows start sections', async () => {
+    const user = userEvent.setup();
+    const [, second] = await openSong();
+    await user.click(second!);
+    await user.keyboard('{End}');
+
+    await user.paste('\n[Chorus]\nD       G\nthe sound');
+
+    expect(screen.getAllByRole('textbox', { name: 'Section name' }).map((b) => (b as HTMLInputElement).value)).toEqual([
+      'Verse 1',
+      'Chorus',
+    ]);
+    const chorus = within(screen.getByRole('region', { name: 'Chorus' }));
+    expect(chorus.getByRole('textbox', { name: 'Lyrics' })).toHaveValue('the sound');
+    expect(chorus.getByRole('button', { name: 'G' }).parentElement?.style.left).toBe('8ch');
+  });
+
+  it('edits the title, artist and key', async () => {
+    const user = userEvent.setup();
+    await openSong();
+
+    await user.type(screen.getByRole('textbox', { name: 'Artist' }), 'John Newton');
+    await user.selectOptions(screen.getByTestId('song-key'), 'A');
+
+    await waitFor(async () => expect(await stored()).toMatch(/^Amazing Grace\nJohn Newton\n\nKey: A\n/));
+  });
+});
+
+describe('new songs', () => {
+  const renderStart = () =>
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <App />
+      </MemoryRouter>,
+    );
+
+  it('opens a new song in the editor, and removes it again if it was left empty', async () => {
+    const user = userEvent.setup();
+    renderStart();
+
+    await user.click(await screen.findByRole('button', { name: 'New song' }));
+    expect(await screen.findByRole('textbox', { name: 'Title' })).toHaveValue('');
+    expect(screen.getAllByRole('textbox', { name: 'Section name' }).map((b) => (b as HTMLInputElement).value)).toEqual([
+      'Intro', 'Verse 1', 'Chorus', 'Verse 2', 'Bridge', 'Outro',
+    ]);
+    expect(screen.getAllByRole('textbox', { name: 'Lyrics' })).toHaveLength(6);
+    expect(await db.songs.count()).toBe(1);
+
+    await user.click(screen.getByRole('link', { name: 'Groovekeeper' }));
+    await waitFor(async () => expect(await db.songs.count()).toBe(0));
+  });
+
+  it('keeps a new song that was written in', async () => {
+    const user = userEvent.setup();
+    renderStart();
+
+    await user.click(await screen.findByRole('button', { name: 'New song' }));
+    await user.type(await screen.findByRole('textbox', { name: 'Title' }), 'My song');
+    await user.click(screen.getByRole('link', { name: 'Groovekeeper' }));
+
+    await waitFor(async () => expect((await db.songs.toArray()).map((s) => s.title)).toEqual(['My song']));
+  });
 });

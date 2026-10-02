@@ -1,6 +1,6 @@
 import type { Song } from '@groovekeeper/core';
 import { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router';
+import { Link, useLocation, useParams } from 'react-router';
 import { LibraryPanel } from '../components/LibraryPanel';
 import { SongEditor } from '../editor/SongEditor';
 import { getSong } from '../library/library';
@@ -10,6 +10,8 @@ import { SongReader } from './SongReader';
 export function SongPage() {
   const { id = '' } = useParams();
   const phone = useIsPhone();
+  // Set by New song: a new song left empty is removed again when it's closed.
+  const isNew = (useLocation().state as { isNew?: boolean } | null)?.isNew === true;
   // The song is read once when it's opened; from then on the editor holds it and saves it.
   const [loaded, setLoaded] = useState<{ id: string; song: Song | undefined } | null>(null);
 
@@ -31,7 +33,7 @@ export function SongPage() {
       <LibraryPanel activeId={id} className="hidden w-72 shrink-0 border-r border-line p-4 md:flex" />
       <main className="flex min-w-0 flex-1 flex-col">
         {ready && !ready.song && <NotFound />}
-        {ready?.song && <SongEditor key={id} id={id} initial={ready.song} />}
+        {ready?.song && <SongEditor key={id} id={id} initial={ready.song} isNew={isNew} />}
       </main>
     </div>
   );

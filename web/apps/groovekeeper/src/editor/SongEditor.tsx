@@ -1,5 +1,7 @@
-import { displayTitle, transposeSong, type Song } from '@groovekeeper/core';
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type PointerEvent, type ReactNode } from 'react';
+import {
+  ALL_KEYS, createTemplate, detectKey, displayTitle, hasContent, transposeSong, UNTITLED_TITLE, type Song,
+} from '@groovekeeper/core';
+import { useEffect, useMemo, useRef, useState, type PointerEvent, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { useCharWidth } from '../components/useCharWidth';
@@ -7,232 +9,293 @@ import { download, songFile, type SongFormat } from '../library/files';
 import { deleteSong, saveSong } from '../library/library';
 import { ChordPalette } from './ChordPalette';
 import { trackDrag } from './drag';
-import {
-  editText, joinWithPrevious, moveChord, neighbourLine, placeChord, removeChord, splitLine, withIds,
-  type Focus, type KeyedSong, type LineAt,
-} from './edit';
-import { EditorLine } from './EditorLine';
+import { addSection, allChords, findLine, placeChord, setArtist, setKey, setTitle, withIds } from './edit';
+import { SectionBlock } from './SectionBlock';
+import { createEditorStore, EditorContext, useEditor, useEditorStore, type EditorStore } from './store';
 
 // Changes are saved to the library this long after the last one, so typing doesn't write on every key.
 const SAVE_DELAY_MS = 400;
 
-const keyOf = (at: LineAt): string => `${at.section}:${at.line}`;
-
-interface PaletteDrag {
-  name: string;
-  x: number;
-  y: number;
-  target: { at: LineAt; column: number } | null;
+interface Props {
+  id: string;
+  initial: Song;
+  /** A song just made with New song: if it's left without anything in it, it's removed again. */
+  isNew?: boolean;
 }
 
 /** The song editor: lyrics with their chord rows, a chord palette, and the song's toolbar. Saves as you go. */
-export function SongEditor({ id, initial }: { id: string; initial: Song }) {
-  const navigate = useNavigate();
-  const [song, setSong] = useState(() => withIds(initial));
-  const [focus, setFocus] = useState<Focus | null>(null);
-  const [paletteDrag, setPaletteDrag] = useState<PaletteDrag | null>(null);
-  const [confirmDelete, setConfirmDelete] = useState(false);
-  const inputs = useRef(new Map<string, HTMLInputElement>());
+export function SongEditor({ id, initial, isNew = false }: Props) {
+  // A song without sections (a new one: the saved text leaves out sections with nothing in them) starts
+  // with the usual blank ones, so there are lines to type into.
+  const [store] = useState(() =>
+    createEditorStore(withIds(initial.sections.length > 0 ? initial : { ...initial, sections: createTemplate().sections })));
+  const save = useAutosave(id, store, isNew);
+  useShortcuts(store);
+
+  return (
+    <EditorContext value={store}>
+      <Toolbar id={id} onDelete={save.cancel} />
+      <EditorBody />
+    </EditorContext>
+  );
+}
+
+function EditorBody() {
+  const store = useEditorStore();
   const charWidth = useCharWidth('text-lg');
-  const save = useAutosave(id, song);
+  const title = useEditor((s) => s.song.title);
+  const artist = useEditor((s) => s.song.artist);
+  // The song's shape (sections and their lines, by id) as one string: this part re-renders only when lines
+  // or sections are added, removed or moved, not on every key.
+  const shape = useEditor((s) =>
+    s.song.sections.map((section) => `${section.id}:${section.lines.map((l) => l.id).join(',')}`).join('|'));
+  const sections = shape ? shape.split('|').map((part) => part.split(':') as [string, string]) : [];
+  const [ghost, setGhost] = useState<{ name: string; x: number; y: number } | null>(null);
+  const { edit, editAndFocus, setDrop } = store.getState();
 
   useEffect(() => {
-    document.title = `${displayTitle(song)} – Groovekeeper`;
-  }, [song]);
-
-  useLayoutEffect(() => {
-    if (!focus) return;
-    const input = inputs.current.get(keyOf(focus.at));
-    input?.focus();
-    input?.setSelectionRange(focus.caret, focus.caret);
-  }, [focus]);
-
-  const edit = (at: LineAt) => ({
-    onText: (text: string, caret: number) => setSong((s) => editText(s, at, text, caret)),
-    // Functional, because Enter over a selection deletes it first in the same event.
-    onSplit: (caret: number) => {
-      setSong((s) => splitLine(s, at, caret).song);
-      setFocus({ at: { section: at.section, line: at.line + 1 }, caret: 0 });
-    },
-    onJoin: () => {
-      const result = joinWithPrevious(song, at);
-      if (!result) return;
-      setSong(result.song);
-      setFocus(result.focus);
-    },
-    onMoveFocus: (direction: -1 | 1, caret: number) => {
-      const target = neighbourLine(song, at, direction);
-      if (target) setFocus({ at: target, caret });
-    },
-    onMoveChord: (chordId: string, position: number) => setSong((s) => moveChord(s, at, chordId, position)),
-    onRemoveChord: (chordId: string) => setSong((s) => removeChord(s, at, chordId)),
-  });
+    document.title = `${title || UNTITLED_TITLE} – Groovekeeper`;
+  }, [title]);
 
   /** The line under the pointer, and the column the pointer is over. */
-  const dropTarget = useCallback(
-    (x: number, y: number): PaletteDrag['target'] => {
-      const row = document.elementFromPoint(x, y)?.closest<HTMLElement>('[data-line]');
-      if (!row || charWidth <= 0) return null;
-      const [section = 0, line = 0] = row.dataset.line!.split(':').map(Number);
-      const column = Math.max(0, Math.floor((x - row.getBoundingClientRect().left) / charWidth));
-      return { at: { section, line }, column };
-    },
-    [charWidth],
-  );
+  function dropTarget(x: number, y: number) {
+    const row = document.elementFromPoint(x, y)?.closest<HTMLElement>('[data-line-id]');
+    if (!row?.dataset.lineId || charWidth <= 0) return null;
+    return { lineId: row.dataset.lineId, column: Math.max(0, Math.floor((x - row.getBoundingClientRect().left) / charWidth)) };
+  }
 
   function startPaletteDrag(name: string, event: PointerEvent<HTMLButtonElement>) {
     // A mouse press would otherwise start selecting text.
     if (event.pointerType === 'mouse') event.preventDefault();
     trackDrag(event, {
-      onMove: (e) => setPaletteDrag({ name, x: e.clientX, y: e.clientY, target: dropTarget(e.clientX, e.clientY) }),
+      onMove: (e) => {
+        setGhost({ name, x: e.clientX, y: e.clientY });
+        setDrop(dropTarget(e.clientX, e.clientY));
+      },
       onEnd: (e) => {
         const target = e && dropTarget(e.clientX, e.clientY);
-        if (target) setSong((s) => placeChord(s, target.at, target.column, name));
-        setPaletteDrag(null);
+        if (target) {
+          edit((s) => {
+            const at = findLine(s, target.lineId);
+            return at ? placeChord(s, at, target.column, name) : s;
+          });
+        }
+        setDrop(null);
+        setGhost(null);
       },
     });
   }
 
+  return (
+    <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
+      <article aria-label="Song" className="min-h-0 min-w-0 flex-1 overflow-auto px-4 py-8 sm:px-10">
+        <input
+          value={title}
+          aria-label="Title"
+          placeholder={UNTITLED_TITLE}
+          className="w-full border-0 bg-transparent p-0 text-3xl font-semibold outline-none placeholder:text-hint"
+          onChange={(event) => {
+            const value = event.target.value;
+            edit((s) => setTitle(s, value), { merge: 'title' });
+          }}
+        />
+        <input
+          value={artist}
+          aria-label="Artist"
+          placeholder="Artist"
+          className="mt-1 w-full border-0 bg-transparent p-0 text-lg text-muted outline-none placeholder:text-hint"
+          onChange={(event) => {
+            const value = event.target.value;
+            edit((s) => setArtist(s, value), { merge: 'artist' });
+          }}
+        />
+        <div className="font-mono text-lg">
+          {sections.map(([sectionId, lineIds], index) => (
+            <SectionBlock
+              key={sectionId}
+              index={index}
+              lineIds={lineIds}
+              first={index === 0}
+              last={index === sections.length - 1}
+              charWidth={charWidth}
+            />
+          ))}
+        </div>
+        <button
+          type="button"
+          className="mt-6 rounded px-2 py-1 text-sm text-muted hover:bg-hover hover:text-fg pointer-coarse:min-h-11"
+          onClick={() => editAndFocus(addSection)}
+        >
+          + Section
+        </button>
+      </article>
+      <ChordPalette
+        onStartDrag={startPaletteDrag}
+        className="order-first max-h-40 shrink-0 overflow-y-auto border-b border-line p-4 lg:order-last lg:max-h-none lg:w-64 lg:border-b-0 lg:border-l"
+      />
+      {ghost ? (
+        <span
+          className="pointer-events-none fixed z-20 -translate-x-1/2 -translate-y-full rounded bg-accent-fill px-2 py-1 font-mono text-sm font-semibold text-on-accent shadow-lg"
+          style={{ left: ghost.x, top: ghost.y - 18 }}
+        >
+          {ghost.name}
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
+function Toolbar({ id, onDelete }: { id: string; onDelete: () => void }) {
+  const store = useEditorStore();
+  const navigate = useNavigate();
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const canUndo = useEditor((s) => s.past.length > 0);
+  const canRedo = useEditor((s) => s.future.length > 0);
+  const key = useEditor((s) => s.song.key);
+  // The chords as a string change only when chords do, so the key isn't worked out again on every key.
+  const chords = useEditor((s) => allChords(s.song).join(' '));
+  const detected = useMemo(() => detectKey(chords ? chords.split(' ') : []), [chords]);
+  const { edit, undo, redo } = store.getState();
+
   const saveFile = (format: SongFormat) => {
-    const file = songFile(song, format);
+    const file = songFile(store.getState().song, format);
     download(file.name, file.text);
   };
 
   return (
-    <>
-      <div className="flex flex-wrap items-center gap-x-5 gap-y-1 border-b border-line bg-toolbar px-4 py-1.5 text-sm">
-        <Link to="/" className="py-1.5 text-muted hover:text-fg md:hidden">
-          ← Library
-        </Link>
-        <span className="flex items-center gap-1">
-          <span className="text-muted">Transpose</span>
-          <ToolButton label="Transpose down" onClick={() => setSong((s) => transposeSong(s, -1))}>−</ToolButton>
-          <ToolButton label="Transpose up" onClick={() => setSong((s) => transposeSong(s, 1))}>+</ToolButton>
-        </span>
-        <span>
-          <span className="text-muted">Key </span>
-          <span className="font-semibold" data-testid="song-key">{song.key || '–'}</span>
-        </span>
-        <span className="ml-auto flex items-center gap-1">
-          <ToolButton onClick={() => saveFile('text')}>Save as .txt</ToolButton>
-          <ToolButton onClick={() => saveFile('chordpro')}>Save as ChordPro</ToolButton>
-          <ToolButton onClick={() => setConfirmDelete(true)}>Delete song</ToolButton>
-        </span>
-      </div>
-
-      <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
-        <article aria-label="Song" className="min-h-0 min-w-0 flex-1 overflow-auto px-4 py-8 sm:px-10">
-          <h1 className="text-3xl font-semibold">{displayTitle(song)}</h1>
-          {song.artist ? <p className="mt-1 text-lg text-muted">{song.artist}</p> : null}
-          <div className="font-mono text-lg">
-            {song.sections.map((section, s) => (
-              <section key={section.id} className="mt-7">
-                <h2 className="font-semibold">
-                  [{section.name}]{section.repeat ? <span className="font-normal text-muted"> (repeat)</span> : null}
-                </h2>
-                {section.lines.map((line, l) => {
-                  const at = { section: s, line: l };
-                  const target = paletteDrag?.target;
-                  return (
-                    <div key={line.id} data-line={keyOf(at)} className="w-fit">
-                      <EditorLine
-                        line={line}
-                        charWidth={charWidth}
-                        dropColumn={target && keyOf(target.at) === keyOf(at) ? target.column : null}
-                        inputRef={(input) => {
-                          if (input) inputs.current.set(keyOf(at), input);
-                          else inputs.current.delete(keyOf(at));
-                        }}
-                        {...edit(at)}
-                      />
-                    </div>
-                  );
-                })}
-              </section>
-            ))}
-          </div>
-        </article>
-        <ChordPalette
-          song={song}
-          onStartDrag={startPaletteDrag}
-          className="order-first max-h-40 shrink-0 overflow-y-auto border-b border-line p-4 lg:order-last lg:max-h-none lg:w-64 lg:border-b-0 lg:border-l"
-        />
-      </div>
-
-      {paletteDrag ? (
-        <span
-          className="pointer-events-none fixed z-20 -translate-x-1/2 -translate-y-full rounded bg-accent-fill px-2 py-1 font-mono text-sm font-semibold text-on-accent shadow-lg"
-          style={{ left: paletteDrag.x, top: paletteDrag.y - 18 }}
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-line bg-toolbar px-4 py-1.5 text-sm">
+      <Link to="/" className="py-1.5 text-muted hover:text-fg md:hidden">
+        ← Library
+      </Link>
+      <span className="flex items-center gap-1">
+        <ToolButton disabled={!canUndo} onClick={undo}>Undo</ToolButton>
+        <ToolButton disabled={!canRedo} onClick={redo}>Redo</ToolButton>
+      </span>
+      <span className="flex items-center gap-1">
+        <span className="text-muted">Transpose</span>
+        <ToolButton label="Transpose down" onClick={() => edit((s) => transposeSong(s, -1))}>−</ToolButton>
+        <ToolButton label="Transpose up" onClick={() => edit((s) => transposeSong(s, 1))}>+</ToolButton>
+      </span>
+      <label className="flex items-center gap-1.5">
+        <span className="text-muted">Key</span>
+        <select
+          value={ALL_KEYS.includes(key) ? key : ''}
+          data-testid="song-key"
+          className="rounded border border-line bg-window px-1 py-1 font-semibold pointer-coarse:min-h-11"
+          onChange={(event) => {
+            const value = event.target.value;
+            edit((s) => setKey(s, value));
+          }}
         >
-          {paletteDrag.name}
-        </span>
+          <option value="">–</option>
+          {ALL_KEYS.map((k) => (
+            <option key={k} value={k}>
+              {k}
+            </option>
+          ))}
+        </select>
+      </label>
+      {detected && detected !== key ? (
+        <ToolButton onClick={() => edit((s) => setKey(s, detected))}>
+          <span className="text-muted">The chords suggest </span>
+          <span className="font-semibold text-accent">{detected}</span>
+        </ToolButton>
       ) : null}
-
+      <span className="ml-auto flex items-center gap-1">
+        <ToolButton onClick={() => saveFile('text')}>Save as .txt</ToolButton>
+        <ToolButton onClick={() => saveFile('chordpro')}>Save as ChordPro</ToolButton>
+        <ToolButton onClick={() => setConfirmDelete(true)}>Delete song</ToolButton>
+      </span>
       {confirmDelete ? (
         <ConfirmDialog
-          title={`Delete “${displayTitle(song)}”?`}
+          title={`Delete “${displayTitle(store.getState().song)}”?`}
           message="The song is removed from the library in this browser. This can't be undone."
           confirmLabel="Delete"
           onCancel={() => setConfirmDelete(false)}
           onConfirm={() => {
-            save.cancel();
+            onDelete();
             void deleteSong(id).then(() => navigate('/'));
           }}
         />
       ) : null}
-    </>
+    </div>
   );
 }
 
-function ToolButton({ label, onClick, children }: { label?: string; onClick: () => void; children: ReactNode }) {
+function ToolButton(props: { label?: string; disabled?: boolean; onClick: () => void; children: ReactNode }) {
   return (
     <button
       type="button"
-      aria-label={label}
-      onClick={onClick}
-      className="rounded px-2 py-1.5 hover:bg-hover pointer-coarse:min-h-11 pointer-coarse:min-w-11"
+      aria-label={props.label}
+      disabled={props.disabled}
+      onClick={props.onClick}
+      className="rounded px-2 py-1.5 hover:bg-hover disabled:text-hint disabled:hover:bg-transparent pointer-coarse:min-h-11 pointer-coarse:min-w-11"
     >
-      {children}
+      {props.children}
     </button>
   );
 }
 
+/** Ctrl+Z undoes, Ctrl+Y and Ctrl+Shift+Z redo (Cmd on a Mac), instead of the text box's own undo. */
+function useShortcuts(store: EditorStore) {
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (!(event.ctrlKey || event.metaKey) || event.altKey) return;
+      const key = event.key.toLowerCase();
+      if (key === 'z' && !event.shiftKey) {
+        event.preventDefault();
+        store.getState().undo();
+      } else if (key === 'y' || (key === 'z' && event.shiftKey)) {
+        event.preventDefault();
+        store.getState().redo();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [store]);
+}
+
 /**
  * Saves the song to the library shortly after each change, and right away when leaving the song, or when
- * the app is hidden (a phone may freeze or close a hidden app without any other warning). `cancel` drops
- * a pending save (when the song is being deleted).
+ * the app is hidden (a phone may freeze or close a hidden app without any other warning). A new song left
+ * empty is removed instead. `cancel` drops a pending save (when the song is being deleted).
  */
-function useAutosave(id: string, song: KeyedSong) {
-  const opened = useRef(song);
+function useAutosave(id: string, store: EditorStore, isNew: boolean) {
   const pending = useRef<Song | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-
-  const flush = useCallback(() => {
-    clearTimeout(timer.current);
-    if (pending.current) void saveSong(id, pending.current);
-    pending.current = null;
-  }, [id]);
+  const cancelled = useRef(false);
 
   useEffect(() => {
-    if (song === opened.current) return;
-    pending.current = song;
-    clearTimeout(timer.current);
-    timer.current = setTimeout(flush, SAVE_DELAY_MS);
-  }, [song, flush]);
-
-  useEffect(() => {
+    const flush = () => {
+      clearTimeout(timer.current);
+      if (pending.current) void saveSong(id, pending.current);
+      pending.current = null;
+    };
+    const unsubscribe = store.subscribe((state, previous) => {
+      if (state.song === previous.song) return;
+      pending.current = state.song;
+      clearTimeout(timer.current);
+      timer.current = setTimeout(flush, SAVE_DELAY_MS);
+    });
     const onHidden = () => document.visibilityState === 'hidden' && flush();
     document.addEventListener('visibilitychange', onHidden);
     window.addEventListener('pagehide', flush);
     return () => {
+      unsubscribe();
       document.removeEventListener('visibilitychange', onHidden);
       window.removeEventListener('pagehide', flush);
-      flush();
+      if (isNew && !cancelled.current && !hasContent(store.getState().song)) {
+        clearTimeout(timer.current);
+        void deleteSong(id);
+      } else if (!cancelled.current) {
+        flush();
+      }
     };
-  }, [flush]);
+  }, [id, store, isNew]);
 
   return {
     cancel: () => {
+      cancelled.current = true;
       clearTimeout(timer.current);
       pending.current = null;
     },

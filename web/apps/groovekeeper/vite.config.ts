@@ -11,6 +11,6 @@ export default defineConfig({
   server: { fs: { allow: [repoRoot] } },
   test: {
     environment: 'jsdom',
-    setupFiles: ['./test/setup.ts'],
+    setupFiles: ['./test/react-renders.ts', './test/setup.ts'],
   },
 });

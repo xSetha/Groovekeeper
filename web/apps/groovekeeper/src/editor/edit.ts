@@ -1,5 +1,7 @@
 // Edits to a song in the editor. Each returns a new song and leaves the old one as it was.
-import { applyTextChange, joinLines, splitAt, textChange, type ChordPlacement, type Song } from '@groovekeeper/core';
+import {
+  applyTextChange, isChordLine, joinLines, splitAt, textChange, type ChordPlacement, type Song,
+} from '@groovekeeper/core';
 
 // The editor's copy of a song gives every section, line and chord an id, so React keeps each text box and
 // chord with its own content when lines are split, joined or moved. The ids are never saved.
@@ -47,13 +49,22 @@ export interface LineAt {
   line: number;
 }
 
-/** Where the caret goes after an edit. */
+/** Where the caret goes after an edit: a line (by id, which stays put when lines move) and a place in it. */
 export interface Focus {
-  at: LineAt;
+  lineId: string;
   caret: number;
 }
 
 export const lineAt = (song: KeyedSong, at: LineAt): KeyedLine | undefined => song.sections[at.section]?.lines[at.line];
+
+/** Where the line with this id is in the song, or null if it's gone. */
+export function findLine(song: KeyedSong, lineId: string): LineAt | null {
+  for (const [section, s] of song.sections.entries()) {
+    const line = s.lines.findIndex((l) => l.id === lineId);
+    if (line >= 0) return { section, line };
+  }
+  return null;
+}
 
 /** The song with the lines of one section replaced. */
 function withLines(song: KeyedSong, section: number, change: (lines: KeyedLine[]) => KeyedLine[]): KeyedSong {
@@ -62,6 +73,8 @@ function withLines(song: KeyedSong, section: number, change: (lines: KeyedLine[]
     sections: song.sections.map((s, i) => (i === section ? { ...s, lines: change(s.lines) } : s)),
   };
 }
+
+const emptyLine = (): KeyedLine => ({ id: newId(), text: '', chords: [] });
 
 const withLine = (song: KeyedSong, at: LineAt, change: (line: KeyedLine) => KeyedLine): KeyedSong =>
   withLines(song, at.section, (lines) => lines.map((l, i) => (i === at.line ? change(l) : l)));
@@ -75,18 +88,19 @@ export function editText(song: KeyedSong, at: LineAt, text: string, caret: numbe
 }
 
 /** Enter: the line is cut at the caret, and the rest goes onto a new line below it. */
-export function splitLine(song: KeyedSong, at: LineAt, caret: number): { song: KeyedSong; focus: Focus } {
+export function splitLine(song: KeyedSong, at: LineAt, caret: number): { song: KeyedSong; focus: Focus } | null {
   const line = lineAt(song, at);
-  if (!line) return { song, focus: { at, caret } };
+  if (!line) return null;
   const [head, tail] = splitAt(line, caret);
+  const newLine = { ...tail, id: newId() };
   return {
     song: withLines(song, at.section, (lines) => [
       ...lines.slice(0, at.line),
       { ...head, id: line.id },
-      { ...tail, id: newId() },
+      newLine,
       ...lines.slice(at.line + 1),
     ]),
-    focus: { at: { section: at.section, line: at.line + 1 }, caret: 0 },
+    focus: { lineId: newLine.id, caret: 0 },
   };
 }
 
@@ -105,23 +119,24 @@ export function joinWithPrevious(song: KeyedSong, at: LineAt): { song: KeyedSong
     return {
       song: withLines(song, at.section, (all) =>
         all.flatMap((l, i) => (i === at.line - 1 ? [joined] : i === at.line ? [] : [l]))),
-      focus: { at: { section: at.section, line: at.line - 1 }, caret: previous.text.length },
+      focus: { lineId: previous.id, caret: previous.text.length },
     };
   }
-  if (line.text.length === 0 && line.chords.length === 0 && lines.length > 1) {
+  const next = lines[1];
+  if (line.text.length === 0 && line.chords.length === 0 && next) {
     return {
       song: withLines(song, at.section, (all) => all.slice(1)),
-      focus: { at, caret: 0 },
+      focus: { lineId: next.id, caret: 0 },
     };
   }
   return null;
 }
 
-/** The line above (-1) or below (+1), across sections; null at the start or end of the song. */
-export function neighbourLine(song: KeyedSong, at: LineAt, direction: -1 | 1): LineAt | null {
-  const all = song.sections.flatMap((section, s) => section.lines.map((_, l) => ({ section: s, line: l })));
-  const index = all.findIndex((a) => a.section === at.section && a.line === at.line);
-  return all[index + direction] ?? null;
+/** The id of the line above (-1) or below (+1), across sections; null at the start or end of the song. */
+export function neighbourLine(song: KeyedSong, lineId: string, direction: -1 | 1): string | null {
+  const all = song.sections.flatMap((section) => section.lines.map((line) => line.id));
+  const index = all.indexOf(lineId);
+  return index < 0 ? null : (all[index + direction] ?? null);
 }
 
 /** A chord dropped at a column: it replaces a chord already there, or is added. */
@@ -146,8 +161,152 @@ export function removeChord(song: KeyedSong, at: LineAt, chordId: string): Keyed
   return withLine(song, at, (line) => ({ ...line, chords: line.chords.filter((c) => c.id !== chordId) }));
 }
 
-/** The chords of the song, each once, in the order they first appear. */
-export function chordsInSong(song: Song): string[] {
-  const names = song.sections.flatMap((s) => s.lines).flatMap((l) => l.chords.toSorted((a, b) => a.position - b.position));
-  return [...new Set(names.map((c) => c.name))];
+// ---- Song details ----
+
+export const setTitle = (song: KeyedSong, title: string): KeyedSong => ({ ...song, title });
+export const setArtist = (song: KeyedSong, artist: string): KeyedSong => ({ ...song, artist });
+export const setKey = (song: KeyedSong, key: string): KeyedSong => ({ ...song, key });
+
+// ---- Sections ----
+
+/** The name a new section gets; the user renames it. */
+export const NEW_SECTION_NAME = 'New section';
+
+/** A new section with one empty line at the end of the song, focused. */
+export function addSection(song: KeyedSong): { song: KeyedSong; focus: Focus } {
+  const line = emptyLine();
+  return {
+    song: { ...song, sections: [...song.sections, { id: newId(), name: NEW_SECTION_NAME, repeat: false, lines: [line] }] },
+    focus: { lineId: line.id, caret: 0 },
+  };
 }
+
+/** A new empty line at the end of a section, focused. */
+export function addLine(song: KeyedSong, section: number): { song: KeyedSong; focus: Focus } {
+  const line = emptyLine();
+  return { song: withLines(song, section, (lines) => [...lines, line]), focus: { lineId: line.id, caret: 0 } };
+}
+
+export const renameSection = (song: KeyedSong, section: number, name: string): KeyedSong => ({
+  ...song,
+  sections: song.sections.map((s, i) => (i === section ? { ...s, name } : s)),
+});
+
+/** The section moved one place up (-1) or down (+1); unchanged at either end. */
+export function moveSection(song: KeyedSong, section: number, direction: -1 | 1): KeyedSong {
+  const target = section + direction;
+  const moving = song.sections[section];
+  const other = song.sections[target];
+  if (!moving || !other) return song;
+  return { ...song, sections: song.sections.with(section, other).with(target, moving) };
+}
+
+/** A copy of the section right after it, with new ids. */
+export function duplicateSection(song: KeyedSong, section: number): KeyedSong {
+  const original = song.sections[section];
+  if (!original) return song;
+  const copy: KeyedSection = {
+    ...original,
+    id: newId(),
+    lines: original.lines.map((line) => ({ ...line, id: newId(), chords: line.chords.map((c) => ({ ...c, id: newId() })) })),
+  };
+  return { ...song, sections: song.sections.toSpliced(section + 1, 0, copy) };
+}
+
+export const deleteSection = (song: KeyedSong, section: number): KeyedSong => ({
+  ...song,
+  sections: song.sections.toSpliced(section, 1),
+});
+
+/** "Play this section again": a repeat of it at the end of the song. */
+export function repeatSection(song: KeyedSong, section: number): KeyedSong {
+  const original = song.sections[section];
+  if (!original) return song;
+  return { ...song, sections: [...song.sections, { id: newId(), name: original.name, repeat: true, lines: [] }] };
+}
+
+// ---- Pasting ----
+
+const HEADING = /^\[(.+)\]$/;
+const TOKEN = /\S+/g;
+
+/**
+ * Text with several lines pasted at the caret: each row becomes a lyric line, a "[Name]" row starts a new
+ * section, and a row of chords (chords over lyrics, as on chord sites) puts its chords above the lyric row
+ * below it. The rest of the line pasted into goes after the pasted text.
+ */
+export function pasteLines(song: KeyedSong, at: LineAt, caret: number, text: string): { song: KeyedSong; focus: Focus } | null {
+  const original = lineAt(song, at);
+  if (!original) return null;
+  // Copies of the sections and their line lists, changed in place below; the song passed in stays as it was.
+  const sections = song.sections.map((s) => ({ ...s, lines: [...s.lines] }));
+  let section = sections[at.section]!;
+  const [head, rest] = splitAt(original, caret);
+  const line: KeyedLine = { ...head, id: original.id, chords: [...head.chords] };
+  section.lines[at.line] = line;
+  const tail: KeyedLine = { ...rest, id: newId() };
+  let insertAt = at.line + 1;
+  let last = line;
+  let pendingChords: KeyedLine | null = null; // a chord row waiting for the lyric row below it
+  let startedSections = false;
+
+  // Chord sites often line chords up with non-breaking spaces.
+  const rows = text.replaceAll('\u00a0', ' ').replaceAll('\r\n', '\n').replaceAll('\r', '\n').split('\n');
+  rows.forEach((raw, i) => {
+    const row = raw.trimEnd();
+    const heading = HEADING.exec(row.trim());
+    if (heading) {
+      // Lines after the insertion point belong after the new heading.
+      const started: KeyedSection = { id: newId(), name: heading[1]!, repeat: false, lines: section.lines.splice(insertAt) };
+      sections.splice(sections.indexOf(section) + 1, 0, started);
+      section = started;
+      startedSections = true;
+      insertAt = 0;
+      pendingChords = null;
+    } else if (row.trim().length > 0 && isChordLine(row)) {
+      // The first chord row goes into the line pasted into, if that line is still blank.
+      if (i === 0 && line.text.length === 0 && line.chords.length === 0) {
+        last = line;
+      } else {
+        last = emptyLine();
+        section.lines.splice(insertAt++, 0, last);
+      }
+      for (const token of row.matchAll(TOKEN)) last.chords.push({ position: token.index, name: token[0], id: newId() });
+      pendingChords = last;
+    } else if (pendingChords && row.trim().length > 0) {
+      pendingChords.text = row;
+      pendingChords = null;
+    } else if (i === 0) {
+      line.text += row;
+    } else if (row.trim().length > 0) {
+      last = { id: newId(), text: row, chords: [] };
+      section.lines.splice(insertAt++, 0, last);
+    } else {
+      pendingChords = null; // a blank row: the chords above were a chord-only line
+    }
+  });
+
+  if (tail.text.length > 0 || tail.chords.length > 0) section.lines.splice(insertAt, 0, tail);
+
+  // Pasting a whole song into a blank line shouldn't leave that blank line (or its empty section) behind.
+  if (line.text.length === 0 && line.chords.length === 0 && last !== line) {
+    const home = sections.find((s) => s.lines.includes(line))!;
+    home.lines.splice(home.lines.indexOf(line), 1);
+    if (home.lines.length === 0) sections.splice(sections.indexOf(home), 1);
+  }
+
+  // A pasted song with its own sections replaces the empty ones (a new song's blank Intro, Verse 1, …), which
+  // saving would drop anyway.
+  const kept = startedSections
+    ? sections.filter((s) => s.repeat || s.lines.some((l) => l.text.length > 0 || l.chords.length > 0) || s.lines.includes(last))
+    : sections;
+
+  return { song: { ...song, sections: kept }, focus: { lineId: last.id, caret: last.text.length } };
+}
+
+/** The chords of the song, each once, in the order they first appear. */
+export const chordsInSong = (song: Song): string[] => [...new Set(allChords(song))];
+
+/** Every chord of the song in playing order (repeats aside), as key detection reads them. */
+export const allChords = (song: Song): string[] =>
+  song.sections.flatMap((s) => s.lines).flatMap((l) => l.chords.toSorted((a, b) => a.position - b.position)).map((c) => c.name);

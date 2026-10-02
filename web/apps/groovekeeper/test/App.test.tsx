@@ -24,15 +24,15 @@ describe('the app', () => {
     await user.upload(screen.getAllByTestId('import-files')[0]!, new File([AMAZING_GRACE], 'Amazing Grace.txt'));
 
     // One song imported: it opens.
-    expect(await screen.findByRole('heading', { level: 1, name: 'Amazing Grace' })).toBeInTheDocument();
+    expect(await screen.findByRole('textbox', { name: 'Title' })).toHaveValue('Amazing Grace');
     expect(screen.getByText('(repeat)')).toBeInTheDocument();
     const sheet = within(screen.getByRole('article', { name: 'Song' }));
     expect(sheet.getByText('G7').parentElement?.style.left).toBe('19ch');
-    expect(screen.getByTestId('song-key')).toHaveTextContent('G');
+    expect(screen.getByTestId('song-key')).toHaveValue('G');
 
     await user.click(screen.getByRole('button', { name: 'Transpose up' }));
 
-    await waitFor(() => expect(screen.getByTestId('song-key')).toHaveTextContent('Ab'));
+    await waitFor(() => expect(screen.getByTestId('song-key')).toHaveValue('Ab'));
     expect(sheet.getByText('Ab7')).toBeInTheDocument();
     const library = screen.getByRole('navigation', { name: 'Library' });
     expect(await within(library).findByTitle('Key of Ab')).toBeInTheDocument();

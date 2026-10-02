@@ -6,6 +6,7 @@ import { ImportSongs } from '../components/ImportSongs';
 import { LibraryPanel } from '../components/LibraryPanel';
 import { Logo } from '../components/TopBar';
 import { db } from '../library/db';
+import { createTemplate } from '@groovekeeper/core';
 import { addSongs } from '../library/library';
 import { sampleSongs } from '../library/samples';
 import { useIsPhone } from '../phone';
@@ -72,8 +73,17 @@ export function StartPage() {
             Write your lyrics, then drop each chord exactly on the syllable where it changes.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
+            <button
+              type="button"
+              className="rounded bg-accent-fill px-5 py-2.5 font-semibold text-on-accent hover:brightness-125 pointer-coarse:min-h-11"
+              onClick={() => {
+                void addSongs([createTemplate()]).then(([id]) => navigate(`/songs/${id}`, { state: { isNew: true } }));
+              }}
+            >
+              New song
+            </button>
             <ImportSongs
-              className="rounded bg-accent-fill px-5 py-2.5 font-semibold text-on-accent hover:brightness-125"
+              className="rounded px-5 py-2.5 font-semibold hover:bg-hover pointer-coarse:min-h-11"
               onImported={openFirst}
             >
               Import songs…
@@ -81,7 +91,8 @@ export function StartPage() {
             {samples}
           </div>
           <p className="mt-6 max-w-md text-sm text-muted">
-            Import <code>.txt</code> and ChordPro files. Your songs are kept in this browser, on this device.
+            Write a new song, or import <code>.txt</code> and ChordPro files. Your songs are kept in this browser,
+            on this device.
           </p>
         </section>
 

@@ -1,24 +1,27 @@
-import { diatonicChords, type Song } from '@groovekeeper/core';
+import { diatonicChords } from '@groovekeeper/core';
 import type { PointerEvent } from 'react';
 import { chordsInSong } from './edit';
+import { useEditor } from './store';
 
 // Offered when the song has no key and no chords yet.
 const STARTER_CHORDS = ['C', 'G', 'D', 'A', 'E', 'F', 'Am', 'Em', 'Dm'];
 
 interface Props {
-  song: Song;
   onStartDrag: (name: string, event: PointerEvent<HTMLButtonElement>) => void;
   className?: string;
 }
 
 /** Chords to drag onto the lyrics: those of the song's key and those already in the song. */
-export function ChordPalette({ song, onStartDrag, className = '' }: Props) {
-  const inKey = diatonicChords(song.key);
-  const inSong = chordsInSong(song);
+export function ChordPalette({ onStartDrag, className = '' }: Props) {
+  const key = useEditor((s) => s.song.key);
+  // Joined into a string so typing lyrics (which leaves the chords as they are) doesn't re-render the palette.
+  const inSong = useEditor((s) => chordsInSong(s.song).join(' '));
+  const inKey = diatonicChords(key);
+  const songChords = inSong ? inSong.split(' ') : [];
   const groups = [
-    { title: `In ${song.key}`, chords: inKey },
-    { title: 'In this song', chords: inSong },
-    { title: 'Chords', chords: inKey.length === 0 && inSong.length === 0 ? STARTER_CHORDS : [] },
+    { title: `In ${key}`, chords: inKey },
+    { title: 'In this song', chords: songChords },
+    { title: 'Chords', chords: inKey.length === 0 && songChords.length === 0 ? STARTER_CHORDS : [] },
   ].filter((group) => group.chords.length > 0);
 
   return (

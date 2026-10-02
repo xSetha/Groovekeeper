@@ -1,35 +1,61 @@
-import { useRef, useState, type KeyboardEvent, type PointerEvent } from 'react';
+import { memo, useLayoutEffect, useRef, useState, type ClipboardEvent, type KeyboardEvent, type PointerEvent } from 'react';
 import { trackDrag } from './drag';
-import type { KeyedLine } from './edit';
+import { editText, joinWithPrevious, moveChord, neighbourLine, pasteLines, removeChord, splitLine } from './edit';
+import { useEditor, useEditorStore } from './store';
 
 interface Props {
-  line: KeyedLine;
+  section: number;
+  line: number;
+  lineId: string;
   /** Width of one lyric letter in pixels, to turn pointer moves into columns. */
   charWidth: number;
-  /** The column a palette chord would land in, highlighted while one is dragged over this line. */
-  dropColumn: number | null;
-  inputRef: (input: HTMLInputElement | null) => void;
-  onText: (text: string, caret: number) => void;
-  onSplit: (caret: number) => void;
-  onJoin: () => void;
-  onMoveFocus: (direction: -1 | 1, caret: number) => void;
-  onMoveChord: (chordId: string, position: number) => void;
-  onRemoveChord: (chordId: string) => void;
 }
 
 /**
  * One lyric line with its chord row above. Lyrics are monospace and chords are placed in `ch` units, so a
- * chord at position n sits above the nth letter.
+ * chord at position n sits above the nth letter. It reads only its own line from the store, so typing in
+ * it doesn't re-render the rest of the song.
  */
-export function EditorLine(props: Props) {
-  const { line, charWidth, dropColumn, inputRef } = props;
+export const EditorLine = memo(function EditorLine({ section, line: lineIndex, lineId, charWidth }: Props) {
+  const store = useEditorStore();
+  const at = { section, line: lineIndex };
+  const line = useEditor((s) => s.song.sections[section]?.lines[lineIndex]);
+  const dropColumn = useEditor((s) => (s.drop?.lineId === lineId ? s.drop.column : null));
+  const focus = useEditor((s) => (s.focus?.lineId === lineId ? s.focus : null));
+  const input = useRef<HTMLInputElement>(null);
   // The chord tapped or clicked, which shows its Remove button (the way to remove one on a phone).
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   // A long press on a phone also fires contextmenu; only a mouse right-click removes a chord.
   const lastPointer = useRef('mouse');
+
+  useLayoutEffect(() => {
+    if (!focus) return;
+    input.current?.focus();
+    input.current?.setSelectionRange(focus.caret, focus.caret);
+  }, [focus]);
+
+  if (!line) return null;
+  const { edit, editAndFocus } = store.getState();
   // Wide enough for the lyrics, the chords past their end, and room to type.
   const width = Math.max(line.text.length + 2, ...line.chords.map((c) => c.position + c.name.length + 1));
+
+  function onText(text: string, caret: number) {
+    // Typing in one line is one undo step per word: a space ends the step.
+    const typedSpace = text.length > (line?.text.length ?? 0) && /\s$/.test(text.slice(0, caret));
+    edit((s) => editText(s, at, text, caret), { merge: `type:${lineId}`, endStep: typedSpace });
+  }
+
+  function onPaste(event: ClipboardEvent<HTMLInputElement>) {
+    const text = event.clipboardData.getData('text/plain');
+    if (!text.includes('\n')) return; // one line: the text box pastes it as usual
+    event.preventDefault();
+    const box = event.currentTarget;
+    const start = box.selectionStart ?? 0;
+    const end = box.selectionEnd ?? start;
+    if (end > start) onText(box.value.slice(0, start) + box.value.slice(end), start);
+    editAndFocus((s) => pasteLines(s, at, start, text));
+  }
 
   function onKeyDown(event: KeyboardEvent<HTMLInputElement>) {
     const input = event.currentTarget;
@@ -37,20 +63,23 @@ export function EditorLine(props: Props) {
     const end = input.selectionEnd ?? start;
     if (event.key === 'Enter') {
       event.preventDefault();
-      if (end > start) props.onText(input.value.slice(0, start) + input.value.slice(end), start);
-      props.onSplit(start);
+      if (end > start) onText(input.value.slice(0, start) + input.value.slice(end), start);
+      editAndFocus((s) => splitLine(s, at, start));
     } else if (event.key === 'Backspace' && start === 0 && end === 0) {
       event.preventDefault();
-      props.onJoin();
+      editAndFocus((s) => joinWithPrevious(s, at));
     } else if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
       event.preventDefault();
-      props.onMoveFocus(event.key === 'ArrowUp' ? -1 : 1, start);
+      const target = neighbourLine(store.getState().song, lineId, event.key === 'ArrowUp' ? -1 : 1);
+      if (target) store.getState().setFocus({ lineId: target, caret: start });
     }
   }
 
   function onChordPointerDown(event: PointerEvent<HTMLButtonElement>, chordId: string, startPosition: number) {
     lastPointer.current = event.pointerType;
     const startX = event.clientX;
+    // One drag is one undo step, however many columns it moves.
+    const step = `drag:${chordId}:${event.timeStamp}`;
     trackDrag(event, {
       onStart: () => {
         setSelectedId(null);
@@ -58,7 +87,8 @@ export function EditorLine(props: Props) {
       },
       onMove: (move) => {
         if (charWidth <= 0) return;
-        props.onMoveChord(chordId, Math.max(0, startPosition + Math.round((move.clientX - startX) / charWidth)));
+        const position = Math.max(0, startPosition + Math.round((move.clientX - startX) / charWidth));
+        edit((s) => moveChord(s, at, chordId, position), { merge: step });
       },
       onEnd: () => setDraggingId(null),
       onTap: () => setSelectedId((selected) => (selected === chordId ? null : chordId)),
@@ -67,7 +97,7 @@ export function EditorLine(props: Props) {
 
   const remove = (chordId: string) => {
     setSelectedId(null);
-    props.onRemoveChord(chordId);
+    edit((s) => removeChord(s, at, chordId));
   };
 
   return (
@@ -123,7 +153,7 @@ export function EditorLine(props: Props) {
         ))}
       </div>
       <input
-        ref={inputRef}
+        ref={input}
         value={line.text}
         aria-label="Lyrics"
         spellCheck={false}
@@ -132,9 +162,10 @@ export function EditorLine(props: Props) {
         className="block border-0 bg-transparent p-0 outline-none"
         style={{ width: `${width}ch` }}
         onFocus={() => setSelectedId(null)}
-        onChange={(event) => props.onText(event.target.value, event.target.selectionStart ?? event.target.value.length)}
+        onChange={(event) => onText(event.target.value, event.target.selectionStart ?? event.target.value.length)}
         onKeyDown={onKeyDown}
+        onPaste={onPaste}
       />
     </div>
   );
-}
+});
