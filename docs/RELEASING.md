@@ -29,10 +29,26 @@ The rules that keep the updater working:
 - **Never change the package ID** (`--packId SongCreator` in `scripts/release.ps1`). Installed copies
   only update from releases with the same ID.
 
+## The changelog
+
+[`CHANGELOG.md`](../CHANGELOG.md) says what changed in each version, written for the people using the
+app ("Chords stay on their syllable when…"), not for developers. It follows
+[Keep a Changelog](https://keepachangelog.com):
+
+- Every change people will notice adds a line under `## [Unreleased]`, in the same commit as the
+  change, under `### Added`, `### Changed`, `### Removed` or `### Fixed`. Changes only developers see
+  (tests, refactoring, build scripts) don't go in.
+- The headings decide the version number: anything under Added (or Changed, Removed) needs at least a
+  `MINOR` release; only Fixed is a `PATCH` release; a change that breaks something is `MAJOR`.
+- A release turns `## [Unreleased]` into `## [1.5.0] - 2026-11-14` and starts a new, empty
+  `## [Unreleased]` above it.
+
 ## Making a release
 
 1. Check that `main` has everything for the release and that the tests pass: `dotnet test`.
-2. Set the new version in `SongCreator/SongCreator.csproj` and commit it on its own:
+2. Choose the version from what's under `## [Unreleased]` in `CHANGELOG.md`. Rename that heading to
+   the version and today's date, add a new empty `## [Unreleased]` above it, set the version in
+   `SongCreator/SongCreator.csproj`, and commit both on their own:
 
    ```powershell
    git commit -am "chore: release 1.5.0"
@@ -53,18 +69,22 @@ The rules that keep the updater working:
    git push origin main v1.5.0
    ```
 
-Pushing the tag starts the **Release** workflow (`.github/workflows/release.yml`). It runs the tests,
-builds the installer with `scripts/release.ps1` and publishes the GitHub release `SongCreator 1.5.0`
-with these files:
+Pushing the tag starts the **Release** workflow (`.github/workflows/release.yml`); follow it on the
+repository's Actions tab. It checks the tag against the version and the changelog, runs the tests,
+builds the installer with `scripts/release.ps1` and publishes the GitHub release `SongCreator 1.5.0`,
+with the version's section of the changelog as its text and these files:
 
 | File | What it's for |
 | --- | --- |
 | `SongCreator-win-Setup.exe` | The installer. This is the link to give people. |
 | `SongCreator-win-Portable.zip` | The app without installing it; it updates itself too. |
-| `SongCreator-1.5.0-full.nupkg`, `-delta.nupkg`, `releases.win.json`, `assets.win.json`, `RELEASES` | Used by the updater. Leave them in the release. |
+| `SongCreator-1.5.0-full.nupkg`, `-delta.nupkg`, `releases.win.json`, `RELEASES` | Used by the updater. Leave them in the release. |
 
-Edit the release on GitHub afterwards to describe what changed. The installed apps pick up the release
-on their next start.
+The installed apps pick up the release on their next start.
+
+If you push the version commit and the tag in one push and no run appears on the Actions tab, push
+the tag again: `git push origin :refs/tags/v1.5.0`, then `git push origin v1.5.0`. That's only safe
+while the release doesn't exist yet.
 
 ## What the installer does
 

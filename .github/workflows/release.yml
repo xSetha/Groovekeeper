@@ -30,6 +30,17 @@ jobs:
           }
           "version=$version" >> $env:GITHUB_OUTPUT
 
+      - name: Take the release notes from CHANGELOG.md
+        shell: pwsh
+        run: |
+          $version = '${{ steps.version.outputs.version }}'
+          $changelog = Get-Content CHANGELOG.md -Raw
+          $section = [regex]::Match($changelog, "(?ms)^## \[$([regex]::Escape($version))\][^\n]*\n(.*?)(?=^## \[|\z)")
+          if (-not $section.Groups[1].Value.Trim()) {
+            throw "CHANGELOG.md has no notes under '## [$version]'."
+          }
+          $section.Groups[1].Value.Trim() | Set-Content (Join-Path $env:RUNNER_TEMP 'release-notes.md')
+
       - name: Test
         run: dotnet test
 
@@ -47,3 +58,8 @@ jobs:
           --tag ${{ github.ref_name }}
           --releaseName "SongCreator ${{ steps.version.outputs.version }}"
           --publish
+
+      - name: Add the release notes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release edit ${{ github.ref_name }} --notes-file "${{ runner.temp }}/release-notes.md"
