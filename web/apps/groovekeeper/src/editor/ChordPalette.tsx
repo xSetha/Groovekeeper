@@ -23,7 +23,7 @@ export function ChordPalette({ song, onStartDrag, className = '' }: Props) {
 
   return (
     <aside aria-label="Chords" className={className}>
-      <h2 className="text-xs font-semibold tracking-wider text-muted uppercase">Chords</h2>
+      <h2 className="font-semibold">Chords</h2>
       <p className="mt-1 text-xs text-muted">
         Drag a chord above a letter. Drop it on a chord to replace that chord. On a touch screen, hold the chord
         for a moment, then drag.

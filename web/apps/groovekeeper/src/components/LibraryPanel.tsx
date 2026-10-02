@@ -21,7 +21,7 @@ export function LibraryPanel({ className = '', activeId, canImport = true }: Pro
 
   return (
     <nav aria-label="Library" className={`flex min-h-0 flex-col ${className}`}>
-      <h2 className="text-xs font-semibold tracking-wider text-muted uppercase">Library</h2>
+      <h2 className="font-semibold">Library</h2>
       <input
         type="search"
         value={search}
@@ -37,10 +37,17 @@ export function LibraryPanel({ className = '', activeId, canImport = true }: Pro
             <Link
               to={`/songs/${song.id}`}
               aria-current={song.id === activeId ? 'page' : undefined}
-              className="block rounded px-2.5 py-2 hover:bg-hover aria-[current=page]:bg-hover"
+              className="flex items-center gap-3 rounded px-2.5 py-2 hover:bg-hover aria-[current=page]:bg-hover"
             >
-              <span className="block text-sm font-semibold">{song.title}</span>
-              <span className="block text-xs text-muted">{[song.artist, song.key].filter(Boolean).join(' · ')}</span>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-sm font-semibold">{song.title}</span>
+                {song.artist ? <span className="block truncate text-xs text-muted">{song.artist}</span> : null}
+              </span>
+              {song.key ? (
+                <span className="shrink-0 rounded bg-chip px-1.5 py-0.5 font-mono text-xs text-muted" title={`Key of ${song.key}`}>
+                  {song.key}
+                </span>
+              ) : null}
             </Link>
           </li>
         ))}

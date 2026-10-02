@@ -35,7 +35,7 @@ describe('the app', () => {
     await waitFor(() => expect(screen.getByTestId('song-key')).toHaveTextContent('Ab'));
     expect(sheet.getByText('Ab7')).toBeInTheDocument();
     const library = screen.getByRole('navigation', { name: 'Library' });
-    expect(await within(library).findByText('John Newton · Ab')).toBeInTheDocument();
+    expect(await within(library).findByTitle('Key of Ab')).toBeInTheDocument();
   });
 
   it('adds the sample songs to an empty library', async () => {
@@ -58,7 +58,7 @@ describe('the app', () => {
 
     // "Am" matches the key of two songs, "am" the title of one.
     const library = screen.getByRole('navigation', { name: 'Library' });
-    expect(within(library).getAllByRole('link').map((link) => link.querySelector('span')?.textContent)).toEqual([
+    expect(within(library).getAllByRole('link').map((link) => link.querySelector('span span')?.textContent)).toEqual([
       'Amazing Grace',
       'House of the Rising Sun',
       'Scarborough Fair',
