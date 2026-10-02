@@ -15,6 +15,9 @@ other chord apps.
 - Sections (`[Verse 1]`, `[Chorus]`, …) that you can rename, move up and down, duplicate or delete.
 - Repeat markers: "play the chorus again" without copying it. Shown as `[Chorus] (repeat)`.
 - Paste a whole song at once, including chords-over-lyrics text copied from chord sites.
+- Drag with the mouse to select lyrics across lines, even across sections. Delete or Backspace
+  deletes the selection with the chords above it and any section headings inside it, and joins
+  what's left of the first and last lines, as in a text editor.
 - Undo and redo for everything: typing, chords, sections and transposing.
 - Find and replace in the lyrics (matches are highlighted) or in the chords, by exact name.
 - Several songs open at once, each in its own tab. An icon on the tab and a label next to the
