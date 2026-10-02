@@ -57,6 +57,9 @@ other chord apps.
 **Printing and gigs**
 - Export one or many songs to a single PDF songbook, with an optional table of contents
   and an option to print the chords as Roman numerals.
+- "Collapse repeated sections" (on by default, for songbooks and setlists): a section that is
+  exactly the same as an earlier one, with the same name, chords and lyrics, is printed as
+  `[Chorus] (repeat)` instead of in full. The song itself isn't changed.
 - Setlists, on their own tab (Ctrl+L, or Songs / Setlists at the top of the window): as many
   as you like, each with library songs in playing order and the key you'll play each one in.
   The same song can be in several setlists, in a different key in each.
