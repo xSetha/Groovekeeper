@@ -26,7 +26,8 @@ export function LibraryPanel({ className = '', activeId }: Props) {
         onChange={(event) => setSearch(event.target.value)}
         placeholder="Search title, artist or key"
         aria-label="Search the library"
-        className="mt-3 rounded border border-line bg-window px-2 py-1.5 text-sm placeholder:text-hint focus:border-accent focus:outline-none"
+        // Phones zoom into text fields with text under 16px, so the search is smaller only with a mouse.
+        className="mt-3 rounded border border-line bg-window px-2 py-1.5 text-base placeholder:text-hint focus:border-accent focus:outline-none pointer-fine:text-sm pointer-coarse:min-h-11"
       />
       <ul className="mt-3 min-h-0 flex-1 overflow-y-auto">
         {shown?.map((song) => (
@@ -42,13 +43,13 @@ export function LibraryPanel({ className = '', activeId }: Props) {
           </li>
         ))}
       </ul>
-      {songs?.length === 0 && <p className="px-2.5 text-sm text-muted">No songs yet.</p>}
-      {songs && songs.length > 0 && shown?.length === 0 && (
+      {songs?.length === 0 ? <p className="px-2.5 text-sm text-muted">No songs yet. Import a song to start.</p> : null}
+      {songs && songs.length > 0 && shown?.length === 0 ? (
         <p className="px-2.5 text-sm text-muted">No song matches “{search.trim()}”.</p>
-      )}
+      ) : null}
       <div className="mt-3">
         <ImportSongs
-          className="rounded px-2.5 py-1.5 text-sm hover:bg-hover"
+          className="rounded px-2.5 py-1.5 text-sm hover:bg-hover pointer-coarse:min-h-11"
           onImported={(ids) => ids.length === 1 && navigate(`/songs/${ids[0]}`)}
         >
           + Import songs…

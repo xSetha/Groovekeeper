@@ -86,7 +86,7 @@ and adjust the next step before starting it. Run npm from Windows Node (in WSL: 
 3. ✅ **Guest-mode app.** (ab0c153) Transposing saves immediately until the editor brings undo; no New song yet. Vite + React + Tailwind scaffold, library, song view, transpose,
    import/export, Dexie, one theme.
    → verify: import a sample song, transpose, reload, it's still there; export matches the desktop's output.
-4. ⏭️ **Editor (next).** Start with a small prototype of the chord row and show it before building the rest. Chord lane over monospace lyrics, anchoring via the ported
+4. ⏭️ **Editor (in progress).** Prototype done (1ea463d): typing with chords anchored, Enter/Backspace/Up/Down, palette drag, chord drag sideways, right-click delete, autosave. Autosave confirmed by the user. Reviewed against the react-best-practices and frontend-design skills and fixed: stable ids as keys, save when the app is hidden, tap a chord then Remove (touch), touch drags start after a short hold so swiping scrolls, 44px touch targets, 16px search on phones, logo colors as theme tokens, persistent storage requested. Next: a test on a real phone, then the store (Zustand + Immer) so each line re-renders only for its own changes, and with it undo/redo, sections (rename, move, duplicate, delete, repeat, add), title/artist/key editing, New song, multi-line paste. Chord lane over monospace lyrics, anchoring via the ported
    `SongLine.ApplyTextChange/SplitAt/Append`, sections, undo. Largest and riskiest step: prototype early.
    → verify: component tests + editing the sample songs by hand.
 5. **Setlists, palette, print stylesheet, the other three themes.**

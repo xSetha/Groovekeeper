@@ -74,3 +74,13 @@ describe('joinLines', () => {
     expect(joinLines(line('hello ', [0, 'C']), line('world', [0, 'G']))).toEqual(line('hello world', [0, 'C'], [6, 'G']));
   });
 });
+
+describe('extra chord fields', () => {
+  it('are kept by every line function, so the editor can give chords ids', () => {
+    const tagged = { text: 'hello world', chords: [{ position: 0, name: 'C', id: 'a' }, { position: 6, name: 'G', id: 'b' }] };
+    expect(applyTextChange(tagged, 0, 0, 2).chords.map((c) => c.id)).toEqual(['a', 'b']);
+    const [head, tail] = splitAt(tagged, 6);
+    expect([head.chords[0]?.id, tail.chords[0]?.id]).toEqual(['a', 'b']);
+    expect(joinLines(head, tail).chords.map((c) => c.id)).toEqual(['a', 'b']);
+  });
+});

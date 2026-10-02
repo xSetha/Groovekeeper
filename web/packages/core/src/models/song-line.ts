@@ -1,7 +1,8 @@
 // Editing a lyric line while keeping each chord over its letter.
 import type { ChordPlacement, SongLine } from './song';
 
-const placed = (position: number, name: string): ChordPlacement => ({ position: Math.max(0, position), name });
+// The chord at a new position, keeping any other fields it has.
+const moved = <C extends ChordPlacement>(chord: C, position: number): C => ({ ...chord, position: Math.max(0, position) });
 
 /**
  * The line's chords moved for a text edit at `offset` (`removed` characters replaced by `added`), so they
@@ -9,13 +10,15 @@ const placed = (position: number, name: string): ChordPlacement => ({ position: 
  * past the end of the text are not over a letter, so they keep their column (typing lyrics under a
  * chord-only line doesn't push them).
  */
-export function applyTextChange(line: SongLine, offset: number, removed: number, added: number): SongLine {
+export function applyTextChange<C extends ChordPlacement>(
+  line: SongLine<C>, offset: number, removed: number, added: number,
+): SongLine<C> {
   return {
     ...line,
     chords: line.chords.map((chord) => {
       if (chord.position >= line.text.length) return chord;
-      if (chord.position >= offset + removed) return placed(chord.position + added - removed, chord.name);
-      if (chord.position > offset) return placed(offset, chord.name);
+      if (chord.position >= offset + removed) return moved(chord, chord.position + added - removed);
+      if (chord.position > offset) return moved(chord, offset);
       return chord;
     }),
   };
@@ -43,22 +46,22 @@ export function textChange(before: string, after: string, caret: number): { offs
 }
 
 /** Cuts the line at `index`: the head keeps the text and chords before it, the tail gets the rest. */
-export function splitAt(line: SongLine, index: number): [head: SongLine, tail: SongLine] {
+export function splitAt<C extends ChordPlacement>(line: SongLine<C>, index: number): [head: SongLine<C>, tail: SongLine<C>] {
   index = Math.min(Math.max(index, 0), line.text.length);
   return [
     { text: line.text.slice(0, index), chords: line.chords.filter((c) => c.position < index) },
     {
       text: line.text.slice(index),
-      chords: line.chords.filter((c) => c.position >= index).map((c) => placed(c.position - index, c.name)),
+      chords: line.chords.filter((c) => c.position >= index).map((c) => moved(c, c.position - index)),
     },
   ];
 }
 
 /** `next` appended to the end of `line`, text and chords. */
-export function joinLines(line: SongLine, next: SongLine): SongLine {
+export function joinLines<C extends ChordPlacement>(line: SongLine<C>, next: SongLine<C>): SongLine<C> {
   const shift = line.text.length;
   return {
     text: line.text + next.text,
-    chords: [...line.chords, ...next.chords.map((c) => placed(c.position + shift, c.name))],
+    chords: [...line.chords, ...next.chords.map((c) => moved(c, c.position + shift))],
   };
 }

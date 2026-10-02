@@ -27,7 +27,7 @@ export function StartPage() {
       <div className="relative mx-auto grid max-w-6xl items-center gap-10 px-4 py-10 sm:px-8 lg:min-h-full lg:grid-cols-[1fr_22rem]">
         <section>
           <div className="flex items-center gap-4">
-            <span className="flex size-14 items-center justify-center rounded-xl bg-[#141111]">
+            <span className="flex size-14 items-center justify-center rounded-xl bg-logo-tile">
               <Logo className="size-9" />
             </span>
             <h1 className="text-4xl font-bold sm:text-5xl">Groovekeeper</h1>
@@ -42,7 +42,7 @@ export function StartPage() {
             >
               Import songs…
             </ImportSongs>
-            {songCount === 0 && (
+            {songCount === 0 ? (
               <button
                 type="button"
                 className="rounded px-5 py-2.5 font-semibold hover:bg-hover"
@@ -50,7 +50,7 @@ export function StartPage() {
               >
                 Try the sample songs
               </button>
-            )}
+            ) : null}
           </div>
           <p className="mt-6 max-w-md text-sm text-muted">
             Import <code>.txt</code> and ChordPro files. Your songs are kept in this browser, on this device.

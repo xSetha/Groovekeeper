@@ -7,7 +7,7 @@ const byTitle = (a: LibrarySong, b: LibrarySong): number =>
 
 /** Every song in the library, by title. */
 export async function listSongs(): Promise<LibrarySong[]> {
-  return (await db.songs.toArray()).sort(byTitle);
+  return (await db.songs.toArray()).toSorted(byTitle);
 }
 
 /** Whether the song's title, artist or key contains the search text, ignoring case. */
@@ -25,10 +25,23 @@ const record = (id: string, song: Song): LibrarySong => ({
   updatedAt: Date.now(),
 });
 
+let persistRequested = false;
+
+/**
+ * Asks the browser not to clear the library when space runs low or the site isn't used for a while. Asked
+ * once, when the first song is stored; the browser may still refuse, so exporting stays the real backup.
+ */
+function keepLibrary(): void {
+  if (persistRequested) return;
+  persistRequested = true;
+  void navigator.storage?.persist?.().catch(() => false);
+}
+
 /** Adds the songs to the library and returns their ids, in the same order. */
 export async function addSongs(songs: Song[]): Promise<string[]> {
   const records = songs.map((song) => record(crypto.randomUUID(), song));
   await db.songs.bulkAdd(records);
+  keepLibrary();
   return records.map((r) => r.id);
 }
 
@@ -40,6 +53,7 @@ export async function getSong(id: string): Promise<Song | undefined> {
 
 export async function saveSong(id: string, song: Song): Promise<void> {
   await db.songs.put(record(id, song));
+  keepLibrary();
 }
 
 export async function deleteSong(id: string): Promise<void> {

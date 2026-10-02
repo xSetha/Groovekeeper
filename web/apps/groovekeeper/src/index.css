@@ -20,6 +20,12 @@
   --color-accent-fill: #8e0e12;
   --color-on-accent: #ffffff;
   --color-selection: #b3262c;
+
+  /* The app's logo, drawn in the theme's colors */
+  --color-logo-tile: #141111;
+  --color-logo-record: #050404;
+  --color-logo-ring: #e5534a;
+  --color-logo-label: #c4161c;
 }
 
 @layer base {

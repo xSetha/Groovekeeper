@@ -4,9 +4,9 @@ import { Link } from 'react-router';
 export function Logo({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 32 32" className={className} aria-hidden="true">
-      <circle cx="16" cy="16" r="13" fill="#050404" stroke="var(--color-accent)" strokeWidth="2" />
-      <circle cx="16" cy="16" r="5.5" fill="#c4161c" />
-      <circle cx="16" cy="16" r="1.5" fill="#050404" />
+      <circle cx="16" cy="16" r="13" strokeWidth="2" className="fill-logo-record stroke-logo-ring" />
+      <circle cx="16" cy="16" r="5.5" className="fill-logo-label" />
+      <circle cx="16" cy="16" r="1.5" className="fill-logo-record" />
     </svg>
   );
 }

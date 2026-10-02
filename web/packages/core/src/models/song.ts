@@ -10,9 +10,10 @@ export interface ChordPlacement {
   name: string;
 }
 
-export interface SongLine {
+/** A lyric line. `C` lets the editor carry extra fields on its chords (an id); the line functions keep them. */
+export interface SongLine<C extends ChordPlacement = ChordPlacement> {
   text: string;
-  chords: ChordPlacement[];
+  chords: C[];
 }
 
 export interface Section {
@@ -55,7 +56,7 @@ export const createTemplate = (): Song => ({
  * key's sharps or flats (so going up and back down returns the same names). Without a key, chords keep
  * their own spelling.
  */
-export function transposeSong(song: Song, semitones: number): Song {
+export function transposeSong<S extends Song>(song: S, semitones: number): S {
   const key = transposeKey(song.key, semitones);
   const useFlats = keyUsesFlats(key);
   return {

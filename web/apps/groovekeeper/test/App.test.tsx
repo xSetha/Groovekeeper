@@ -70,7 +70,7 @@ describe('the app', () => {
     await db.songs.add({ id: 'grace', title: 'Amazing Grace', artist: '', key: 'G', text: AMAZING_GRACE, updatedAt: 0 });
     renderApp('/songs/grace');
 
-    await user.click(await screen.findByRole('button', { name: 'Delete' }));
+    await user.click(await screen.findByRole('button', { name: 'Delete song' }));
     const dialog = screen.getByRole('dialog', { name: 'Delete “Amazing Grace”?' });
     await user.click(within(dialog).getByRole('button', { name: 'Delete' }));
 

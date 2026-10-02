@@ -67,6 +67,31 @@ describe('the editor', () => {
     expect(first).toHaveFocus();
   });
 
+  it('removes a chord by tapping it, then Remove (no right-click on a phone)', async () => {
+    const user = userEvent.setup();
+    await openSong();
+
+    await user.click(sheet().getByRole('button', { name: 'G' }));
+    await user.click(sheet().getByRole('button', { name: 'Remove' }));
+
+    expect(sheet().queryByRole('button', { name: 'G' })).not.toBeInTheDocument();
+    expect(sheet().queryByRole('button', { name: 'Remove' })).not.toBeInTheDocument();
+  });
+
+  it('saves straight away when the app is hidden', async () => {
+    const user = userEvent.setup();
+    const [first] = await openSong();
+    await user.click(first!);
+    await user.keyboard('{End}!');
+
+    Object.defineProperty(document, 'visibilityState', { value: 'hidden', configurable: true });
+    document.dispatchEvent(new Event('visibilitychange'));
+    Object.defineProperty(document, 'visibilityState', { value: 'visible', configurable: true });
+
+    // Well before the 400 ms autosave delay.
+    await waitFor(async () => expect(await stored()).toContain('Amazing grace!\n'), { timeout: 150 });
+  });
+
   it('removes a chord with right-click', async () => {
     const user = userEvent.setup();
     await openSong();

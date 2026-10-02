@@ -24,7 +24,10 @@ export function ChordPalette({ song, onStartDrag, className = '' }: Props) {
   return (
     <aside aria-label="Chords" className={className}>
       <h2 className="text-xs font-semibold tracking-wider text-muted uppercase">Chords</h2>
-      <p className="mt-1 text-xs text-muted">Drag a chord above a letter. Drop it on a chord to replace that chord.</p>
+      <p className="mt-1 text-xs text-muted">
+        Drag a chord above a letter. Drop it on a chord to replace that chord. On a touch screen, hold the chord
+        for a moment, then drag.
+      </p>
       {groups.map((group) => (
         <section key={group.title} className="mt-4">
           <h3 className="text-sm font-semibold">{group.title}</h3>
@@ -33,7 +36,7 @@ export function ChordPalette({ song, onStartDrag, className = '' }: Props) {
               <button
                 key={name}
                 type="button"
-                className="cursor-grab touch-none rounded bg-chip px-2 py-1 font-mono text-sm font-semibold text-chord hover:brightness-125"
+                className="cursor-grab rounded bg-chip px-2 py-1 font-mono text-sm font-semibold text-chord select-none [-webkit-touch-callout:none] hover:brightness-125 pointer-coarse:min-h-11 pointer-coarse:min-w-11"
                 onPointerDown={(event) => onStartDrag(name, event)}
               >
                 {name}

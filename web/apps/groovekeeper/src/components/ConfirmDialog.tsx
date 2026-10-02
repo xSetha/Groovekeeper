@@ -33,13 +33,13 @@ export function ConfirmDialog({ title, message, confirmLabel, onConfirm, onCance
         </h2>
         <p className="mt-2 text-sm text-muted">{message}</p>
         <div className="mt-5 flex justify-end gap-2">
-          <button ref={cancel} type="button" onClick={onCancel} className="rounded px-3 py-1.5 text-sm hover:bg-hover">
+          <button ref={cancel} type="button" onClick={onCancel} className="rounded px-3 py-1.5 text-sm hover:bg-hover pointer-coarse:min-h-11">
             Cancel
           </button>
           <button
             type="button"
             onClick={onConfirm}
-            className="rounded bg-accent-fill px-3 py-1.5 text-sm font-semibold text-on-accent hover:brightness-125"
+            className="rounded bg-accent-fill px-3 py-1.5 text-sm font-semibold text-on-accent hover:brightness-125 pointer-coarse:min-h-11"
           >
             {confirmLabel}
           </button>

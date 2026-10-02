@@ -16,16 +16,13 @@ export function ImportSongs({ className, children, onImported }: Props) {
 
   async function importFiles(files: File[]) {
     setError(null);
-    const songs = [];
-    for (const file of files) {
-      try {
-        songs.push(readSongFile(file.name, await file.text()));
-      } catch {
-        setError(`Couldn't read ${file.name}.`);
-        return;
-      }
+    const read = await Promise.allSettled(files.map(async (file) => readSongFile(file.name, await file.text())));
+    const failed = files.filter((_, i) => read[i]?.status === 'rejected');
+    if (failed.length > 0) {
+      setError(`Couldn't read ${failed.map((f) => f.name).join(', ')}. Check that the file is still there, then import it again.`);
+      return;
     }
-    onImported?.(await addSongs(songs));
+    onImported?.(await addSongs(read.flatMap((r) => (r.status === 'fulfilled' ? [r.value] : []))));
   }
 
   return (
@@ -47,11 +44,11 @@ export function ImportSongs({ className, children, onImported }: Props) {
           if (files.length > 0) void importFiles(files);
         }}
       />
-      {error && (
+      {error ? (
         <p role="alert" className="text-sm text-chord">
           {error}
         </p>
-      )}
+      ) : null}
     </>
   );
 }
