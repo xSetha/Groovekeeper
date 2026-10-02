@@ -6,6 +6,8 @@ version's section here becomes the text of its GitHub release.
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-10-02
+
 ### Changed
 - SongCreator is now called Groovekeeper. Your songs, setlists and settings stay where they are, and
   updates keep coming as before. The shortcuts and the entry in Windows' Installed apps get the new
