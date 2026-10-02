@@ -47,13 +47,17 @@ app ("Chords stay on their syllable when…"), not for developers. It follows
 ## Making a release
 
 1. Check that `main` has everything for the release and that the tests pass: `dotnet test`.
-2. Choose the version from what's under `## [Unreleased]` in `CHANGELOG.md`. Rename that heading to
-   the version and today's date, add a new empty `## [Unreleased]` above it, set the version in
-   `SongCreator/SongCreator.csproj`, and commit both on their own:
+2. Choose the version from what's under `## [Unreleased]` in `CHANGELOG.md`, then let the script
+   prepare the release:
 
    ```powershell
-   git commit -am "chore: release 1.5.0"
+   powershell -ExecutionPolicy Bypass -File scripts\prepare-release.ps1 -Version 1.5.0
    ```
+
+   It checks that 1.5.0 is the next version and that the changelog allows it (no `PATCH` release
+   when there are Added, Changed or Removed entries), sets the version in
+   `SongCreator/SongCreator.csproj`, renames `## [Unreleased]` to the version and today's date with a
+   new empty `## [Unreleased]` above it, and commits both as `chore: release 1.5.0`.
 
 3. Optional, but worth it for a bigger release: build the installer yourself and try it.
 

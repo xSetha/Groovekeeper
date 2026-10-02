@@ -118,6 +118,14 @@ powershell -ExecutionPolicy Bypass -File scripts\seed-songs.ps1
 Releases are built by `scripts/release.ps1` and published by a GitHub workflow when a version tag
 is pushed. [docs/RELEASING.md](docs/RELEASING.md) has the version numbering and the steps.
 
+Other scripts, each run with `powershell -ExecutionPolicy Bypass -File scripts\<name>.ps1`:
+
+| Script | What it does |
+| --- | --- |
+| `prepare-release.ps1 -Version 1.5.0` | Sets the version, dates the changelog and commits both, ready to tag |
+| `screenshots.ps1` | Retakes the screenshots in `docs/screenshots` with the sample songs. It runs the app on a sample library in place of yours (close the app first) and puts your library back afterwards |
+| `make-icon.ps1` | Redraws the app icon and the installer's splash image |
+
 ## Keyboard shortcuts
 
 | Shortcut | Action |
