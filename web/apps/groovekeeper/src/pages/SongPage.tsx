@@ -4,6 +4,7 @@ import { Link, useLocation, useParams } from 'react-router';
 import { LibraryPanel } from '../components/LibraryPanel';
 import { SongEditor } from '../editor/SongEditor';
 import { getSong } from '../library/library';
+import { isNewFrom } from '../navigation';
 import { useIsPhone } from '../phone';
 import { SongReader } from './SongReader';
 
@@ -11,7 +12,7 @@ export function SongPage() {
   const { id = '' } = useParams();
   const phone = useIsPhone();
   // Set by New song: a new song left empty is removed again when it's closed.
-  const isNew = (useLocation().state as { isNew?: boolean } | null)?.isNew === true;
+  const isNew = isNewFrom(useLocation().state);
   // The song is read once when it's opened; from then on the editor holds it and saves it.
   const [loaded, setLoaded] = useState<{ id: string; song: Song | undefined } | null>(null);
 
