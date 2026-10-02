@@ -28,6 +28,7 @@ namespace SongCreator.ViewModels
         private bool _updatingSetlists;
         private bool _includeTableOfContents = true;
         private bool _romanNumerals;
+        private bool _collapseRepeats = true;
         private bool _openWhenDone = true;
 
         public SetlistViewModel(IDialogService dialogs, LibraryViewModel library)
@@ -122,6 +123,13 @@ namespace SongCreator.ViewModels
         {
             get => _romanNumerals;
             set => SetProperty(ref _romanNumerals, value);
+        }
+
+        /// <summary>Print a section that is an exact copy of an earlier one as a repeat, e.g. "[Chorus] (repeat)".</summary>
+        public bool CollapseRepeats
+        {
+            get => _collapseRepeats;
+            set => SetProperty(ref _collapseRepeats, value);
         }
 
         public bool OpenWhenDone
@@ -271,7 +279,7 @@ namespace SongCreator.ViewModels
             try
             {
                 File.WriteAllBytes(path, SongPdfWriter.Create(Items.Select(i => i.SongToPlay()).ToList(), IncludeTableOfContents, RomanNumerals,
-                    Items.Select(i => i.Semitones).ToList()));
+                    Items.Select(i => i.Semitones).ToList(), CollapseRepeats));
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {

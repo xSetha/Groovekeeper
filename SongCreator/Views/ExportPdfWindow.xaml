@@ -33,6 +33,8 @@
             <WrapPanel DockPanel.Dock="Bottom" Margin="28,4,28,12">
                 <CheckBox Content="Table of contents" IsChecked="{Binding IncludeTableOfContents}" Margin="0,0,28,6" />
                 <CheckBox Content="Chords as Roman numerals" IsChecked="{Binding RomanNumerals}" Margin="0,0,28,6" />
+                <CheckBox Content="Collapse repeated sections" IsChecked="{Binding CollapseRepeats}" Margin="0,0,28,6"
+                          ToolTip="A section that is exactly the same as an earlier one (name, chords and lyrics) is printed as [Chorus] (repeat)" />
                 <CheckBox Content="Open the PDF when done" IsChecked="{Binding OpenWhenDone}" Margin="0,0,0,6" />
             </WrapPanel>
 

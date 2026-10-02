@@ -52,5 +52,33 @@ namespace SongCreator.Tests
             byte[] pdf = SongPdfWriter.Create(songs, tableOfContents: true, semitones: [0, 4]);
             Assert.Equal("%PDF", Encoding.ASCII.GetString(pdf, 0, 4));
         }
+
+        private const string RepeatingSong =
+            "Song\n\n[Chorus]\nG       C\nI gotta feeling\n\n[Verse]\nAm\nla la\n\n" +
+            "[chorus]\nG       C\nI gotta feeling   \n\n\n" +                // same, apart from case and blank space
+            "[Chorus]\nG       D\nI gotta feeling\n\n" +                     // another chord
+            "[Chorus 2]\nG       C\nI gotta feeling\n";                        // another name
+
+        [Fact]
+        public void FindsSectionsThatRepeatAnEarlierOneExactly()
+        {
+            var song = SongTextReader.Parse(RepeatingSong);
+            Assert.Equal([song.Sections[2]], SongPdfWriter.RepeatedSections(song));
+        }
+
+        [Fact]
+        public void RepeatMarkersAndEmptySectionsAreNotRepeatedSections()
+        {
+            var song = SongTextReader.Parse("Song\n\n[Chorus]\nG\nla\n\n[Chorus]\n(Repeat)\n\n[Bridge]\n\n[Bridge]\n");
+            Assert.True(song.Sections[1].IsRepeat);
+            Assert.Empty(SongPdfWriter.RepeatedSections(song));
+        }
+
+        [Fact]
+        public void CreatesAPdfWithRepeatsCollapsed()
+        {
+            byte[] pdf = SongPdfWriter.Create([SongTextReader.Parse(RepeatingSong)], tableOfContents: false, collapseRepeats: true);
+            Assert.Equal("%PDF", Encoding.ASCII.GetString(pdf, 0, 4));
+        }
     }
 }
