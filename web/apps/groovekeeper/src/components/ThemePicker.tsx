@@ -40,7 +40,8 @@ export function ThemePicker() {
         className="rounded px-2 py-1 text-sm text-muted hover:bg-hover hover:text-fg pointer-coarse:min-h-11"
         onClick={() => setOpen(!open)}
       >
-        Theme: {theme.name}
+        {/* On a narrow screen only "Theme" shows; the name is still read out. */}
+        Theme<span className="max-sm:sr-only">: {theme.name}</span>
       </button>
       {open ? (
         <div

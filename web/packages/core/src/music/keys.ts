@@ -33,3 +33,28 @@ export function transposeKey(key: string, semitones: number): string {
   const pitch = mod12(pitchClass(parsed.tonic) + semitones);
   return (parsed.minor ? MINOR_NAMES : MAJOR_NAMES)[pitch]!;
 }
+
+/** Whether two keys sound the same (C# and Db do); false when either is unknown. */
+export function sameKey(a: string, b: string): boolean {
+  const first = parseKey(a);
+  const second = parseKey(b);
+  return first !== null && second !== null && first.minor === second.minor &&
+    pitchClass(first.tonic) === pitchClass(second.tonic);
+}
+
+/** The twelve keys of the same mode as `key`, from C up, with their usual names; none for an unknown key. */
+export function keysOfMode(key: string): string[] {
+  if (!parseKey(key)) return [];
+  return Array.from({ length: 12 }, (_, n) => transposeKey(key, n))
+    // transposeKey only gives names parseKey reads back, so the ! can't fail.
+    .toSorted((a, b) => pitchClass(parseKey(a)!.tonic) - pitchClass(parseKey(b)!.tonic));
+}
+
+/** How far `to` is from `from`, the short way round (-5 … +6); 0 when either key is unknown. */
+export function semitonesBetween(from: string, to: string): number {
+  const start = parseKey(from);
+  const end = parseKey(to);
+  if (!start || !end) return 0;
+  const up = mod12(pitchClass(end.tonic) - pitchClass(start.tonic));
+  return up > 6 ? up - 12 : up;
+}

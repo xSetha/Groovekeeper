@@ -1,4 +1,4 @@
-import { displayTitle, transposeSong, type Song } from '@groovekeeper/core';
+import { displayTitle, songKey, transposeKey, transposeSong, type Song } from '@groovekeeper/core';
 import { useEffect, useLayoutEffect, useState, type ReactNode } from 'react';
 import { Link } from 'react-router';
 import { SongSheet, songColumns } from '../components/SongSheet';
@@ -11,13 +11,27 @@ const SMALLEST_PX = 13;
 // Measured at this size to learn how wide a letter is for any size.
 const PROBE_PX = 100;
 
+interface Props {
+  song: Song;
+  /** Where "‹ back" goes: the library, or the setlist the song is played from. */
+  back?: { to: string; label: string };
+  /** How far to transpose the song to start with: a setlist's key for it. */
+  startSemitones?: number;
+  /** In a setlist: the songs before and after, and which one this is ("2 of 5"). */
+  steps?: { previous: string | null; next: string | null; position: string };
+}
+
 /**
- * A song on a phone: read only, as large as fits the screen, with transpose at the bottom within thumb
- * reach. Transposing here only changes what's shown (to play in another key), never the saved song.
+ * A song on a phone: read only, as large as fits the screen, with transpose (and, in a setlist, the previous
+ * and next song) at the bottom within thumb reach. Transposing here only changes what's shown, never the
+ * saved song.
  */
-export function SongReader({ song }: { song: Song }) {
-  const [semitones, setSemitones] = useState(0);
+export function SongReader({ song, back = { to: '/', label: 'Library' }, startSemitones = 0, steps }: Props) {
+  const [semitones, setSemitones] = useState(startSemitones);
   const shown = semitones === 0 ? song : transposeSong(song, semitones);
+  // The song's key, or the one its chords point to, moved with the song.
+  const original = songKey(song).key;
+  const startKey = transposeKey(original, startSemitones);
   const fontSize = useFittedFontSize(song);
 
   useEffect(() => {
@@ -27,9 +41,10 @@ export function SongReader({ song }: { song: Song }) {
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="min-h-0 flex-1 overflow-auto px-4 pt-3 pb-6">
-        <Link to="/" className="-ml-2 inline-flex min-h-11 items-center px-2 text-muted">
-          ‹ Library
+        <Link to={back.to} className="-ml-2 inline-flex min-h-11 items-center px-2 text-muted">
+          ‹ {back.label}
         </Link>
+        {steps ? <span className="ml-2 text-sm text-muted">{steps.position}</span> : null}
         <h1 className="mt-1 text-2xl font-semibold">{displayTitle(song)}</h1>
         {song.artist ? <p className="text-muted">{song.artist}</p> : null}
         <div className="mt-5" data-testid="sheet-fit" ref={fontSize.measure}>
@@ -38,23 +53,39 @@ export function SongReader({ song }: { song: Song }) {
       </div>
 
       <div className="flex shrink-0 items-center justify-between border-t border-line bg-toolbar px-2 pb-[env(safe-area-inset-bottom)]">
+        {steps ? <StepLink to={steps.previous} label="Previous song">‹</StepLink> : null}
         <BarButton label="Transpose down" onClick={() => setSemitones((s) => s - 1)}>−</BarButton>
         <div className="text-center leading-tight">
           <div>
             <span className="text-muted">Key </span>
-            <span className="font-semibold" data-testid="song-key">{shown.key || '–'}</span>
+            <span className="font-semibold" data-testid="song-key">{transposeKey(original, semitones) || '–'}</span>
           </div>
-          {semitones !== 0 ? (
-            <button type="button" className="min-h-8 text-sm text-accent short:min-h-6" onClick={() => setSemitones(0)}>
-              Back to {song.key || 'the original key'}
+          {semitones !== startSemitones ? (
+            <button type="button" className="min-h-8 text-sm text-accent short:min-h-6" onClick={() => setSemitones(startSemitones)}>
+              Back to {startKey || 'the original key'}
             </button>
           ) : (
             <div className="min-h-8 text-sm text-muted short:min-h-6">Transpose</div>
           )}
         </div>
         <BarButton label="Transpose up" onClick={() => setSemitones((s) => s + 1)}>+</BarButton>
+        {steps ? <StepLink to={steps.next} label="Next song">›</StepLink> : null}
       </div>
     </div>
+  );
+}
+
+/** The previous or next song of a setlist; greyed out at either end. */
+function StepLink({ to, label, children }: { to: string | null; label: string; children: string }) {
+  const style = 'flex size-14 items-center justify-center text-3xl short:size-11';
+  return to ? (
+    <Link to={to} aria-label={label} className={`${style} active:bg-hover`}>
+      {children}
+    </Link>
+  ) : (
+    <span aria-hidden="true" className={`${style} text-hint`}>
+      {children}
+    </span>
   );
 }
 

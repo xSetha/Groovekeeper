@@ -1,5 +1,6 @@
 import { parseSongText, songToText, type Song } from '@groovekeeper/core';
 import { db, type LibrarySong } from './db';
+import { newId } from './ids';
 
 const byTitle = (a: LibrarySong, b: LibrarySong): number =>
   a.title.localeCompare(b.title, undefined, { sensitivity: 'base' }) ||
@@ -25,17 +26,6 @@ const record = (id: string, song: Song): LibrarySong => ({
   updatedAt: Date.now(),
 });
 
-/**
- * A new random song id, a version 4 UUID. Not crypto.randomUUID: browsers offer it only on HTTPS pages and
- * localhost, and the app is also opened over plain http on the local network to test it on a phone.
- */
-export function newSongId(): string {
-  const bytes = crypto.getRandomValues(new Uint8Array(16));
-  bytes[6] = (bytes[6]! & 0x0f) | 0x40; // version 4
-  bytes[8] = (bytes[8]! & 0x3f) | 0x80; // variant 1
-  const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
-  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
-}
 
 let persistRequested = false;
 
@@ -51,7 +41,7 @@ function keepLibrary(): void {
 
 /** Adds the songs to the library and returns their ids, in the same order. */
 export async function addSongs(songs: Song[]): Promise<string[]> {
-  const records = songs.map((song) => record(newSongId(), song));
+  const records = songs.map((song) => record(newId(), song));
   await db.songs.bulkAdd(records);
   keepLibrary();
   return records.map((r) => r.id);
@@ -68,6 +58,14 @@ export async function saveSong(id: string, song: Song): Promise<void> {
   keepLibrary();
 }
 
+/** Removes the song from the library, and from every setlist it's in. */
 export async function deleteSong(id: string): Promise<void> {
-  await db.songs.delete(id);
+  await db.transaction('rw', db.songs, db.setlists, async () => {
+    await db.songs.delete(id);
+    await db.setlists
+      .filter((setlist) => setlist.songs.some((entry) => entry.songId === id))
+      .modify((setlist) => {
+        setlist.songs = setlist.songs.filter((entry) => entry.songId !== id);
+      });
+  });
 }

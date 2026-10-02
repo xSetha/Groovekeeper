@@ -1,7 +1,8 @@
 import { parseSongText, transposeSong } from '@groovekeeper/core';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { db } from '../src/library/db';
-import { addSongs, deleteSong, getSong, listSongs, matchesSearch, newSongId, saveSong } from '../src/library/library';
+import { newId } from '../src/library/ids';
+import { addSongs, deleteSong, getSong, listSongs, matchesSearch, saveSong } from '../src/library/library';
 
 const song = (title: string, artist = '', key = '') =>
   parseSongText(`${title}\n${artist}\n\nKey: ${key}\n\n[Verse 1]\nG     C\nla la la\n`);
@@ -45,8 +46,8 @@ describe('library', () => {
     expect(matchesSearch(stored!, 'Burns')).toBe(false);
   });
 
-  it('makes song ids without crypto.randomUUID, which plain http pages on the network lack', () => {
-    const ids = new Set(Array.from({ length: 100 }, newSongId));
+  it('makes ids without crypto.randomUUID, which plain http pages on the network lack', () => {
+    const ids = new Set(Array.from({ length: 100 }, newId));
     expect(ids.size).toBe(100);
     for (const id of ids) expect(id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
   });

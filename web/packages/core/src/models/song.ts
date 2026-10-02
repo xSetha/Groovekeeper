@@ -1,5 +1,6 @@
 import { transposeChordName } from '../music/chord';
-import { keyUsesFlats, transposeKey } from '../music/keys';
+import { detectKey } from '../music/key-detector';
+import { keyUsesFlats, parseKey, transposeKey } from '../music/keys';
 
 /**
  * A chord anchored above a character index of a lyric line.
@@ -70,4 +71,15 @@ export function transposeSong<S extends Song>(song: S, semitones: number): S {
       })),
     })),
   };
+}
+
+/**
+ * The key a song is written in: its own key, or else the one its chords point to (`detected`). Empty when
+ * there's neither.
+ */
+export function songKey(song: Song): { key: string; detected: boolean } {
+  if (parseKey(song.key)) return { key: song.key, detected: false };
+  const chords = song.sections.flatMap((s) => s.lines).flatMap((l) => l.chords.toSorted((a, b) => a.position - b.position));
+  const detected = detectKey(chords.map((c) => c.name));
+  return detected ? { key: detected, detected: true } : { key: '', detected: false };
 }
