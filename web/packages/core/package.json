@@ -1,0 +1,12 @@
+{
+  "name": "@groovekeeper/core",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Songs, chords and the song file formats, shared by the Groovekeeper web app",
+  "type": "module",
+  "exports": "./src/index.ts",
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc -p ."
+  }
+}

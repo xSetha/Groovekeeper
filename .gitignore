@@ -16,3 +16,8 @@
 
 # Release builds (scripts/release.ps1)
 artifacts/
+
+# Web app (web/): its npm workspace packages aren't NuGet packages
+!web/packages/*
+node_modules/
+dist/

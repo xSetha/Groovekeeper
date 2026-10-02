@@ -1,8 +1,9 @@
 # Shared test fixtures
 
 Test cases that every Groovekeeper implementation must pass: the desktop app (C#, run by
-`SongCreator.Tests/SharedFixturesTests.cs`) and the web app's core package. They pin down the song
-file formats and the music rules, so a song saved by one app reads the same in the other.
+`SongCreator.Tests/SharedFixturesTests.cs`) and the web app's core package (run by
+`web/packages/core/test/fixtures.test.ts`). They pin down the song file formats and the music rules,
+so a song saved by one app reads the same in the other.
 
 When a rule changes, change the fixture first; then both test suites show what to fix.
 
