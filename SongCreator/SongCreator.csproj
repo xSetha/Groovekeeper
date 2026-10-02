@@ -23,7 +23,7 @@
 
   <ItemGroup>
     <Resource Include="Assets\SongCreator.ico" />
-    <Resource Include="Assets\SongCreator.png" />
+    <Resource Include="Assets\Backgrounds\*.jpg" />
   </ItemGroup>
 
   <ItemGroup>

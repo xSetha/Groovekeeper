@@ -6,7 +6,7 @@
         ShowInTaskbar="False" WindowStartupLocation="CenterOwner"
         FontFamily="{DynamicResource UiFont}" Foreground="{DynamicResource TextForeground}">
     <Border Background="{DynamicResource CardBackground}" BorderBrush="{DynamicResource PopupBorder}" BorderThickness="1"
-            CornerRadius="12" Margin="40" Effect="{DynamicResource CardShadow}">
+            CornerRadius="4" Margin="40" Effect="{DynamicResource CardShadow}">
         <DockPanel>
             <!-- Header (drag to move) -->
             <StackPanel DockPanel.Dock="Top" Margin="28,24,28,16" Background="Transparent"
@@ -40,7 +40,7 @@
 
             <!-- Song list -->
             <StackPanel Margin="20,0,20,8">
-                <Border BorderBrush="{DynamicResource CardBorder}" BorderThickness="1" CornerRadius="8" Padding="4">
+                <Border BorderBrush="{DynamicResource CardBorder}" BorderThickness="1" CornerRadius="4" Padding="4">
                     <Grid>
                         <TextBlock Text="No songs yet. Add song files to export them." Margin="12,18"
                                    Foreground="{DynamicResource MutedForeground}" HorizontalAlignment="Center"
@@ -49,7 +49,7 @@
                             <ItemsControl ItemsSource="{Binding Items}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
-                                        <Border x:Name="Row" CornerRadius="6" Padding="10,6" Background="Transparent">
+                                        <Border x:Name="Row" CornerRadius="4" Padding="10,6" Background="Transparent">
                                             <DockPanel>
                                                 <!-- Position in the PDF -->
                                                 <TextBlock DockPanel.Dock="Left" Width="26" VerticalAlignment="Center"

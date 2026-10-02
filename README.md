@@ -85,7 +85,9 @@ The installer isn't code-signed yet, so Windows may warn that it "protected your
   together with their songs.
 
 **Looks**
-- Three themes: Studio (dark), Aurora (ink blue) and Paper (light).
+- Four themes: Amp (black and blood red), Backstage (charcoal and brass), Record Sleeve (forest
+  green, cream and mustard) and Songbook (cream paper with red ink chords). Each has its own photo
+  behind the start page; [CREDITS.md](CREDITS.md) lists where they come from.
 
 ## Getting started
 
@@ -198,5 +200,5 @@ keep that name.
 | `SongCreator/IO` | Song library (SQLite), song files, setlist import, PDF export (QuestPDF) |
 | `SongCreator/ViewModels` | Editor, library, palette, undo history, find/replace, export and setlist logic |
 | `SongCreator/Views`, `Controls` | WPF windows and the lyric line editor |
-| `SongCreator/Themes` | The three themes |
+| `SongCreator/Themes` | The four themes |
 | `SongCreator.Tests` | xUnit tests |

@@ -15,16 +15,26 @@ namespace SongCreator.Themes
     {
         public static IReadOnlyList<Theme> Themes { get; } =
         [
-            new("Studio", "Neutral dark with an amber accent"),
-            new("Aurora", "Ink blue with a violet glow"),
-            new("Paper", "Warm light, like a printed songbook"),
+            new("Amp", "Black with blood red, like a guitar amp"),
+            new("Backstage", "Warm charcoal with brass"),
+            new("Record Sleeve", "Forest green, cream and mustard"),
+            new("Songbook", "Cream paper with red ink chords"),
         ];
 
         private static readonly Dictionary<string, string> Sources = new()
         {
-            ["Studio"] = "Themes/StudioDark.xaml",
-            ["Aurora"] = "Themes/Aurora.xaml",
-            ["Paper"] = "Themes/Paper.xaml",
+            ["Amp"] = "Themes/Amp.xaml",
+            ["Backstage"] = "Themes/Backstage.xaml",
+            ["Record Sleeve"] = "Themes/RecordSleeve.xaml",
+            ["Songbook"] = "Themes/Songbook.xaml",
+        };
+
+        // Themes of earlier versions, and the theme that took each one's place
+        private static readonly Dictionary<string, string> Replaced = new()
+        {
+            ["Studio"] = "Backstage",
+            ["Aurora"] = "Amp",
+            ["Paper"] = "Songbook",
         };
 
         private static readonly string SettingsFile = Path.Combine(
@@ -39,6 +49,7 @@ namespace SongCreator.Themes
             try
             {
                 string name = File.ReadAllText(SettingsFile).Trim();
+                name = Replaced.GetValueOrDefault(name, name);
                 var theme = Themes.FirstOrDefault(t => t.Name == name);
                 if (theme != null)
                     Apply(theme, save: false);

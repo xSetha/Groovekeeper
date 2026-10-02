@@ -10,6 +10,12 @@ version's section here becomes the text of its GitHub release.
 - SongCreator is now called Groovekeeper. Your songs, setlists and settings stay where they are, and
   updates keep coming as before. The shortcuts and the entry in Windows' Installed apps get the new
   name with this update.
+- A new icon: a record whose label is a keyhole.
+- New themes: Amp (black and blood red, the new default), Backstage (charcoal and brass), Record
+  Sleeve (forest green, cream and mustard) and Songbook (cream paper with red ink chords). They
+  replace Studio, Aurora and Paper; if you used one of those, you get Backstage, Amp or Songbook.
+- The start page shows a photo that goes with the theme: an amp's speaker grille, a sound desk,
+  record grooves or a handwritten score. Corners are squarer and the cards flat throughout the app.
 
 ## [1.0.0] - 2026-10-02
 

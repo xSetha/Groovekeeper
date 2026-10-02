@@ -7,7 +7,7 @@
         FontFamily="{DynamicResource UiFont}"
         MouseLeftButtonDown="Window_MouseLeftButtonDown">
     <Border Background="{DynamicResource CardBackground}" BorderBrush="{DynamicResource PopupBorder}" BorderThickness="1"
-            CornerRadius="10" Padding="28,24" Margin="40" Width="420" Effect="{DynamicResource CardShadow}">
+            CornerRadius="4" Padding="28,24" Margin="40" Width="420" Effect="{DynamicResource CardShadow}">
         <StackPanel>
             <TextBlock FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextForeground}"
                        TextWrapping="Wrap">

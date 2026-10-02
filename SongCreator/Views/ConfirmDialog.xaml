@@ -8,7 +8,7 @@
         MouseLeftButtonDown="Window_MouseLeftButtonDown">
     <!-- A yes/no question in the app's theme, e.g. before deleting something -->
     <Border Background="{DynamicResource CardBackground}" BorderBrush="{DynamicResource PopupBorder}" BorderThickness="1"
-            CornerRadius="10" Padding="28,24" Margin="40" Width="420" Effect="{DynamicResource CardShadow}">
+            CornerRadius="4" Padding="28,24" Margin="40" Width="420" Effect="{DynamicResource CardShadow}">
         <StackPanel>
             <TextBlock x:Name="Question" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextForeground}"
                        TextWrapping="Wrap" />

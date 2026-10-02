@@ -6,7 +6,7 @@
         ShowInTaskbar="False" WindowStartupLocation="CenterOwner"
         FontFamily="{DynamicResource UiFont}" Foreground="{DynamicResource TextForeground}">
     <Border Background="{DynamicResource CardBackground}" BorderBrush="{DynamicResource PopupBorder}" BorderThickness="1"
-            CornerRadius="12" Margin="40" Effect="{DynamicResource CardShadow}">
+            CornerRadius="4" Margin="40" Effect="{DynamicResource CardShadow}">
         <DockPanel>
             <!-- Header (drag to move) -->
             <StackPanel DockPanel.Dock="Top" Margin="28,24,28,12" Background="Transparent"

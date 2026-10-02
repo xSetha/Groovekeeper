@@ -1,0 +1,46 @@
+<!-- Backstage: warm charcoal with brass, like a studio at night. -->
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=System.Runtime">
+    <sys:Boolean x:Key="IsDarkTheme">True</sys:Boolean>
+    <FontFamily x:Key="UiFont">Segoe UI Variable Text, Segoe UI</FontFamily>
+    <FontFamily x:Key="SongFont">Cascadia Mono, Consolas</FontFamily>
+
+    <SolidColorBrush x:Key="WindowBackground" Color="#1E1B18" />
+    <SolidColorBrush x:Key="ToolbarBackground" Color="#24201D" />
+    <SolidColorBrush x:Key="TabStripBackground" Color="#171513" />
+    <SolidColorBrush x:Key="TabHoverBackground" Color="#221E1B" />
+    <SolidColorBrush x:Key="CardBackground" Color="#262220" />
+    <SolidColorBrush x:Key="CardBorder" Color="#35302B" />
+    <SolidColorBrush x:Key="PopupBackground" Color="#2A2622" />
+    <SolidColorBrush x:Key="PopupBorder" Color="#3D3731" />
+
+    <SolidColorBrush x:Key="TextForeground" Color="#E9E4DA" />
+    <SolidColorBrush x:Key="MutedForeground" Color="#9C948A" />
+    <SolidColorBrush x:Key="HintForeground" Color="#625B53" />
+    <SolidColorBrush x:Key="DisabledForeground" Color="#625B53" />
+
+    <SolidColorBrush x:Key="ChordTagBackground" Color="#302A24" />
+    <SolidColorBrush x:Key="ChordTagForeground" Color="#C9A227" />
+    <SolidColorBrush x:Key="ColumnHighlight" Color="#40C9A227" />
+
+    <SolidColorBrush x:Key="ButtonHover" Color="#2E2925" />
+    <SolidColorBrush x:Key="AccentBrush" Color="#C9A227" />
+    <SolidColorBrush x:Key="AccentFill" Color="#C9A227" />
+    <SolidColorBrush x:Key="OnAccentForeground" Color="#1E1B18" />
+    <SolidColorBrush x:Key="SelectionBrush" Color="#8C7A3A" />
+    <SolidColorBrush x:Key="KeyCapBorder" Color="#463F38" />
+    <SolidColorBrush x:Key="ScrollThumb" Color="#3D3731" />
+
+    <!-- The app's logo (StartPage), drawn in this theme's colors -->
+    <SolidColorBrush x:Key="LogoTile" Color="#2A2420" />
+    <SolidColorBrush x:Key="LogoRecord" Color="#120F0D" />
+    <SolidColorBrush x:Key="LogoRing" Color="#C9A227" />
+    <SolidColorBrush x:Key="LogoLabel" Color="#C9A227" />
+
+    <!-- The start page's photo, dimmed under WindowBackground so the text stays readable -->
+    <BitmapImage x:Key="StartBackground" UriSource="/Assets/Backgrounds/backstage.jpg" />
+    <sys:Double x:Key="StartBackgroundDim">0.80</sys:Double>
+
+    <DropShadowEffect x:Key="CardShadow" BlurRadius="24" ShadowDepth="4" Opacity="0.45" Color="Black" />
+</ResourceDictionary>

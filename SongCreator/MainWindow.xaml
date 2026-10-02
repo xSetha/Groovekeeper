@@ -31,7 +31,7 @@
                    IsOpen="{Binding IsChecked, ElementName=ThemeButton, Mode=TwoWay}" StaysOpen="False"
                    AllowsTransparency="True" PopupAnimation="Fade">
                 <Border Background="{DynamicResource PopupBackground}" BorderBrush="{DynamicResource PopupBorder}"
-                        BorderThickness="1" CornerRadius="10" Padding="6" Margin="16" Width="310"
+                        BorderThickness="1" CornerRadius="4" Padding="6" Margin="16" Width="310"
                         Effect="{DynamicResource CardShadow}">
                     <StackPanel>
                         <TextBlock Text="THEME" FontSize="11" FontWeight="SemiBold" Margin="10,6,10,6"
@@ -48,7 +48,7 @@
                                             </Grid.ColumnDefinitions>
 
                                             <!-- Miniature of the theme: a chord tag over a lyric line, plus its accent -->
-                                            <Border Width="68" Height="46" CornerRadius="6" Background="{Binding Background}"
+                                            <Border Width="68" Height="46" CornerRadius="4" Background="{Binding Background}"
                                                     BorderBrush="{Binding Border}" BorderThickness="1">
                                                 <StackPanel Margin="8,7,0,0">
                                                     <Border HorizontalAlignment="Left" CornerRadius="2" Padding="3,0"

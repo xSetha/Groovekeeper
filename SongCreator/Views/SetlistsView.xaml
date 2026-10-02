@@ -75,7 +75,7 @@
             </DockPanel>
 
             <!-- Songs, in playing order; a drop target for reordering and for library songs -->
-            <Border BorderBrush="{DynamicResource CardBorder}" BorderThickness="1" CornerRadius="8" Padding="4"
+            <Border BorderBrush="{DynamicResource CardBorder}" BorderThickness="1" CornerRadius="4" Padding="4"
                     Background="Transparent" AllowDrop="True" DragOver="SongList_DragOver" Drop="SongList_Drop">
                 <Grid>
                     <TextBlock Text="No songs yet. Drag songs here from the library, or press + next to one." Margin="12,18"
@@ -85,7 +85,7 @@
                         <ItemsControl x:Name="SongList" ItemsSource="{Binding Items}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Border x:Name="Row" CornerRadius="6" Padding="6,6,10,6" Background="Transparent" Cursor="SizeAll"
+                                    <Border x:Name="Row" CornerRadius="4" Padding="6,6,10,6" Background="Transparent" Cursor="SizeAll"
                                             ToolTip="Drag to reorder, double-click to edit the song"
                                             PreviewMouseLeftButtonDown="SongRow_PreviewMouseLeftButtonDown"
                                             MouseMove="SongRow_MouseMove" MouseLeftButtonDown="SongRow_MouseLeftButtonDown">

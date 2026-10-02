@@ -8,7 +8,7 @@
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
                 <!-- Active theme; replaced by ThemeManager -->
-                <ResourceDictionary Source="Themes/StudioDark.xaml" />
+                <ResourceDictionary Source="Themes/Amp.xaml" />
             </ResourceDictionary.MergedDictionaries>
 
             <converters:BoolToVisibilityConverter x:Key="BoolToVisible" />
@@ -77,7 +77,7 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="6"
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="4"
                                 Padding="{TemplateBinding Padding}">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
                         </Border>
@@ -102,7 +102,7 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ToggleButton">
-                        <Border x:Name="Bd" Background="Transparent" CornerRadius="6">
+                        <Border x:Name="Bd" Background="Transparent" CornerRadius="4">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
                         </Border>
                         <ControlTemplate.Triggers>
@@ -128,7 +128,7 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="Bd" Background="Transparent" CornerRadius="8" Padding="8">
+                        <Border x:Name="Bd" Background="Transparent" CornerRadius="4" Padding="8">
                             <ContentPresenter />
                         </Border>
                         <ControlTemplate.Triggers>
@@ -149,7 +149,7 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="CheckBox">
                         <StackPanel Orientation="Horizontal" Background="Transparent">
-                            <Border x:Name="Box" Width="18" Height="18" CornerRadius="5" BorderThickness="1.5"
+                            <Border x:Name="Box" Width="18" Height="18" CornerRadius="3" BorderThickness="1.5"
                                     BorderBrush="{DynamicResource MutedForeground}" Background="Transparent"
                                     VerticalAlignment="Center">
                                 <TextBlock x:Name="Tick" Text="&#xE73E;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
@@ -201,7 +201,7 @@
                                 <Popup x:Name="PART_Popup" IsOpen="{TemplateBinding IsSubmenuOpen}" Placement="Bottom"
                                        VerticalOffset="6" HorizontalOffset="-10" AllowsTransparency="True" Focusable="False">
                                     <Border Background="{DynamicResource PopupBackground}" BorderBrush="{DynamicResource PopupBorder}" BorderThickness="1"
-                                            CornerRadius="6" Padding="4" MinWidth="200">
+                                            CornerRadius="4" Padding="4" MinWidth="200">
                                         <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Cycle" />
                                     </Border>
                                 </Popup>
@@ -265,7 +265,7 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ListBoxItem">
-                        <Border x:Name="Bd" Background="Transparent" CornerRadius="6" Padding="8,4" Margin="0,0,0,2">
+                        <Border x:Name="Bd" Background="Transparent" CornerRadius="4" Padding="8,4" Margin="0,0,0,2">
                             <ContentPresenter />
                         </Border>
                         <ControlTemplate.Triggers>
@@ -291,7 +291,7 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="ContextMenu">
                         <Border Background="{DynamicResource PopupBackground}" BorderBrush="{DynamicResource PopupBorder}" BorderThickness="1"
-                                CornerRadius="6" Padding="4" MinWidth="160">
+                                CornerRadius="4" Padding="4" MinWidth="160">
                             <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Cycle" />
                         </Border>
                     </ControlTemplate>
@@ -386,7 +386,7 @@
                             <Popup IsOpen="{TemplateBinding IsDropDownOpen}" Placement="Bottom" VerticalOffset="4"
                                    AllowsTransparency="True" Focusable="False">
                                 <Border Background="{DynamicResource PopupBackground}" BorderBrush="{DynamicResource PopupBorder}" BorderThickness="1"
-                                        CornerRadius="6" Padding="4" MaxHeight="{TemplateBinding MaxDropDownHeight}">
+                                        CornerRadius="4" Padding="4" MaxHeight="{TemplateBinding MaxDropDownHeight}">
                                     <ScrollViewer VerticalScrollBarVisibility="Auto">
                                         <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Contained" />
                                     </ScrollViewer>
