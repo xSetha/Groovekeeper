@@ -8,7 +8,7 @@
   "scripts": {
     "test": "npm test --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
-    "dev": "npm run dev -w @groovekeeper/app",
+    "dev": "npm run dev -w @groovekeeper/app --",
     "build": "npm run build -w @groovekeeper/app"
   },
   "devDependencies": {
