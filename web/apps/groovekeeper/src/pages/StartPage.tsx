@@ -8,16 +8,51 @@ import { Logo } from '../components/TopBar';
 import { db } from '../library/db';
 import { addSongs } from '../library/library';
 import { sampleSongs } from '../library/samples';
+import { useIsPhone } from '../phone';
 
 export function StartPage() {
   const navigate = useNavigate();
   const songCount = useLiveQuery(() => db.songs.count());
   const [sampleError, setSampleError] = useState(false);
+  const phone = useIsPhone();
   const openFirst = (ids: string[]) => ids.length === 1 && navigate(`/songs/${ids[0]}`);
 
   useEffect(() => {
     document.title = 'Groovekeeper';
   }, []);
+
+  // Until songs sync from another device, the sample songs are the way to try the app with a few songs.
+  const samples = (
+    <>
+      {songCount === 0 ? (
+        <button
+          type="button"
+          className="rounded px-5 py-2.5 font-semibold hover:bg-hover pointer-coarse:min-h-11"
+          onClick={() => {
+            setSampleError(false);
+            addSongs(sampleSongs()).catch(() => setSampleError(true));
+          }}
+        >
+          Try the sample songs
+        </button>
+      ) : null}
+      {sampleError ? (
+        <p role="alert" className="text-sm text-chord">
+          Couldn't add the sample songs. Reload the page and try again.
+        </p>
+      ) : null}
+    </>
+  );
+
+  if (phone) {
+    // On a phone the start page is the library: songs are read here and written on a bigger screen.
+    return (
+      <main className="flex min-h-0 flex-1 flex-col gap-3 p-4">
+        <LibraryPanel canImport={false} className="min-h-0 flex-1" />
+        {samples}
+      </main>
+    );
+  }
 
   return (
     <main className="relative min-h-0 flex-1 overflow-y-auto">
@@ -43,24 +78,8 @@ export function StartPage() {
             >
               Import songs…
             </ImportSongs>
-            {songCount === 0 ? (
-              <button
-                type="button"
-                className="rounded px-5 py-2.5 font-semibold hover:bg-hover"
-                onClick={() => {
-                  setSampleError(false);
-                  addSongs(sampleSongs()).catch(() => setSampleError(true));
-                }}
-              >
-                Try the sample songs
-              </button>
-            ) : null}
+            {samples}
           </div>
-          {sampleError ? (
-            <p role="alert" className="mt-3 text-sm text-chord">
-              Couldn't add the sample songs. Reload the page and try again.
-            </p>
-          ) : null}
           <p className="mt-6 max-w-md text-sm text-muted">
             Import <code>.txt</code> and ChordPro files. Your songs are kept in this browser, on this device.
           </p>

@@ -8,10 +8,12 @@ interface Props {
   className?: string;
   /** The song that is open, highlighted in the list. */
   activeId?: string;
+  /** False on a phone, where the library is read only. */
+  canImport?: boolean;
 }
 
 /** The library: every song by title, with a search over title, artist and key. */
-export function LibraryPanel({ className = '', activeId }: Props) {
+export function LibraryPanel({ className = '', activeId, canImport = true }: Props) {
   const songs = useLiveQuery(listSongs, []);
   const [search, setSearch] = useState('');
   const navigate = useNavigate();
@@ -43,18 +45,24 @@ export function LibraryPanel({ className = '', activeId }: Props) {
           </li>
         ))}
       </ul>
-      {songs?.length === 0 ? <p className="px-2.5 text-sm text-muted">No songs yet. Import a song to start.</p> : null}
+      {songs?.length === 0 ? (
+        <p className="px-2.5 text-sm text-muted">
+          {canImport ? 'No songs yet. Import a song to start.' : 'No songs yet. Songs are written on a computer or tablet.'}
+        </p>
+      ) : null}
       {songs && songs.length > 0 && shown?.length === 0 ? (
         <p className="px-2.5 text-sm text-muted">No song matches “{search.trim()}”.</p>
       ) : null}
-      <div className="mt-3">
-        <ImportSongs
-          className="rounded px-2.5 py-1.5 text-sm hover:bg-hover pointer-coarse:min-h-11"
-          onImported={(ids) => ids.length === 1 && navigate(`/songs/${ids[0]}`)}
-        >
-          + Import songs…
-        </ImportSongs>
-      </div>
+      {canImport ? (
+        <div className="mt-3">
+          <ImportSongs
+            className="rounded px-2.5 py-1.5 text-sm hover:bg-hover pointer-coarse:min-h-11"
+            onImported={(ids) => ids.length === 1 && navigate(`/songs/${ids[0]}`)}
+          >
+            + Import songs…
+          </ImportSongs>
+        </div>
+      ) : null}
     </nav>
   );
 }

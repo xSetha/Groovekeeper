@@ -4,9 +4,12 @@ import { Link, useParams } from 'react-router';
 import { LibraryPanel } from '../components/LibraryPanel';
 import { SongEditor } from '../editor/SongEditor';
 import { getSong } from '../library/library';
+import { useIsPhone } from '../phone';
+import { SongReader } from './SongReader';
 
 export function SongPage() {
   const { id = '' } = useParams();
+  const phone = useIsPhone();
   // The song is read once when it's opened; from then on the editor holds it and saves it.
   const [loaded, setLoaded] = useState<{ id: string; song: Song | undefined } | null>(null);
 
@@ -19,6 +22,10 @@ export function SongPage() {
   }, [id]);
 
   const ready = loaded?.id === id ? loaded : null;
+  if (phone) {
+    // On a phone, songs are read, not edited.
+    return ready?.song ? <SongReader song={ready.song} /> : ready ? <NotFound /> : null;
+  }
   return (
     <div className="flex min-h-0 flex-1">
       <LibraryPanel activeId={id} className="hidden w-72 shrink-0 border-r border-line p-4 md:flex" />

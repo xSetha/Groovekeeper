@@ -2,6 +2,7 @@ import { displayTitle, transposeSong, type Song } from '@groovekeeper/core';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type PointerEvent, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { ConfirmDialog } from '../components/ConfirmDialog';
+import { useCharWidth } from '../components/useCharWidth';
 import { download, songFile, type SongFormat } from '../library/files';
 import { deleteSong, saveSong } from '../library/library';
 import { ChordPalette } from './ChordPalette';
@@ -32,7 +33,7 @@ export function SongEditor({ id, initial }: { id: string; initial: Song }) {
   const [paletteDrag, setPaletteDrag] = useState<PaletteDrag | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const inputs = useRef(new Map<string, HTMLInputElement>());
-  const charWidth = useCharWidth();
+  const charWidth = useCharWidth('text-lg');
   const save = useAutosave(id, song);
 
   useEffect(() => {
@@ -194,23 +195,6 @@ function ToolButton({ label, onClick, children }: { label?: string; onClick: () 
       {children}
     </button>
   );
-}
-
-/** The width of one letter of the lyrics' monospace font, in pixels; 0 until it's measured. */
-function useCharWidth(): number {
-  const [width, setWidth] = useState(0);
-  useLayoutEffect(() => {
-    const probe = document.createElement('span');
-    probe.className = 'font-mono text-lg invisible absolute whitespace-pre';
-    probe.textContent = '0'.repeat(100);
-    document.body.append(probe);
-    const measure = () => setWidth(probe.getBoundingClientRect().width / 100);
-    measure();
-    // The font may still be loading; measure again once it is.
-    void document.fonts?.ready.then(measure);
-    return () => probe.remove();
-  }, []);
-  return width;
 }
 
 /**

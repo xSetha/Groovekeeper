@@ -1,5 +1,8 @@
 @import 'tailwindcss';
 
+/* A short screen: a phone turned sideways. */
+@custom-variant short (@media (max-height: 500px));
+
 /* The Amp theme: near-black with blood red, like a guitar amp on a dark stage (SongCreator/Themes/Amp.xaml).
    Other themes will redefine these colors under a [data-theme] selector. */
 @theme {
