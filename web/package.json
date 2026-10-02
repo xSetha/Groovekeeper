@@ -2,11 +2,14 @@
   "name": "groovekeeper-web",
   "private": true,
   "workspaces": [
-    "packages/*"
+    "packages/*",
+    "apps/*"
   ],
   "scripts": {
     "test": "npm test --workspaces --if-present",
-    "typecheck": "npm run typecheck --workspaces --if-present"
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "dev": "npm run dev -w @groovekeeper/app",
+    "build": "npm run build -w @groovekeeper/app"
   },
   "devDependencies": {
     "@types/node": "^26.6.4",

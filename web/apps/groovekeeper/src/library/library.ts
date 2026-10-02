@@ -1,0 +1,47 @@
+import { parseSongText, songToText, type Song } from '@groovekeeper/core';
+import { db, type LibrarySong } from './db';
+
+const byTitle = (a: LibrarySong, b: LibrarySong): number =>
+  a.title.localeCompare(b.title, undefined, { sensitivity: 'base' }) ||
+  a.artist.localeCompare(b.artist, undefined, { sensitivity: 'base' });
+
+/** Every song in the library, by title. */
+export async function listSongs(): Promise<LibrarySong[]> {
+  return (await db.songs.toArray()).sort(byTitle);
+}
+
+/** Whether the song's title, artist or key contains the search text, ignoring case. */
+export function matchesSearch(song: LibrarySong, search: string): boolean {
+  const needle = search.trim().toLowerCase();
+  return [song.title, song.artist, song.key].some((field) => field.toLowerCase().includes(needle));
+}
+
+const record = (id: string, song: Song): LibrarySong => ({
+  id,
+  title: song.title,
+  artist: song.artist,
+  key: song.key,
+  text: songToText(song),
+  updatedAt: Date.now(),
+});
+
+/** Adds the songs to the library and returns their ids, in the same order. */
+export async function addSongs(songs: Song[]): Promise<string[]> {
+  const records = songs.map((song) => record(crypto.randomUUID(), song));
+  await db.songs.bulkAdd(records);
+  return records.map((r) => r.id);
+}
+
+/** The library song with this id, read into a song; undefined if there is none. */
+export async function getSong(id: string): Promise<Song | undefined> {
+  const stored = await db.songs.get(id);
+  return stored && parseSongText(stored.text);
+}
+
+export async function saveSong(id: string, song: Song): Promise<void> {
+  await db.songs.put(record(id, song));
+}
+
+export async function deleteSong(id: string): Promise<void> {
+  await db.songs.delete(id);
+}

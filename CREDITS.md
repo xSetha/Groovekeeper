@@ -3,7 +3,8 @@
 ## Start page photos
 
 Each theme's start page has a photo behind it, in `SongCreator/Assets/Backgrounds`. They are in the
-public domain or under CC0, from Wikimedia Commons; the app uses cropped, resized copies.
+public domain or under CC0, from Wikimedia Commons; the app uses cropped, resized copies. The web
+version uses the same files (`web/apps/groovekeeper/src/assets`).
 
 | Theme | Photo | By | License |
 | --- | --- | --- | --- |

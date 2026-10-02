@@ -1,0 +1,36 @@
+@import 'tailwindcss';
+
+/* The Amp theme: near-black with blood red, like a guitar amp on a dark stage (SongCreator/Themes/Amp.xaml).
+   Other themes will redefine these colors under a [data-theme] selector. */
+@theme {
+  --font-sans: 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif;
+  --font-mono: 'Cascadia Mono', Consolas, ui-monospace, monospace;
+
+  --color-window: #0f0d0d;
+  --color-toolbar: #161313;
+  --color-card: #191515;
+  --color-line: #2a2222;
+  --color-hover: #221c1c;
+  --color-fg: #ece6e1;
+  --color-muted: #9a8f8a;
+  --color-hint: #5e5450;
+  --color-chip: #241b1b;
+  --color-chord: #e5534a;
+  --color-accent: #e5534a;
+  --color-accent-fill: #8e0e12;
+  --color-on-accent: #ffffff;
+  --color-selection: #b3262c;
+}
+
+@layer base {
+  html {
+    color-scheme: dark;
+  }
+  body {
+    @apply bg-window text-fg font-sans antialiased;
+  }
+  ::selection {
+    background: var(--color-selection);
+    color: var(--color-on-accent);
+  }
+}
