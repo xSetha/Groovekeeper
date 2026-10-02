@@ -7,6 +7,18 @@ Songs live in the app's library, with search, and you can still open and save so
 plain `.txt` with the chords on the line above the lyrics, or the ChordPro format used by many
 other chord apps.
 
+## Install
+
+Download `SongCreator-win-Setup.exe` from the latest
+[release](https://github.com/xSetha/SongCreator/releases/latest) and run it. It installs SongCreator
+for your Windows user, without administrator rights, and adds it to the Start menu and the desktop.
+The app updates itself: a new version is downloaded in the background and installed the next
+time you start it. Your songs and setlists are kept.
+
+The installer isn't code-signed yet, so Windows may warn that it "protected your PC": click
+**More info**, then **Run anyway**. If you'd rather not install anything, use
+`SongCreator-win-Portable.zip` from the same release.
+
 ## Features
 
 **Writing**
@@ -91,6 +103,9 @@ first (by default `Documents\SongCreator\Songs`), if you'd rather import them fr
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\seed-songs.ps1
 ```
+
+Releases are built by `scripts/release.ps1` and published by a GitHub workflow when a version tag
+is pushed. [docs/RELEASING.md](docs/RELEASING.md) has the version numbering and the steps.
 
 ## Keyboard shortcuts
 

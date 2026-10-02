@@ -1,0 +1,88 @@
+# Releasing SongCreator
+
+SongCreator is shipped as a Windows installer built with [Velopack](https://velopack.io) and published on
+[GitHub Releases](https://github.com/xSetha/SongCreator/releases). Installed copies check those releases
+when they start, download a newer version in the background, and install it the next time they start.
+
+## Version numbers
+
+Versions follow [Semantic Versioning](https://semver.org): `MAJOR.MINOR.PATCH`, for example `1.4.2`.
+
+| Part | Raise it when a release… | Example |
+| --- | --- | --- |
+| `MAJOR` | can break something for people already using the app: the library (`library.db`) or song files change so that an older version can't read them any more, or a feature is removed | `1.4.2` → `2.0.0` |
+| `MINOR` | adds something: a feature, a menu entry, a theme, a new file format | `1.4.2` → `1.5.0` |
+| `PATCH` | only fixes bugs, without anything new | `1.4.2` → `1.4.3` |
+
+Raising a part sets the parts after it back to 0. When a release has both fixes and features, it's a
+`MINOR` release.
+
+The rules that keep the updater working:
+
+- **One place for the version:** `<Version>` in `SongCreator/SongCreator.csproj`. The app, the installer
+  and the update packages all take it from there.
+- **The tag is the version with a `v`:** `<Version>1.5.0</Version>` is released by the tag `v1.5.0`. The
+  release workflow refuses to build when they don't match.
+- **Versions only go up.** The updater only installs a version higher than the one installed.
+- **A released version is never rebuilt.** Don't move or reuse a tag, or replace the files of a release.
+  If a release has a bug, fix it and release the next `PATCH` version.
+- **Never change the package ID** (`--packId SongCreator` in `scripts/release.ps1`). Installed copies
+  only update from releases with the same ID.
+
+## Making a release
+
+1. Check that `main` has everything for the release and that the tests pass: `dotnet test`.
+2. Set the new version in `SongCreator/SongCreator.csproj` and commit it on its own:
+
+   ```powershell
+   git commit -am "chore: release 1.5.0"
+   ```
+
+3. Optional, but worth it for a bigger release: build the installer yourself and try it.
+
+   ```powershell
+   powershell -ExecutionPolicy Bypass -File scripts\release.ps1
+   ```
+
+   It puts `SongCreator-win-Setup.exe` and `SongCreator-win-Portable.zip` in `artifacts\releases`.
+
+4. Tag the commit and push both:
+
+   ```powershell
+   git tag v1.5.0
+   git push origin main v1.5.0
+   ```
+
+Pushing the tag starts the **Release** workflow (`.github/workflows/release.yml`). It runs the tests,
+builds the installer with `scripts/release.ps1` and publishes the GitHub release `SongCreator 1.5.0`
+with these files:
+
+| File | What it's for |
+| --- | --- |
+| `SongCreator-win-Setup.exe` | The installer. This is the link to give people. |
+| `SongCreator-win-Portable.zip` | The app without installing it; it updates itself too. |
+| `SongCreator-1.5.0-full.nupkg`, `-delta.nupkg`, `releases.win.json`, `assets.win.json`, `RELEASES` | Used by the updater. Leave them in the release. |
+
+Edit the release on GitHub afterwards to describe what changed. The installed apps pick up the release
+on their next start.
+
+## What the installer does
+
+- Installs for the current user in `%LocalAppData%\SongCreator`, without asking for administrator
+  rights, and adds shortcuts to the Start menu and the desktop. Uninstalling is done in Windows'
+  Installed apps list.
+- Brings its own .NET runtime (the app is published self-contained), so nothing else needs to be
+  installed. The WebView2 Runtime used by Import from Web comes with Windows 10 and 11.
+- The user's songs, setlists and settings are in `%AppData%\SongCreator`, outside the install folder,
+  so updating or reinstalling keeps them.
+
+The installer isn't code-signed yet, so Windows SmartScreen warns about it the first time: click
+**More info**, then **Run anyway**.
+
+## Third-party licenses
+
+PDF export uses [QuestPDF](https://www.questpdf.com) under its Community License, which the app selects
+in `SongCreator/IO/SongPdfWriter.cs` (`QuestPDF.Settings.License = LicenseType.Community`). The Community
+License is free for individuals (below the revenue limit in its terms) and for open-source projects
+under an OSI-approved license. If SongCreator is used by a company above that limit, it needs a paid
+QuestPDF license; see the [QuestPDF license](https://github.com/QuestPDF/QuestPDF/blob/main/LICENSE.md).
