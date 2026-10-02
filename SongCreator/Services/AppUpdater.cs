@@ -4,7 +4,7 @@ using Velopack.Sources;
 namespace SongCreator.Services
 {
     /// <summary>
-    /// Keeps an installed SongCreator up to date from the GitHub releases. A newer version is downloaded in the
+    /// Keeps an installed Groovekeeper up to date from the GitHub releases. A newer version is downloaded in the
     /// background and installed the next time the app starts, so the songs being edited are never interrupted.
     /// </summary>
     public static class AppUpdater

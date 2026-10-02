@@ -56,7 +56,7 @@ namespace SongCreator.IO
                     });
                 });
             })
-            .WithMetadata(new DocumentMetadata { Title = songs.Count == 1 ? songs[0].DisplayTitle : "Songbook", Creator = "SongCreator" })
+            .WithMetadata(new DocumentMetadata { Title = songs.Count == 1 ? songs[0].DisplayTitle : "Songbook", Creator = "Groovekeeper" })
             .GeneratePdf();
         }
 

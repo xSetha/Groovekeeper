@@ -4,7 +4,7 @@
         xmlns:controls="clr-namespace:SongCreator.Controls"
         xmlns:views="clr-namespace:SongCreator.Views"
         xmlns:music="clr-namespace:SongCreator.Music"
-        Title="SongCreator" MinWidth="900" MinHeight="600" WindowStartupLocation="CenterScreen"
+        Title="Groovekeeper" MinWidth="900" MinHeight="600" WindowStartupLocation="CenterScreen"
         Icon="Assets/SongCreator.ico"
         Background="{DynamicResource WindowBackground}"
         Foreground="{DynamicResource TextForeground}"

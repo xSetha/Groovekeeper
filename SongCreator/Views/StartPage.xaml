@@ -80,7 +80,7 @@
                 <StackPanel Orientation="Horizontal">
                     <Image Source="/Assets/SongCreator.png" Width="52" Height="52" Margin="0,4,16,0"
                            RenderOptions.BitmapScalingMode="HighQuality" />
-                    <TextBlock FontSize="48" FontWeight="Bold" Text="SongCreator" />
+                    <TextBlock FontSize="48" FontWeight="Bold" Text="Groovekeeper" />
                 </StackPanel>
                 <TextBlock FontSize="19" Foreground="{DynamicResource MutedForeground}" TextWrapping="Wrap"
                            Margin="0,12,0,32" LineHeight="28" MaxWidth="420" HorizontalAlignment="Left"

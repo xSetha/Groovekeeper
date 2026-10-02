@@ -263,7 +263,7 @@ namespace SongCreator.ViewModels
 
         private void BackupLibrary()
         {
-            string? path = _dialogs.PickBackupPath($"SongCreator library {DateTime.Now:yyyy-MM-dd}");
+            string? path = _dialogs.PickBackupPath($"Groovekeeper library {DateTime.Now:yyyy-MM-dd}");
             if (path == null)
                 return;
             try

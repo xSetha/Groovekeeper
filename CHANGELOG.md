@@ -1,10 +1,15 @@
 # Changelog
 
-What changed in each version of SongCreator, for the people using it. The version numbers follow
-the rules in [docs/RELEASING.md](docs/RELEASING.md), and each version's section here becomes the
-text of its GitHub release.
+What changed in each version of Groovekeeper (called SongCreator until 1.0.0), for the people using
+it. The version numbers follow the rules in [docs/RELEASING.md](docs/RELEASING.md), and each
+version's section here becomes the text of its GitHub release.
 
 ## [Unreleased]
+
+### Changed
+- SongCreator is now called Groovekeeper. Your songs, setlists and settings stay where they are, and
+  updates keep coming as before. The shortcuts and the entry in Windows' Installed apps get the new
+  name with this update.
 
 ## [1.0.0] - 2026-10-02
 

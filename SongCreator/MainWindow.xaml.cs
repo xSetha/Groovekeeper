@@ -61,7 +61,7 @@ namespace SongCreator
             }
             catch (Exception ex) when (ex is SqliteException or IOException or UnauthorizedAccessException)
             {
-                MessageBox.Show($"Couldn't open the song library at {SongLibrary.DefaultPath}:\n{ex.Message}", "SongCreator",
+                MessageBox.Show($"Couldn't open the song library at {SongLibrary.DefaultPath}:\n{ex.Message}", "Groovekeeper",
                     MessageBoxButton.OK, MessageBoxImage.Error);
                 Environment.Exit(1);
                 throw;   // not reached

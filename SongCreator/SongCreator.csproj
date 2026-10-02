@@ -7,6 +7,9 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
     <ApplicationIcon>Assets\SongCreator.ico</ApplicationIcon>
+    <!-- The app's name, shown in Task Manager and the file's properties. The code keeps its old name, SongCreator. -->
+    <Product>Groovekeeper</Product>
+    <AssemblyTitle>Groovekeeper</AssemblyTitle>
     <!-- The release version; see docs/RELEASING.md before changing it -->
     <Version>1.0.0</Version>
     <!-- App.Main runs Velopack before WPF starts -->

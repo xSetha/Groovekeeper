@@ -1,7 +1,12 @@
-# SongCreator
+# Groovekeeper
 
 A WPF app (.NET 10) for writing chord sheets. The README describes the features, the file formats and
 the project layout.
+
+The app was called SongCreator until 1.0.0. Users see Groovekeeper; the code (projects, folders,
+namespaces), the Velopack package ID and the data folders in `%AppData%` and `%LocalAppData%` keep
+the name SongCreator on purpose, so installed copies keep updating and keep their songs. Don't rename
+those.
 
 - Build and test: `dotnet build`, `dotnet test`.
 - **Changelog:** every change users will notice adds a line under `## [Unreleased]` in `CHANGELOG.md`,

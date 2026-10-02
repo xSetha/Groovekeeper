@@ -1,6 +1,6 @@
-# Releasing SongCreator
+# Releasing Groovekeeper
 
-SongCreator is shipped as a Windows installer built with [Velopack](https://velopack.io) and published on
+Groovekeeper is shipped as a Windows installer built with [Velopack](https://velopack.io) and published on
 [GitHub Releases](https://github.com/xSetha/SongCreator/releases). Installed copies check those releases
 when they start, download a newer version in the background, and install it the next time they start.
 
@@ -27,7 +27,8 @@ The rules that keep the updater working:
 - **A released version is never rebuilt.** Don't move or reuse a tag, or replace the files of a release.
   If a release has a bug, fix it and release the next `PATCH` version.
 - **Never change the package ID** (`--packId SongCreator` in `scripts/release.ps1`). Installed copies
-  only update from releases with the same ID.
+  only update from releases with the same ID. It's the app's old name; people see the title
+  (`--packTitle Groovekeeper`), which can change.
 
 ## The changelog
 
@@ -60,7 +61,7 @@ app ("Chords stay on their syllable when…"), not for developers. It follows
    powershell -ExecutionPolicy Bypass -File scripts\release.ps1
    ```
 
-   It puts `SongCreator-win-Setup.exe` and `SongCreator-win-Portable.zip` in `artifacts\releases`.
+   It puts `Groovekeeper-Setup.exe` and `Groovekeeper-Portable.zip` in `artifacts\releases`.
 
 4. Tag the commit and push both:
 
@@ -71,13 +72,13 @@ app ("Chords stay on their syllable when…"), not for developers. It follows
 
 Pushing the tag starts the **Release** workflow (`.github/workflows/release.yml`); follow it on the
 repository's Actions tab. It checks the tag against the version and the changelog, runs the tests,
-builds the installer with `scripts/release.ps1` and publishes the GitHub release `SongCreator 1.5.0`,
+builds the installer with `scripts/release.ps1` and publishes the GitHub release `Groovekeeper 1.5.0`,
 with the version's section of the changelog as its text and these files:
 
 | File | What it's for |
 | --- | --- |
-| `SongCreator-win-Setup.exe` | The installer. This is the link to give people. |
-| `SongCreator-win-Portable.zip` | The app without installing it; it updates itself too. |
+| `Groovekeeper-Setup.exe` | The installer. This is the link to give people. |
+| `Groovekeeper-Portable.zip` | The app without installing it; it updates itself too. |
 | `SongCreator-1.5.0-full.nupkg`, `-delta.nupkg`, `releases.win.json`, `RELEASES` | Used by the updater. Leave them in the release. |
 
 The installed apps pick up the release on their next start.
@@ -95,6 +96,7 @@ while the release doesn't exist yet.
   installed. The WebView2 Runtime used by Import from Web comes with Windows 10 and 11.
 - The user's songs, setlists and settings are in `%AppData%\SongCreator`, outside the install folder,
   so updating or reinstalling keeps them.
+- The install and data folders keep the app's old name, SongCreator, like the package ID.
 
 The installer isn't code-signed yet, so Windows SmartScreen warns about it the first time: click
 **More info**, then **Run anyway**.
@@ -104,5 +106,5 @@ The installer isn't code-signed yet, so Windows SmartScreen warns about it the f
 PDF export uses [QuestPDF](https://www.questpdf.com) under its Community License, which the app selects
 in `SongCreator/IO/SongPdfWriter.cs` (`QuestPDF.Settings.License = LicenseType.Community`). The Community
 License is free for individuals (below the revenue limit in its terms) and for open-source projects
-under an OSI-approved license. If SongCreator is used by a company above that limit, it needs a paid
+under an OSI-approved license. If Groovekeeper is used by a company above that limit, it needs a paid
 QuestPDF license; see the [QuestPDF license](https://github.com/QuestPDF/QuestPDF/blob/main/LICENSE.md).

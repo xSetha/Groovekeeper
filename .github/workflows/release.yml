@@ -56,7 +56,7 @@ jobs:
           --token ${{ secrets.GITHUB_TOKEN }}
           --outputDir artifacts/releases
           --tag ${{ github.ref_name }}
-          --releaseName "SongCreator ${{ steps.version.outputs.version }}"
+          --releaseName "Groovekeeper ${{ steps.version.outputs.version }}"
           --publish
 
       - name: Add the release notes

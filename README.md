@@ -1,4 +1,4 @@
-# SongCreator
+# Groovekeeper
 
 A Windows desktop app for writing chord sheets: type the lyrics, drop each chord exactly on the
 syllable where it changes, then transpose, print, and build setlists for a gig.
@@ -9,15 +9,15 @@ other chord apps.
 
 ## Install
 
-Download `SongCreator-win-Setup.exe` from the latest
-[release](https://github.com/xSetha/SongCreator/releases/latest) and run it. It installs SongCreator
+Download `Groovekeeper-Setup.exe` from the latest
+[release](https://github.com/xSetha/SongCreator/releases/latest) and run it. It installs Groovekeeper
 for your Windows user, without administrator rights, and adds it to the Start menu and the desktop.
 The app updates itself: a new version is downloaded in the background and installed the next
 time you start it. Your songs and setlists are kept.
 
 The installer isn't code-signed yet, so Windows may warn that it "protected your PC": click
 **More info**, then **Run anyway**. If you'd rather not install anything, use
-`SongCreator-win-Portable.zip` from the same release.
+`Groovekeeper-Portable.zip` from the same release.
 
 ## Features
 
@@ -98,7 +98,7 @@ dotnet test                          # run the tests
 
 To try the app with some public-domain songs, import the files in `samples/songs` into the
 library (File → Import Songs into Library…). The seed script copies them to a songs folder
-first (by default `Documents\SongCreator\Songs`), if you'd rather import them from there:
+first (by default `Documents\Groovekeeper\Songs`), if you'd rather import them from there:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\seed-songs.ps1
@@ -170,7 +170,7 @@ That [G]saved a wretch like [D]me
 ```
 
 **Library (`%AppData%\SongCreator\library.db`)**: a SQLite database with the songs and the
-setlists. Each song is stored as its `.txt` text. Don't keep it in a folder that a cloud service
+setlists. The folder keeps the app's old name, SongCreator, so that nobody's library moves. Each song is stored as its `.txt` text. Don't keep it in a folder that a cloud service
 syncs while the app is open; use File → Back Up Library… to make a copy instead.
 
 **Older setlists (`.setlist`)**: setlists used to be JSON files that point to song files. They can
@@ -187,6 +187,9 @@ be imported on the Setlists tab (Import…), which adds their songs to the libra
 ```
 
 ## Project layout
+
+The app used to be called SongCreator, and the code still is: the projects, folders and namespaces
+keep that name.
 
 | Folder | Contents |
 | --- | --- |
