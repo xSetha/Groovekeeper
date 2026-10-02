@@ -54,10 +54,17 @@ other chord apps.
 **Printing and gigs**
 - Export one or many songs to a single PDF songbook, with an optional table of contents
   and an option to print the chords as Roman numerals.
-- Setlists: library songs in playing order, each in the key you'll play it in, saved in the
-  library and exported to one PDF. The songs themselves are never changed. Each transposed
-  song is marked in the PDF, e.g. `[Key of E (+4 semitones from the original)]`.
-  Older `.setlist` files can be imported, together with their songs.
+- Setlists, on their own tab (Ctrl+L, or Songs / Setlists at the top of the window): as many
+  as you like, each with library songs in playing order and the key you'll play each one in.
+  The same song can be in several setlists, in a different key in each.
+- Drag songs to reorder a setlist, and drag them in from the library next to it (or press +).
+  Every change is saved in the library right away.
+- Double-click a song in a setlist to edit it in the song editor. A setlist only refers to its
+  songs, so the edit shows in every setlist that has it; choosing a key in a setlist never
+  changes the song.
+- Export a setlist to one PDF. Each transposed song is marked in the PDF, e.g.
+  `[Key of E (+4 semitones from the original)]`. Older `.setlist` files can be imported,
+  together with their songs.
 
 **Looks**
 - Three themes: Studio (dark), Aurora (ink blue) and Paper (light).
@@ -90,7 +97,7 @@ powershell -ExecutionPolicy Bypass -File scripts\seed-songs.ps1
 | Ctrl+B | Show or hide the library panel |
 | Ctrl+I | Import from the web |
 | Ctrl+E | Export PDF |
-| Ctrl+L | Setlist |
+| Ctrl+L | Setlists tab |
 | Ctrl+Z | Undo |
 | Ctrl+Y, Ctrl+Shift+Z | Redo |
 | Ctrl+F, Ctrl+H | Find and replace (Enter: next match, Esc: close) |
@@ -146,7 +153,7 @@ setlists. Each song is stored as its `.txt` text. Don't keep it in a folder that
 syncs while the app is open; use File → Back Up Library… to make a copy instead.
 
 **Older setlists (`.setlist`)**: setlists used to be JSON files that point to song files. They can
-be imported in the setlist window (Import…), which adds their songs to the library.
+be imported on the Setlists tab (Import…), which adds their songs to the library.
 
 ```json
 {
