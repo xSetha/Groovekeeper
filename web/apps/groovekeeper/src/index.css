@@ -3,57 +3,56 @@
 /* A short screen: a phone turned sideways. */
 @custom-variant short (@media (max-height: 500px));
 
-/* The themes come from the desktop app (SongCreator/Themes/*.xaml). Amp is the default, defined here; the
-   others redefine every color under a [data-theme] selector on <html>. A new color token goes in all four. */
-@theme {
+/* The themes come from the desktop app (SongCreator/Themes/*.xaml). Tailwind's color tokens (bg-window,
+   text-chord, ...) each point to a --gk-* variable, and every theme below sets all of those once; a new
+   color goes into @theme and into all four themes. "inline" makes a utility read the variable where it's
+   used, so an element with its own data-theme (a preview in the theme picker) shows that theme. */
+@theme inline {
   --font-sans: 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif;
   --font-mono: 'Cascadia Mono', Consolas, ui-monospace, monospace;
 
-  --color-window: #0f0d0d;
-  --color-toolbar: #161313;
-  --color-card: #191515;
-  --color-line: #2a2222;
-  --color-hover: #221c1c;
-  --color-fg: #ece6e1;
-  --color-muted: #9a8f8a;
-  --color-hint: #5e5450;
-  --color-chip: #241b1b;
-  --color-chord: #e5534a;
-  --color-accent: #e5534a;
-  --color-accent-fill: #8e0e12;
-  --color-on-accent: #ffffff;
-  --color-selection: #b3262c;
-
-  /* The app's logo, drawn in the theme's colors */
-  --color-logo-tile: #141111;
-  --color-logo-record: #050404;
-  --color-logo-ring: #e5534a;
-  --color-logo-label: #c4161c;
+  --color-window: var(--gk-window);
+  --color-toolbar: var(--gk-toolbar);
+  --color-card: var(--gk-card);
+  --color-line: var(--gk-line);
+  --color-hover: var(--gk-hover);
+  --color-fg: var(--gk-fg);
+  --color-muted: var(--gk-muted);
+  --color-hint: var(--gk-hint);
+  --color-chip: var(--gk-chip);
+  --color-chord: var(--gk-chord);
+  --color-accent: var(--gk-accent);
+  --color-accent-fill: var(--gk-accent-fill);
+  --color-on-accent: var(--gk-on-accent);
+  --color-selection: var(--gk-selection);
+  --color-logo-tile: var(--gk-logo-tile);
+  --color-logo-record: var(--gk-logo-record);
+  --color-logo-ring: var(--gk-logo-ring);
+  --color-logo-label: var(--gk-logo-label);
 }
 
-/* Amp: near-black with blood red, like a guitar amp on a dark stage. The colors repeat the defaults in
-   @theme above, so an element marked data-theme="amp" (a preview in the theme picker) shows Amp inside
-   another theme. */
+/* Amp: near-black with blood red, like a guitar amp on a dark stage. The default theme, and the one an
+   element marked data-theme="amp" shows inside another theme. */
 :root,
 [data-theme='amp'] {
-  --color-window: #0f0d0d;
-  --color-toolbar: #161313;
-  --color-card: #191515;
-  --color-line: #2a2222;
-  --color-hover: #221c1c;
-  --color-fg: #ece6e1;
-  --color-muted: #9a8f8a;
-  --color-hint: #5e5450;
-  --color-chip: #241b1b;
-  --color-chord: #e5534a;
-  --color-accent: #e5534a;
-  --color-accent-fill: #8e0e12;
-  --color-on-accent: #ffffff;
-  --color-selection: #b3262c;
-  --color-logo-tile: #141111;
-  --color-logo-record: #050404;
-  --color-logo-ring: #e5534a;
-  --color-logo-label: #c4161c;
+  --gk-window: #0f0d0d;
+  --gk-toolbar: #161313;
+  --gk-card: #191515;
+  --gk-line: #2a2222;
+  --gk-hover: #221c1c;
+  --gk-fg: #ece6e1;
+  --gk-muted: #9a8f8a;
+  --gk-hint: #5e5450;
+  --gk-chip: #241b1b;
+  --gk-chord: #e5534a;
+  --gk-accent: #e5534a;
+  --gk-accent-fill: #8e0e12;
+  --gk-on-accent: #ffffff;
+  --gk-selection: #b3262c;
+  --gk-logo-tile: #141111;
+  --gk-logo-record: #050404;
+  --gk-logo-ring: #e5534a;
+  --gk-logo-label: #c4161c;
   /* The start page's photo, dimmed under the window color so the text stays readable. Only the current
      theme's photo is downloaded. */
   --start-photo: url('./assets/amp.jpg');
@@ -63,72 +62,72 @@
 
 /* Backstage: warm charcoal with brass. */
 [data-theme='backstage'] {
-  --color-window: #1e1b18;
-  --color-toolbar: #24201d;
-  --color-card: #262220;
-  --color-line: #35302b;
-  --color-hover: #2e2925;
-  --color-fg: #e9e4da;
-  --color-muted: #9c948a;
-  --color-hint: #625b53;
-  --color-chip: #302a24;
-  --color-chord: #c9a227;
-  --color-accent: #c9a227;
-  --color-accent-fill: #c9a227;
-  --color-on-accent: #1e1b18;
-  --color-selection: #8c7a3a;
-  --color-logo-tile: #2a2420;
-  --color-logo-record: #120f0d;
-  --color-logo-ring: #c9a227;
-  --color-logo-label: #c9a227;
+  --gk-window: #1e1b18;
+  --gk-toolbar: #24201d;
+  --gk-card: #262220;
+  --gk-line: #35302b;
+  --gk-hover: #2e2925;
+  --gk-fg: #e9e4da;
+  --gk-muted: #9c948a;
+  --gk-hint: #625b53;
+  --gk-chip: #302a24;
+  --gk-chord: #c9a227;
+  --gk-accent: #c9a227;
+  --gk-accent-fill: #c9a227;
+  --gk-on-accent: #1e1b18;
+  --gk-selection: #8c7a3a;
+  --gk-logo-tile: #2a2420;
+  --gk-logo-record: #120f0d;
+  --gk-logo-ring: #c9a227;
+  --gk-logo-label: #c9a227;
   --start-photo: url('./assets/backstage.jpg');
   --start-dim: 0.8;
 }
 
 /* Record Sleeve: forest green, cream and mustard. */
 [data-theme='record-sleeve'] {
-  --color-window: #1f2a24;
-  --color-toolbar: #24302a;
-  --color-card: #26332c;
-  --color-line: #34443a;
-  --color-hover: #2c3a32;
-  --color-fg: #efe6d2;
-  --color-muted: #a9b0a0;
-  --color-hint: #66705f;
-  --color-chip: #2e3d34;
-  --color-chord: #e0a526;
-  --color-accent: #e0a526;
-  --color-accent-fill: #c8572b;
-  --color-on-accent: #ffffff;
-  --color-selection: #a8743a;
-  --color-logo-tile: #2e3d34;
-  --color-logo-record: #121a15;
-  --color-logo-ring: #e0a526;
-  --color-logo-label: #c8572b;
+  --gk-window: #1f2a24;
+  --gk-toolbar: #24302a;
+  --gk-card: #26332c;
+  --gk-line: #34443a;
+  --gk-hover: #2c3a32;
+  --gk-fg: #efe6d2;
+  --gk-muted: #a9b0a0;
+  --gk-hint: #66705f;
+  --gk-chip: #2e3d34;
+  --gk-chord: #e0a526;
+  --gk-accent: #e0a526;
+  --gk-accent-fill: #c8572b;
+  --gk-on-accent: #ffffff;
+  --gk-selection: #a8743a;
+  --gk-logo-tile: #2e3d34;
+  --gk-logo-record: #121a15;
+  --gk-logo-ring: #e0a526;
+  --gk-logo-label: #c8572b;
   --start-photo: url('./assets/record.jpg');
   --start-dim: 0.74;
 }
 
 /* Songbook: cream paper with red ink chords, the one light theme. */
 [data-theme='songbook'] {
-  --color-window: #f6f1e7;
-  --color-toolbar: #fbf8f2;
-  --color-card: #fffdf8;
-  --color-line: #e2d9c6;
-  --color-hover: #f1ebe0;
-  --color-fg: #1c1a17;
-  --color-muted: #6b645a;
-  --color-hint: #a8a091;
-  --color-chip: #f3e6e1;
-  --color-chord: #9e2b25;
-  --color-accent: #9e2b25;
-  --color-accent-fill: #9e2b25;
-  --color-on-accent: #ffffff;
-  --color-selection: #d9a79f;
-  --color-logo-tile: #1c1a17;
-  --color-logo-record: #0b0a09;
-  --color-logo-ring: #f6f1e7;
-  --color-logo-label: #b8322b;
+  --gk-window: #f6f1e7;
+  --gk-toolbar: #fbf8f2;
+  --gk-card: #fffdf8;
+  --gk-line: #e2d9c6;
+  --gk-hover: #f1ebe0;
+  --gk-fg: #1c1a17;
+  --gk-muted: #6b645a;
+  --gk-hint: #a8a091;
+  --gk-chip: #f3e6e1;
+  --gk-chord: #9e2b25;
+  --gk-accent: #9e2b25;
+  --gk-accent-fill: #9e2b25;
+  --gk-on-accent: #ffffff;
+  --gk-selection: #d9a79f;
+  --gk-logo-tile: #1c1a17;
+  --gk-logo-record: #0b0a09;
+  --gk-logo-ring: #f6f1e7;
+  --gk-logo-label: #b8322b;
   --start-photo: url('./assets/songbook.jpg');
   --start-dim: 0.82;
   color-scheme: light;
@@ -139,7 +138,7 @@
     @apply bg-window text-fg font-sans antialiased;
   }
   ::selection {
-    background: var(--color-selection);
-    color: var(--color-on-accent);
+    background: var(--gk-selection);
+    color: var(--gk-on-accent);
   }
 }
