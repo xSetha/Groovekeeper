@@ -125,6 +125,8 @@ Other scripts, each run with `powershell -ExecutionPolicy Bypass -File scripts\<
 | `prepare-release.ps1 -Version 1.5.0` | Sets the version, dates the changelog and commits both, ready to tag |
 | `screenshots.ps1` | Retakes the screenshots in `docs/screenshots` with the sample songs. It runs the app on a sample library in place of yours (close the app first) and puts your library back afterwards |
 | `make-icon.ps1` | Redraws the app icon and the installer's splash image |
+| `check.ps1` | Runs every check before a commit: the desktop tests, the web typecheck and tests, the database's access rules and the end-to-end tests, then sums them up. Checks that need the local Supabase are skipped when it isn't running. `-SkipDesktop`, `-SkipE2E` leave parts out |
+| `web-dev.ps1` | Starts what the web app needs while working on it: Docker Desktop, the local Supabase and the app at http://localhost:5173. `-Network` also serves it on the local network, for a phone |
 
 ## Keyboard shortcuts
 
