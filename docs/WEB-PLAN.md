@@ -87,7 +87,7 @@ and adjust the next step before starting it. Run npm from Windows Node (in WSL: 
    import/export, Dexie, one theme.
    → verify: import a sample song, transpose, reload, it's still there; export matches the desktop's output.
 4. ✅ **Editor.** Typing with chords kept on their letters, Enter/Backspace/Up/Down, chords dragged from a palette and sideways (touch: hold, then drag; tap a chord for Remove), autosave, undo/redo (Ctrl+Z/Y, a word per step), sections (add, rename, move, duplicate, repeat, delete, + Line), title/artist/key with a key suggestion, New song, pasting a whole song. The song lives in a Zustand store; typing re-renders only the line typed in (checked by test/rerender.test.tsx). On phones the app is read only (library + reading view).
-5. ⏭️ **Palette, themes, setlists, printing (in progress).**
+5. ✅ **Palette, themes, setlists, printing.**
    - ✅ Full chord palette: after the last chord, in the key, in the song, every type on any root with a
      bass note, Roman numerals on the chips; the I IV V toggle shows the song's chords as numerals (cc24034).
    - ✅ Backstage, Record Sleeve and Songbook themes with a picker in the top bar; colors are `--gk-*`
@@ -95,12 +95,15 @@ and adjust the next step before starting it. Run npm from Windows Node (in WSL: 
    - ✅ Setlists (9490eba): songs in playing order with a key each ("+2 from G"), drag or arrows to
      reorder, added from the library; each entry has its own id (database version 3). On a phone a setlist
      opens to play, each song in its setlist key with previous/next at the bottom.
-   - ⏭️ **Next: printing and PDF through the browser.** One song, several songs as a songbook, a setlist
-     with each song in its key (marked like the desktop: "Key of E (+4 semitones from the original)"),
-     and "Collapse repeated sections" (a section identical to an earlier one with the same name prints as
-     `[Chorus] (repeat)`). A print stylesheet and the browser's Save as PDF; no PDF library.
-6. **Accounts + sync.** Supabase migrations + RLS, Auth UI, sync step (push dirty, pull since),
-   guest upload, conflict prompt.
+   - ✅ Printing and PDF through the browser's print dialog (Save as PDF), from a print page (`/print`,
+     loaded only when opened): one song (Print in the editor), a setlist with each song in its key and the
+     desktop's note ("[Key of E (+4 semitones from the original)]"), or songs ticked in the library as a
+     songbook in title order. Options: Collapse repeated sections (`[Chorus] (repeat)`, a rule in
+     `packages/core` and `shared/fixtures/music/printing.json`) and Chords as Roman numerals. Pages are in
+     the Songbook theme's ink whatever the theme; each song starts a new page; a song with long lines prints
+     smaller so nothing runs off the page. No table of contents (the browser can't number its pages).
+6. ⏭️ **Next: Accounts + sync.** Settle the open question on sharing (below) first. Supabase
+   migrations + RLS, Auth UI, sync step (push dirty, pull since), guest upload, conflict prompt.
    → verify: RLS tests against local Supabase (signed-out and other-user access denied); two
    browsers on one account see each other's edits; an edit made offline syncs when back online;
    a stale push shows the conflict prompt.

@@ -57,7 +57,7 @@ describe('the app', () => {
     await user.type(screen.getByRole('searchbox', { name: 'Search the library' }), 'am');
 
     // "Am" matches the key of two songs, "am" the title of one.
-    const library = screen.getByRole('navigation', { name: 'Library' });
+    const library = within(screen.getByRole('navigation', { name: 'Library' })).getByRole('list');
     expect(within(library).getAllByRole('link').map((link) => link.querySelector('span span')?.textContent)).toEqual([
       'Amazing Grace',
       'House of the Rising Sun',

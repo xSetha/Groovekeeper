@@ -9,7 +9,7 @@ interface Props {
   className?: string;
   /** The song that is open, highlighted in the list. */
   activeId?: string;
-  /** False on a phone, where the library is read only. */
+  /** False on a phone, where the library is read only: no importing, and no printing. */
   canImport?: boolean;
 }
 
@@ -62,13 +62,18 @@ export function LibraryPanel({ className = '', activeId, canImport = true }: Pro
         <p className="px-2.5 text-sm text-muted">No song matches “{search.trim()}”.</p>
       ) : null}
       {canImport ? (
-        <div className="mt-3">
+        <div className="mt-3 flex flex-wrap gap-1">
           <ImportSongs
             className="rounded px-2.5 py-1.5 text-sm hover:bg-hover pointer-coarse:min-h-11"
             onImported={(ids) => ids.length === 1 && navigate(`/songs/${ids[0]}`)}
           >
             + Import songs…
           </ImportSongs>
+          {songs && songs.length > 0 ? (
+            <Link to="/print" className="rounded px-2.5 py-1.5 text-sm hover:bg-hover pointer-coarse:min-h-11">
+              Print songs…
+            </Link>
+          ) : null}
         </div>
       ) : null}
     </nav>

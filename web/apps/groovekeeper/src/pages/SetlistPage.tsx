@@ -132,9 +132,15 @@ function SetlistEditor({ setlist, songs }: Loaded) {
         </Link>
         <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2">
           <NameField setlist={setlist} onError={() => setError(true)} />
+          <Link
+            to={`/print?setlist=${setlist.id}`}
+            className="ml-auto rounded px-2 py-1.5 text-sm hover:bg-hover pointer-coarse:min-h-11"
+          >
+            Print setlist
+          </Link>
           <button
             type="button"
-            className="ml-auto rounded px-2 py-1.5 text-sm hover:bg-hover pointer-coarse:min-h-11"
+            className="rounded px-2 py-1.5 text-sm hover:bg-hover pointer-coarse:min-h-11"
             onClick={() => setConfirmDelete(true)}
           >
             Delete setlist

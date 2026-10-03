@@ -8,3 +8,4 @@ export * from './models/song';
 export * from './models/song-line';
 export * from './formats/song-text';
 export * from './formats/chordpro';
+export * from './formats/printing';

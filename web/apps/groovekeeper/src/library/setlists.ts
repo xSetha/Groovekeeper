@@ -1,5 +1,7 @@
 // Setlists in the library. Every change is saved right away, as in the desktop app.
-import { keysOfMode, parseSongText, sameKey, semitonesBetween, songKey, UNTITLED_TITLE, type Song } from '@groovekeeper/core';
+import {
+  keysOfMode, parseSongText, sameKey, semitonesBetween, songKey, transposeSong, UNTITLED_TITLE, type Song,
+} from '@groovekeeper/core';
 import { db, type LibrarySetlist, type LibrarySong, type SetlistEntry } from './db';
 import { newId } from './ids';
 
@@ -97,6 +99,12 @@ export function setlistSong(entry: SetlistEntry, stored: LibrarySong): SetlistSo
     key,
     semitones: semitonesBetween(originalKey, key),
   };
+}
+
+/** The song as it's played: in its setlist key, and marked with the key its chords point to when it has none written. */
+export function songToPlay({ song, originalKey, detected, semitones }: SetlistSong): Song {
+  if (semitones === 0 && !detected) return song;
+  return transposeSong({ ...song, key: originalKey }, semitones);
 }
 
 /** The setlist's songs, in order. Songs that are no longer in the library are left out. */

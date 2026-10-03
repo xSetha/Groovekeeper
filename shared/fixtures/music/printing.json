@@ -1,0 +1,29 @@
+{
+  "repeatedSections": [
+    {
+      "name": "the same section again, apart from case and blank space",
+      "song": "Song\n\n[Chorus]\nG       C\nI gotta feeling\n\n[Verse]\nAm\nla la\n\n[chorus]\nG       C\nI gotta feeling   \n\n\n[Chorus]\nG       D\nI gotta feeling\n\n[Chorus 2]\nG       C\nI gotta feeling\n",
+      "expected": [2]
+    },
+    {
+      "name": "repeat markers and empty sections",
+      "song": "Song\n\n[Chorus]\nG\nla\n\n[Chorus]\n(Repeat)\n\n[Bridge]\n\n[Bridge]\n",
+      "expected": []
+    },
+    {
+      "name": "a chord moved to another letter",
+      "song": "Song\n\n[Chorus]\nG\nla la\n\n[Chorus]\n   G\nla la\n",
+      "expected": []
+    },
+    {
+      "name": "every copy after the first",
+      "song": "Song\n\n[Chorus]\nC\nhey\n\n[Verse]\nla\n\n[Chorus]\nC\nhey\n\n[Chorus]\nC\nhey\n",
+      "expected": [2, 3]
+    }
+  ],
+  "keyChangeNotes": [
+    { "key": "E", "semitones": 4, "expected": "[Key of E (+4 semitones from the original)]" },
+    { "key": "Bb", "semitones": -1, "expected": "[Key of Bb (−1 semitone from the original)]" },
+    { "key": "G", "semitones": 0, "expected": null }
+  ]
+}
