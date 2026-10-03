@@ -1,9 +1,10 @@
-import { getDefaultNormalizer, render, screen, within } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { App } from '../src/App';
 import { db } from '../src/library/db';
+import { lineSegments } from '../src/pages/PrintPage';
 
 const GRACE =
   'Amazing Grace\nJohn Newton\n\nKey: G\n\n[Chorus]\nG          C\nAmazing grace\n\n[Verse]\nD\nhow sweet\n\n' +
@@ -27,8 +28,10 @@ const renderAt = (path: string) =>
   );
 
 const pages = () => within(screen.getByRole('main', { name: 'Pages to print' }));
-// Chord rows are matched with their spaces, which place each chord over its letter.
-const asWritten = { normalizer: getDefaultNormalizer({ collapseWhitespace: false }) };
+// The chords printed, in order.
+const chordsShown = () =>
+  [...screen.getByRole('main', { name: 'Pages to print' }).querySelectorAll('.text-chord')].flatMap((row) =>
+    (row.textContent ?? '').trim().split(/\s+/).filter(Boolean));
 
 describe('printing', () => {
   it('prints one song, with a section that repeats an earlier one collapsed', async () => {
@@ -37,18 +40,17 @@ describe('printing', () => {
 
     expect(await screen.findByRole('heading', { name: 'Amazing Grace' })).toBeInTheDocument();
     expect(pages().getByText('Key: G')).toBeInTheDocument();
-    expect(pages().getAllByText('Amazing grace')).toHaveLength(1);
+    expect(pages().getAllByText('Amazing')).toHaveLength(1);
     expect(pages().getByText('(repeat)')).toBeInTheDocument();
     expect(document.title).toBe('Amazing Grace');
 
     await user.click(screen.getByRole('checkbox', { name: /Collapse repeated sections/ }));
-    expect(pages().getAllByText('Amazing grace')).toHaveLength(2);
+    expect(pages().getAllByText('Amazing')).toHaveLength(2);
     expect(pages().queryByText('(repeat)')).toBeNull();
 
-    // The chord row keeps its columns; as numerals in G.
-    expect(pages().getAllByText('G          C', asWritten)).toHaveLength(2);
+    expect(chordsShown()).toEqual(['G', 'C', 'D', 'G', 'C']);
     await user.click(screen.getByRole('checkbox', { name: /Chords as Roman numerals/ }));
-    expect(pages().getAllByText('I          IV', asWritten)).toHaveLength(2);
+    expect(chordsShown()).toEqual(['I', 'IV', 'V', 'I', 'IV']);
   });
 
   it('prints a setlist with each song in its key, noting a changed key', async () => {
@@ -60,7 +62,7 @@ describe('printing', () => {
 
     expect(await screen.findByText('[Key of A (+2 semitones from the original)]')).toBeInTheDocument();
     expect(pages().getByText('Key: A')).toBeInTheDocument();
-    expect(pages().getAllByText('A          D', asWritten)).toHaveLength(1);
+    expect(chordsShown().slice(0, 3)).toEqual(['A', 'D', 'E']);
     // Played as written, in the key its chords point to.
     expect(pages().getByText('Key: Am')).toBeInTheDocument();
     expect(pages().getAllByRole('article')).toHaveLength(2);
@@ -94,5 +96,29 @@ describe('printing', () => {
     await user.click(screen.getByRole('button', { name: 'Print' }));
     expect(await screen.findByRole('heading', { name: 'Print' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: '← Amazing Grace' })).toHaveAttribute('href', '/songs/grace');
+  });
+});
+
+describe('a long line', () => {
+  it('is cut into pieces at the start of words, each with its own chords', () => {
+    expect(lineSegments('G           C', 'Amazing grace, how sweet')).toEqual([
+      { chords: 'G       ', text: 'Amazing ' },
+      { chords: '    C  ', text: 'grace, ' },
+      { chords: '    ', text: 'how ' },
+      { chords: '     ', text: 'sweet' },
+    ]);
+  });
+
+  it('is never cut in the middle of a chord name', () => {
+    // Cmaj7 runs over the start of "the", so "sweet the" stays in one piece.
+    expect(lineSegments('     Cmaj7', 'how sweet the').map((s) => s.text)).toEqual(['how ', 'sweet the']);
+  });
+
+  it('keeps chords past the end of the lyric', () => {
+    expect(lineSegments('Am      E', 'house')).toEqual([{ chords: 'Am      E', text: 'house    ' }]);
+  });
+
+  it('of chords only is cut before each chord', () => {
+    expect(lineSegments('Am  C  D', '').map((s) => s.chords)).toEqual(['Am  ', 'C  ', 'D']);
   });
 });

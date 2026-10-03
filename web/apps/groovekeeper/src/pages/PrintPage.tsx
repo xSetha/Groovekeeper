@@ -195,19 +195,27 @@ function PrintLayout({ title, back, songs, empty, intro, options, children }: La
 
       <main aria-label="Pages to print" className="min-h-0 flex-1 overflow-y-auto bg-window p-4 sm:p-8 print:overflow-visible print:p-0">
         {songs.length === 0 ? <p className="text-muted print:hidden">{empty}</p> : null}
-        {songs.map(({ id, song, semitones }) => (
-          <PrintedSheet key={id} song={song} semitones={semitones} options={options} />
-        ))}
+        {songs.length > 0 ? (
+          // The paper, in the Songbook theme's ink whatever the app's theme.
+          <div
+            data-theme="songbook"
+            className="mx-auto max-w-[21cm] bg-card px-[2cm] py-[1.5cm] text-fg shadow-xl max-sm:px-6 print:max-w-none print:p-0 print:shadow-none"
+          >
+            {songs.map(({ id, song, semitones }) => (
+              <PrintedSong key={id} song={song} semitones={semitones} options={options} />
+            ))}
+          </div>
+        ) : null}
       </main>
     </div>
   );
 }
 
 /**
- * One song on paper, always in the Songbook theme's ink. Each song starts a new page when printed. Sizes are
- * in points, like a printed page, and chord rows are written as text above their lyric, as in a .txt file.
+ * One song, following the one before it under a thin line, as in the desktop's PDF. Sizes are in points, like
+ * a printed page, and chord rows are written as text above their lyric, as in a .txt file.
  */
-function PrintedSheet({ song, semitones, options }: { song: Song; semitones: number; options: Options }) {
+function PrintedSong({ song, semitones, options }: { song: Song; semitones: number; options: Options }) {
   const repeated = options.collapseRepeats ? repeatedSections(song) : new Set<number>();
   const display = options.numerals && parseKey(song.key) ? (name: string) => romanNumeral(name, song.key) ?? name : undefined;
   const sections = song.sections.map((section, index) => ({
@@ -215,34 +223,38 @@ function PrintedSheet({ song, semitones, options }: { song: Song; semitones: num
     collapsed: section.repeat || repeated.has(index),
     lines: printedLines(section).map((line) => ({ line, chords: line.chords.length > 0 ? chordLine(line, display) : '' })),
   }));
-  // The widest printed line, in letters: a song with longer lines prints smaller, so no line runs off the page.
-  const columns = Math.max(1, ...sections.flatMap((s) => s.lines.map(({ line, chords }) => Math.max(chords.length, line.text.trimEnd().length))));
   const note = keyChangeNote(song.key, semitones);
-
-  return (
-    <article
-      data-theme="songbook"
-      className="@container mx-auto mb-8 max-w-[21cm] bg-card px-[2cm] py-[1.5cm] text-fg shadow-xl max-sm:px-6 print:m-0 print:max-w-none print:break-before-page print:p-0 print:shadow-none print:first:break-before-auto"
-    >
+  // The title is kept with the start of the song's first section, so it's never left alone at the bottom of a page.
+  const opening = sections.findIndex(({ collapsed, lines }) => collapsed || lines.length > 0);
+  const header = (
+    <div className="font-sans">
       <h2 className="text-[18pt] leading-tight font-bold">
         {displayTitle(song)}
         {note ? <span className="ml-3 text-[11pt] font-normal text-muted">{note}</span> : null}
       </h2>
       {song.artist ? <p className="text-[11pt] text-muted">{song.artist}</p> : null}
       {song.key ? <p className="mt-1 text-[9pt] text-muted">Key: {song.key}</p> : null}
+    </div>
+  );
 
-      {/* A monospace letter is about 0.6em wide, so this size fits `columns` letters across the page. */}
-      <div className="font-mono" style={{ fontSize: `min(10.5pt, calc(100cqi / ${(columns * 0.6).toFixed(1)}))` }}>
+  return (
+    <article className="not-first:mt-[22pt] not-first:border-t not-first:border-line not-first:pt-[22pt]">
+      {opening < 0 ? header : null}
+      <div className="font-mono text-[10.5pt]">
         {sections.map(({ section, collapsed, lines: [first, ...rest] }, index) =>
           collapsed ? (
-            <p key={index} className="mt-[1.2em] font-bold text-muted">
-              [{section.name}]<span className="ml-2 font-sans text-[9pt] font-normal italic">(repeat)</span>
-            </p>
+            <div key={index} className="break-inside-avoid">
+              {index === opening ? header : null}
+              <p className="mt-[1.2em] font-bold text-muted">
+                [{section.name}]<span className="ml-2 font-sans text-[9pt] font-normal italic">(repeat)</span>
+              </p>
+            </div>
           ) : first ? (
-            <section key={index} className="mt-[1.2em]">
+            <section key={index}>
               {/* The heading stays with the section's first line, so it's never left alone at the bottom of a page. */}
               <div className="break-inside-avoid">
-                <h3 className="mb-[0.2em] font-bold text-muted">[{section.name}]</h3>
+                {index === opening ? header : null}
+                <h3 className="mt-[1.2em] mb-[0.2em] font-bold text-muted">[{section.name}]</h3>
                 <PrintedLine line={first.line} chords={first.chords} />
               </div>
               {rest.map(({ line, chords }, lineIndex) => (
@@ -256,14 +268,47 @@ function PrintedSheet({ song, semitones, options }: { song: Song; semitones: num
   );
 }
 
-/** A chord row and its lyric, never split across two pages. */
+/**
+ * A chord row and its lyric, never split across two pages. A line too long for the page wraps between words,
+ * and each piece keeps its chords above its letters (see `lineSegments`).
+ */
 function PrintedLine({ line, chords }: { line: SongLine; chords: string }) {
+  const text = line.text.trimEnd();
   return (
-    <div className="break-inside-avoid whitespace-pre">
-      {chords ? <div className="font-bold text-chord">{chords}</div> : null}
-      {line.text.trim() ? <div>{line.text.trimEnd()}</div> : null}
+    <div className="flex break-inside-avoid flex-wrap">
+      {lineSegments(chords, text).map((segment, index) => (
+        <div key={index} className="flex flex-col whitespace-pre">
+          {chords ? <span className="font-bold text-chord">{segment.chords}</span> : null}
+          {text.trim() ? <span>{segment.text}</span> : null}
+        </div>
+      ))}
     </div>
   );
+}
+
+/**
+ * Cuts a chord row and its lyric into pieces at the same columns, so the browser can wrap a long line between
+ * pieces and every chord still sits above its letter. A piece starts at a word of the lyric (or at a chord, on
+ * a line of chords only), and never in the middle of a chord name.
+ */
+export function lineSegments(chords: string, text: string): { chords: string; text: string }[] {
+  const width = Math.max(chords.length, text.length);
+  const chordRow = chords.padEnd(width);
+  const lyric = text.padEnd(width);
+  const chordsOnly = text.trim().length === 0;
+  const startsPiece = (i: number) =>
+    chordRow[i - 1] === ' ' &&
+    (chordsOnly ? chordRow[i] !== ' ' : lyric[i - 1] === ' ' && lyric[i] !== ' ');
+
+  const segments: { chords: string; text: string }[] = [];
+  let start = 0;
+  for (let i = 1; i <= width; i++) {
+    if (i === width || startsPiece(i)) {
+      segments.push({ chords: chordRow.slice(start, i), text: lyric.slice(start, i) });
+      start = i;
+    }
+  }
+  return segments;
 }
 
 function CheckBox(props: { checked: boolean; onChange: (checked: boolean) => void; hint?: string; children: ReactNode }) {

@@ -2,7 +2,7 @@
 
 An app for writing chord sheets: a WPF desktop app (.NET 10), and a web version in progress in `web/`
 (Vite + React 19 + TypeScript + Tailwind). The README describes the features, the file formats and
-the project layout; `docs/WEB-PLAN.md` has the web plan and its progress.
+the project layout; `docs/WEB-PLAN.md` (local only, not in the repo) has the web plan and its progress.
 
 The app was called SongCreator until 1.0.0. Users see Groovekeeper; the code (projects, folders,
 namespaces), the Velopack package ID and the data folders in `%AppData%` and `%LocalAppData%` keep
