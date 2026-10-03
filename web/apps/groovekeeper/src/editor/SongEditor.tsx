@@ -219,7 +219,7 @@ function Toolbar({ id, onDelete }: { id: string; onDelete: () => void }) {
       <span className="ml-auto flex items-center gap-1">
         <ToolButton onClick={() => saveFile('text')}>Save as .txt</ToolButton>
         <ToolButton onClick={() => saveFile('chordpro')}>Save as ChordPro</ToolButton>
-        <ToolButton onClick={() => navigate(`/print?song=${id}`)}>Print</ToolButton>
+        <ToolButton onClick={() => navigate(`/pdf?song=${id}`)}>Export PDF</ToolButton>
         <ToolButton onClick={() => setConfirmDelete(true)}>Delete song</ToolButton>
       </span>
       {confirmDelete ? (

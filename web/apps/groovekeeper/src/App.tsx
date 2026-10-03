@@ -8,8 +8,8 @@ import { SongPage } from './pages/SongPage';
 import { StartPage } from './pages/StartPage';
 import { useIsPhone } from './phone';
 
-// Printing is used now and then, so its page is loaded only when it's opened.
-const PrintPage = lazy(() => import('./pages/PrintPage'));
+// Exporting a PDF is done now and then, so its page is loaded only when it's opened.
+const PdfPage = lazy(() => import('./pages/PdfPage'));
 
 export function App() {
   // A song read on a phone gets the whole screen; it has its own way back to the library.
@@ -20,7 +20,7 @@ export function App() {
   const reading = songMatch !== null || setlistSongMatch !== null;
   const readingOnPhone = phone && reading;
   return (
-    <div className="flex h-dvh flex-col print:block print:h-auto">
+    <div className="flex h-dvh flex-col">
       {readingOnPhone ? null : <TopBar />}
       <Routes>
         <Route path="/" element={<StartPage />} />
@@ -28,7 +28,7 @@ export function App() {
         <Route path="/setlists" element={<SetlistsPage />} />
         <Route path="/setlists/:id" element={<SetlistPage />} />
         <Route path="/setlists/:id/:position" element={<SetlistSongPage />} />
-        <Route path="/print" element={<Suspense><PrintPage /></Suspense>} />
+        <Route path="/pdf" element={<Suspense><PdfPage /></Suspense>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </div>

@@ -9,7 +9,7 @@ interface Props {
   className?: string;
   /** The song that is open, highlighted in the list. */
   activeId?: string;
-  /** False on a phone, where the library is read only: no importing, and no printing. */
+  /** False on a phone, where the library is read only: no importing, and no exporting PDFs. */
   canImport?: boolean;
 }
 
@@ -70,8 +70,8 @@ export function LibraryPanel({ className = '', activeId, canImport = true }: Pro
             + Import songs…
           </ImportSongs>
           {songs && songs.length > 0 ? (
-            <Link to="/print" className="rounded px-2.5 py-1.5 text-sm hover:bg-hover pointer-coarse:min-h-11">
-              Print songs…
+            <Link to="/pdf" className="rounded px-2.5 py-1.5 text-sm hover:bg-hover pointer-coarse:min-h-11">
+              Export PDF…
             </Link>
           ) : null}
         </div>

@@ -15,7 +15,7 @@ export function Logo({ className }: { className?: string }) {
 export function TopBar() {
   const onSetlists = useLocation().pathname.startsWith('/setlists');
   return (
-    <header className="flex h-11 shrink-0 items-center justify-between border-b border-line bg-toolbar px-4 print:hidden">
+    <header className="flex h-11 shrink-0 items-center justify-between border-b border-line bg-toolbar px-4">
       <Link to="/" className="flex items-center gap-2 text-sm font-semibold">
         <Logo className="size-5" />
         Groovekeeper

@@ -133,11 +133,6 @@
   color-scheme: light;
 }
 
-/* Printed pages (the print page): the browser's paper size, with the desktop PDF's margins. */
-@page {
-  margin: 2cm;
-}
-
 @layer base {
   body {
     @apply bg-window text-fg font-sans antialiased;

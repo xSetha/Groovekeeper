@@ -133,10 +133,10 @@ function SetlistEditor({ setlist, songs }: Loaded) {
         <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2">
           <NameField setlist={setlist} onError={() => setError(true)} />
           <Link
-            to={`/print?setlist=${setlist.id}`}
+            to={`/pdf?setlist=${setlist.id}`}
             className="ml-auto rounded px-2 py-1.5 text-sm hover:bg-hover pointer-coarse:min-h-11"
           >
-            Print setlist
+            Export PDF
           </Link>
           <button
             type="button"
