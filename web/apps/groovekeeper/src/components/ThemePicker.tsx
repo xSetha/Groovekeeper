@@ -37,11 +37,18 @@ export function ThemePicker() {
         type="button"
         aria-expanded={open}
         aria-controls={panel}
-        className="rounded px-2 py-1 text-sm text-muted hover:bg-hover hover:text-fg pointer-coarse:min-h-11"
+        aria-label={`Theme: ${theme.name}`}
+        title={`Theme: ${theme.name}`}
+        className="flex items-center justify-center rounded p-1.5 text-muted hover:bg-hover hover:text-fg aria-expanded:bg-hover aria-expanded:text-fg pointer-coarse:min-h-11 pointer-coarse:min-w-11"
         onClick={() => setOpen(!open)}
       >
-        {/* On a narrow screen only "Theme" shows; the name is still read out. */}
-        Theme<span className="max-sm:sr-only">: {theme.name}</span>
+        {/* A palette, as on the desktop's theme button. */}
+        <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" aria-hidden="true">
+          <path d="M12 3a9 9 0 0 0 0 18c1.2 0 2-.8 2-1.9 0-.5-.2-.9-.5-1.3-.3-.3-.5-.7-.5-1.2 0-1 .9-1.8 1.9-1.8H17a4 4 0 0 0 4-4C21 6.6 17 3 12 3Z" />
+          <circle cx="7.5" cy="11.5" r="1.3" fill="currentColor" stroke="none" />
+          <circle cx="10" cy="7.5" r="1.3" fill="currentColor" stroke="none" />
+          <circle cx="15" cy="7.5" r="1.3" fill="currentColor" stroke="none" />
+        </svg>
       </button>
       {open ? (
         <div

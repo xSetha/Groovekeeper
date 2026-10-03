@@ -47,7 +47,7 @@ describe('exporting a PDF', () => {
     expect(preview().getByText('Key: G')).toBeInTheDocument();
     expect(preview().getAllByText('Amazing')).toHaveLength(1);
     expect(preview().getByText('(repeat)')).toBeInTheDocument();
-    expect(document.title).toBe('Amazing Grace');
+    await waitFor(() => expect(document.title).toBe('Amazing Grace'));
 
     await user.click(screen.getByRole('checkbox', { name: /Collapse repeated sections/ }));
     expect(preview().getAllByText('Amazing')).toHaveLength(2);
@@ -93,7 +93,7 @@ describe('exporting a PDF', () => {
     // Played as written, in the key its chords point to.
     expect(preview().getByText('Key: Am')).toBeInTheDocument();
     expect(preview().getAllByRole('article')).toHaveLength(2);
-    expect(document.title).toBe('Friday gig');
+    await waitFor(() => expect(document.title).toBe('Friday gig'));
 
     await user.click(screen.getByRole('button', { name: 'Export PDF' }));
     await waitFor(() => expect(exportPdf).toHaveBeenCalledTimes(1));

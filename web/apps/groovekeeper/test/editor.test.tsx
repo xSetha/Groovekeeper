@@ -259,4 +259,14 @@ describe('new songs', () => {
 
     await waitFor(async () => expect((await db.songs.toArray()).map((s) => s.title)).toEqual(['My song']));
   });
+
+  it('starts a new song from beside the editor, keeping the one that was open', async () => {
+    const user = userEvent.setup();
+    await openSong();
+    expect(await screen.findByRole('textbox', { name: 'Title' })).toHaveValue('Amazing Grace');
+
+    await user.click(screen.getByRole('button', { name: '+ New song' }));
+    await waitFor(() => expect(screen.getByRole('textbox', { name: 'Title' })).toHaveValue(''));
+    expect((await db.songs.toArray()).map((s) => s.title).toSorted()).toEqual(['', 'Amazing Grace']);
+  });
 });

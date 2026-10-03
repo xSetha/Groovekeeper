@@ -3,6 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { listSongs, matchesSearch } from '../library/library';
+import { useNewSong } from '../navigation';
 import { ImportSongs } from './ImportSongs';
 
 interface Props {
@@ -18,6 +19,7 @@ export function LibraryPanel({ className = '', activeId, canImport = true }: Pro
   const songs = useLiveQuery(listSongs, []);
   const [search, setSearch] = useState('');
   const navigate = useNavigate();
+  const newSong = useNewSong();
   const shown = songs?.filter((song) => matchesSearch(song, search));
 
   return (
@@ -32,7 +34,12 @@ export function LibraryPanel({ className = '', activeId, canImport = true }: Pro
         // Phones zoom into text fields with text under 16px, so the search is smaller only with a mouse.
         className="mt-3 rounded border border-line bg-window px-2 py-1.5 text-base placeholder:text-hint focus:border-accent focus:outline-none pointer-fine:text-sm pointer-coarse:min-h-11"
       />
-      <ul className="mt-3 min-h-0 flex-1 overflow-y-auto">
+      {canImport ? (
+        <button type="button" className="mt-2 self-start rounded px-2.5 py-1.5 text-sm hover:bg-hover pointer-coarse:min-h-11" onClick={newSong}>
+          + New song
+        </button>
+      ) : null}
+      <ul className={`${canImport ? 'mt-1' : 'mt-3'} min-h-0 flex-1 overflow-y-auto`}>
         {shown?.map((song) => (
           <li key={song.id}>
             <Link

@@ -7,6 +7,7 @@ import { ConfirmDialog } from '../components/ConfirmDialog';
 import { useCharWidth } from '../components/useCharWidth';
 import { download, songFile, type SongFormat } from '../library/files';
 import { deleteSong, saveSong } from '../library/library';
+import { useNewSong } from '../navigation';
 import { ChordPalette } from './ChordPalette';
 import { trackDrag } from '../components/drag';
 import { addSection, allChords, findLine, placeChord, setArtist, setKey, setTitle, withIds } from './edit';
@@ -149,6 +150,7 @@ function EditorBody() {
 function Toolbar({ id, onDelete }: { id: string; onDelete: () => void }) {
   const store = useEditorStore();
   const navigate = useNavigate();
+  const newSong = useNewSong();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const canUndo = useEditor((s) => s.past.length > 0);
   const canRedo = useEditor((s) => s.future.length > 0);
@@ -171,6 +173,10 @@ function Toolbar({ id, onDelete }: { id: string; onDelete: () => void }) {
       <Link to="/" className="py-1.5 text-muted hover:text-fg lg:hidden">
         ← Library
       </Link>
+      {/* Beside the library panel on a wide screen; here where the panel is hidden. */}
+      <span className="lg:hidden">
+        <ToolButton onClick={newSong}>New song</ToolButton>
+      </span>
       <span className="flex items-center gap-1">
         <ToolButton disabled={!canUndo} onClick={undo}>Undo</ToolButton>
         <ToolButton disabled={!canRedo} onClick={redo}>Redo</ToolButton>

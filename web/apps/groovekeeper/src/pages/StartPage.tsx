@@ -5,13 +5,14 @@ import { ImportSongs } from '../components/ImportSongs';
 import { LibraryPanel } from '../components/LibraryPanel';
 import { Logo } from '../components/TopBar';
 import { db } from '../library/db';
-import { createTemplate } from '@groovekeeper/core';
 import { addSongs } from '../library/library';
 import { sampleSongs } from '../library/samples';
+import { useNewSong } from '../navigation';
 import { useIsPhone } from '../phone';
 
 export function StartPage() {
   const navigate = useNavigate();
+  const newSong = useNewSong();
   const songCount = useLiveQuery(() => db.songs.count());
   const [sampleError, setSampleError] = useState(false);
   const phone = useIsPhone();
@@ -75,9 +76,7 @@ export function StartPage() {
             <button
               type="button"
               className="rounded bg-accent-fill px-5 py-2.5 font-semibold text-on-accent hover:brightness-125 pointer-coarse:min-h-11"
-              onClick={() => {
-                void addSongs([createTemplate()]).then(([id]) => navigate(`/songs/${id}`, { state: { isNew: true } }));
-              }}
+              onClick={newSong}
             >
               New song
             </button>
