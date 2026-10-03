@@ -1,0 +1,115 @@
+// Two devices on one account, as two separate browsers: the guest library joins the account, changes go
+// both ways, an offline edit syncs once back online, a song changed on both becomes a change to settle,
+// and signing out empties the device. Needs the local Supabase (`npm run db:start` in web/).
+import { expect, test, type Browser, type Page } from '@playwright/test';
+import { supabaseRunning } from './supabase';
+
+const PASSWORD = 'correct horse battery';
+
+test.beforeAll(async () => {
+  test.skip(!(await supabaseRunning()), 'The local Supabase isn’t running: start it with npm run db:start in web/.');
+});
+
+/** A new browser, like another device: its own storage, nothing shared with the others. */
+async function device(browser: Browser): Promise<Page> {
+  const context = await browser.newContext();
+  return context.newPage();
+}
+
+/** Syncs now and waits for it to finish, from the account page. */
+async function syncNow(page: Page): Promise<void> {
+  await page.goto('/account');
+  await page.getByRole('button', { name: 'Sync now' }).click();
+  await expect(page.getByText(/^Synced at/)).toBeVisible();
+}
+
+const library = (page: Page) => page.getByRole('navigation', { name: 'Library' });
+
+/** Changes a song's title in the editor and leaves it, which saves it. */
+async function retitle(page: Page, song: RegExp, title: string): Promise<void> {
+  await page.goto('/');
+  await library(page).getByRole('link', { name: song }).click();
+  await page.getByRole('textbox', { name: 'Title' }).fill(title);
+  await page.getByRole('link', { name: 'Songs' }).click();
+}
+
+test('two devices on one account', async ({ browser }) => {
+  const email = `e2e-${Date.now()}@example.com`;
+  const a = await device(browser);
+  const b = await device(browser);
+
+  await test.step('a guest with songs creates an account and adds them', async () => {
+    await a.goto('/');
+    await a.getByRole('button', { name: 'Try the sample songs' }).click();
+    await expect(library(a).getByText('Scarborough Fair')).toBeVisible();
+    await a.getByRole('banner').getByRole('link', { name: 'Sign in' }).click();
+    await a.getByRole('button', { name: 'Create an account' }).click();
+    await a.getByRole('textbox', { name: 'Email' }).fill(email);
+    await a.getByLabel('Password').fill(PASSWORD);
+    await a.getByRole('button', { name: 'Create account' }).click();
+    await a.getByRole('button', { name: 'Add 6 songs to my account' }).click();
+    await expect(a.getByText(/^Synced at/)).toBeVisible();
+  });
+
+  await test.step('another device signs in and gets the songs', async () => {
+    await b.goto('/account');
+    await b.getByRole('textbox', { name: 'Email' }).fill(email);
+    await b.getByLabel('Password').fill(PASSWORD);
+    await b.getByRole('button', { name: 'Sign in' }).click();
+    await expect(b.getByText(/^Synced at/)).toBeVisible();
+    await b.goto('/');
+    await expect(library(b).getByText('Scarborough Fair')).toBeVisible();
+  });
+
+  await test.step('a change on one device reaches the other', async () => {
+    await retitle(a, /Oh! Susanna/, 'Oh! Susanna (live)');
+    await syncNow(a);
+    await syncNow(b);
+    await b.goto('/');
+    await expect(library(b).getByText('Oh! Susanna (live)')).toBeVisible();
+  });
+
+  await test.step('a change made offline syncs once back online', async () => {
+    // The song is opened online: offline, the app works on in the page already open (pages can't be loaded).
+    await a.goto('/');
+    await library(a).getByRole('link', { name: /Twinkle/ }).click();
+    await a.context().setOffline(true);
+    await a.getByRole('textbox', { name: 'Title' }).fill('Twinkle (offline edit)');
+    await a.getByRole('link', { name: 'Songs' }).click();
+    await expect(a.getByRole('banner').getByText('Offline', { exact: true })).toBeVisible();
+    await a.context().setOffline(false);
+    await expect(a.getByRole('banner').getByText('Offline', { exact: true })).toBeHidden();
+    await syncNow(a);
+    await syncNow(b);
+    await b.goto('/');
+    await expect(library(b).getByText('Twinkle (offline edit)')).toBeVisible();
+  });
+
+  await test.step('a song changed on both devices becomes a change to settle', async () => {
+    await a.goto('/');
+    await library(a).getByRole('link', { name: /Auld Lang Syne/ }).click();
+    await a.context().setOffline(true);
+    await a.getByRole('textbox', { name: 'Title' }).fill('Auld Lang Syne (A)');
+    await a.getByRole('link', { name: 'Songs' }).click();
+    await retitle(b, /Auld Lang Syne/, 'Auld Lang Syne (B)');
+    await syncNow(b);
+    await a.context().setOffline(false);
+
+    await a.getByRole('link', { name: '1 change to settle' }).click();
+    await expect(a.getByText('In your account')).toBeVisible();
+    // Keep this device's copy: it replaces the other everywhere.
+    await a.getByRole('button', { name: 'Keep this copy' }).first().click();
+    await expect(a.getByText(/Nothing to settle/)).toBeVisible();
+    await syncNow(a);
+    await syncNow(b);
+    await b.goto('/');
+    await expect(library(b).getByText('Auld Lang Syne (A)')).toBeVisible();
+  });
+
+  await test.step('signing out empties the device', async () => {
+    await b.goto('/account');
+    await b.getByRole('button', { name: 'Sign out' }).click();
+    await expect(b.getByRole('banner').getByRole('link', { name: 'Sign in' })).toBeVisible();
+    await expect(b.getByRole('button', { name: 'Try the sample songs' })).toBeVisible();
+  });
+});

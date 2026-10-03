@@ -3,10 +3,12 @@
   "private": true,
   "workspaces": [
     "packages/*",
-    "apps/*"
+    "apps/*",
+    "e2e"
   ],
   "scripts": {
     "test": "npm test --workspaces --if-present",
+    "test:e2e": "npm run test:e2e -w @groovekeeper/e2e --",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "dev": "npm run dev -w @groovekeeper/app --",
     "build": "npm run build -w @groovekeeper/app",
