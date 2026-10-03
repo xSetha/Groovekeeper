@@ -9,6 +9,7 @@ import { addSongs } from '../library/library';
 import { sampleSongs } from '../library/samples';
 import { useNewSong } from '../navigation';
 import { useIsPhone } from '../phone';
+import { useAccount } from '../sync/account';
 
 export function StartPage() {
   const navigate = useNavigate();
@@ -16,6 +17,7 @@ export function StartPage() {
   const songCount = useLiveQuery(() => db.songs.count());
   const [sampleError, setSampleError] = useState(false);
   const phone = useIsPhone();
+  const signedIn = useAccount((s) => s.status === 'signedIn');
   const openFirst = (ids: string[]) => ids.length === 1 && navigate(`/songs/${ids[0]}`);
 
   useEffect(() => {
@@ -89,8 +91,10 @@ export function StartPage() {
             {samples}
           </div>
           <p className="mt-6 max-w-md text-sm text-muted">
-            Write a new song, or import <code>.txt</code> and ChordPro files. Your songs are kept in this browser,
-            on this device.
+            Write a new song, or import <code>.txt</code> and ChordPro files.{' '}
+            {signedIn
+              ? 'Your songs are kept in your account and on every device you sign in on.'
+              : 'Your songs are kept in this browser, on this device, until you sign in.'}
           </p>
         </section>
 

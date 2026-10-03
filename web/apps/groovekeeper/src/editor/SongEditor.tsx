@@ -8,6 +8,7 @@ import { useCharWidth } from '../components/useCharWidth';
 import { download, songFile, type SongFormat } from '../library/files';
 import { deleteSong, saveSong } from '../library/library';
 import { useNewSong } from '../navigation';
+import { holdOpenSong } from '../sync/account';
 import { ChordPalette } from './ChordPalette';
 import { trackDrag } from '../components/drag';
 import { addSection, allChords, findLine, placeChord, setArtist, setKey, setTitle, withIds } from './edit';
@@ -31,6 +32,8 @@ export function SongEditor({ id, initial, isNew = false }: Props) {
   const [store] = useState(() =>
     createEditorStore(withIds(initial.sections.length > 0 ? initial : { ...initial, sections: createTemplate().sections })));
   const save = useAutosave(id, store, isNew);
+  // Syncing doesn't replace the song while it's open here.
+  useEffect(() => holdOpenSong(id), [id]);
   useShortcuts(store);
 
   return (

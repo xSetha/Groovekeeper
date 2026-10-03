@@ -1,4 +1,7 @@
+import { useLiveQuery } from 'dexie-react-hooks';
 import { Link, useLocation } from 'react-router';
+import { db } from '../library/db';
+import { useAccount } from '../sync/account';
 import { ThemePicker } from './ThemePicker';
 
 /** The app's logo: a record with a red label, as on the desktop start page. */
@@ -18,13 +21,18 @@ export function TopBar() {
     <header className="flex h-11 shrink-0 items-center justify-between border-b border-line bg-toolbar px-4">
       <Link to="/" className="flex items-center gap-2 text-sm font-semibold">
         <Logo className="size-5" />
-        Groovekeeper
+        {/* On a phone only the logo shows, to leave room for the rest of the bar; the name is still read out. */}
+        <span className="max-sm:sr-only">Groovekeeper</span>
       </Link>
       <nav aria-label="Main" className="flex h-full items-stretch gap-1 text-sm">
         <Tab to="/" active={!onSetlists}>Songs</Tab>
         <Tab to="/setlists" active={onSetlists}>Setlists</Tab>
       </nav>
-      <ThemePicker />
+      <div className="flex items-center gap-1">
+        <SyncNotes />
+        <AccountLink />
+        <ThemePicker />
+      </div>
     </header>
   );
 }
@@ -38,6 +46,58 @@ function Tab({ to, active, children }: { to: string; active: boolean; children: 
       className="flex items-center border-b-2 border-transparent px-3 text-muted hover:text-fg aria-[current=page]:border-accent aria-[current=page]:font-semibold aria-[current=page]:text-fg"
     >
       {children}
+    </Link>
+  );
+}
+
+/** Only when something needs attention: songs changed on two devices, being offline, or a failed sync. */
+function SyncNotes() {
+  const sync = useAccount((s) => s.sync);
+  const conflicts = useLiveQuery(() => db.conflicts.count(), [], 0);
+  return (
+    <>
+      {conflicts > 0 ? (
+        <Link to="/conflicts" className="rounded px-2 py-1 text-sm font-semibold text-accent hover:bg-hover">
+          {conflicts === 1 ? '1 change' : `${conflicts} changes`} to settle
+        </Link>
+      ) : null}
+      {sync === 'offline' ? (
+        <span className="px-2 text-sm text-muted" title="Changes are saved on this device and sync when you’re back online.">
+          Offline
+        </span>
+      ) : sync === 'failed' ? (
+        <Link to="/account" className="rounded px-2 py-1 text-sm text-chord hover:bg-hover">
+          Couldn’t sync
+        </Link>
+      ) : null}
+    </>
+  );
+}
+
+/** "Sign in", or the account once signed in; both open the account page. */
+function AccountLink() {
+  const status = useAccount((s) => s.status);
+  const email = useAccount((s) => s.email);
+  if (status === 'starting') return null;
+  if (status === 'guest') {
+    return (
+      <Link to="/account" className="rounded px-2 py-1 text-sm whitespace-nowrap text-muted hover:bg-hover hover:text-fg pointer-coarse:min-h-11 pointer-coarse:flex pointer-coarse:items-center">
+        Sign in
+      </Link>
+    );
+  }
+  return (
+    <Link
+      to="/account"
+      aria-label={`Account: ${email ?? ''}`}
+      title={`Account: ${email ?? ''}`}
+      className="flex items-center justify-center rounded p-1.5 text-muted hover:bg-hover hover:text-fg pointer-coarse:min-h-11 pointer-coarse:min-w-11"
+    >
+      {/* A person: the account. */}
+      <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
+        <circle cx="12" cy="8" r="4" />
+        <path d="M4 21c0-4 3.6-7 8-7s8 3 8 7" />
+      </svg>
     </Link>
   );
 }

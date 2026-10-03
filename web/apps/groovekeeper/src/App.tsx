@@ -10,6 +10,9 @@ import { useIsPhone } from './phone';
 
 // Exporting a PDF is done now and then, so its page is loaded only when it's opened.
 const PdfPage = lazy(() => import('./pages/PdfPage'));
+// The account pages are opened now and then too.
+const AccountPage = lazy(() => import('./pages/AccountPage'));
+const ConflictsPage = lazy(() => import('./pages/ConflictsPage'));
 
 export function App() {
   // A song read on a phone gets the whole screen; it has its own way back to the library.
@@ -29,6 +32,8 @@ export function App() {
         <Route path="/setlists/:id" element={<SetlistPage />} />
         <Route path="/setlists/:id/:position" element={<SetlistSongPage />} />
         <Route path="/pdf" element={<Suspense><PdfPage /></Suspense>} />
+        <Route path="/account" element={<Suspense><AccountPage /></Suspense>} />
+        <Route path="/conflicts" element={<Suspense><ConflictsPage /></Suspense>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </div>

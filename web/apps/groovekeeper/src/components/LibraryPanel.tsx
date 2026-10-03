@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { listSongs, matchesSearch } from '../library/library';
 import { useNewSong } from '../navigation';
+import { useAccount } from '../sync/account';
 import { ImportSongs } from './ImportSongs';
 
 interface Props {
@@ -20,6 +21,7 @@ export function LibraryPanel({ className = '', activeId, canImport = true }: Pro
   const [search, setSearch] = useState('');
   const navigate = useNavigate();
   const newSong = useNewSong();
+  const signedIn = useAccount((s) => s.status === 'signedIn');
   const shown = songs?.filter((song) => matchesSearch(song, search));
 
   return (
@@ -62,7 +64,19 @@ export function LibraryPanel({ className = '', activeId, canImport = true }: Pro
       </ul>
       {songs?.length === 0 ? (
         <p className="px-2.5 text-sm text-muted">
-          {canImport ? 'No songs yet. Import a song to start.' : 'No songs yet. Songs are written on a computer or tablet.'}
+          {canImport ? (
+            'No songs yet. Import a song to start.'
+          ) : signedIn ? (
+            'No songs yet. Songs are written on a computer or tablet.'
+          ) : (
+            <>
+              No songs yet.{' '}
+              <Link to="/account" className="text-accent hover:underline">
+                Sign in
+              </Link>{' '}
+              to get the songs from your account; songs are written on a computer or tablet.
+            </>
+          )}
         </p>
       ) : null}
       {songs && songs.length > 0 && shown?.length === 0 ? (
