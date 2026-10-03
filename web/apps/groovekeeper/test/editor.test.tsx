@@ -8,7 +8,7 @@ import { db } from '../src/library/db';
 const TEXT = 'Amazing Grace\n\nKey: G\n\n[Verse 1]\nG          C\nAmazing grace\nhow sweet\n';
 
 const openSong = async () => {
-  await db.songs.add({ id: 'grace', title: 'Amazing Grace', artist: '', key: 'G', text: TEXT, updatedAt: 0 });
+  await db.songs.add({ id: 'grace', title: 'Amazing Grace', artist: '', key: 'G', text: TEXT, updatedAt: 0, version: 0, dirty: 1 });
   render(
     <MemoryRouter initialEntries={['/songs/grace']}>
       <App />
@@ -205,7 +205,7 @@ describe('the chord palette', () => {
 describe('the key suggestion', () => {
   const open = async (key: string) => {
     const text = `Song\n\nKey: ${key}\n\n[Verse]\nC#      F#      G#     C#\nla la la la la la la la la la la\n`;
-    await db.songs.add({ id: 'k', title: 'Song', artist: '', key, text, updatedAt: 0 });
+    await db.songs.add({ id: 'k', title: 'Song', artist: '', key, text, updatedAt: 0, version: 0, dirty: 1 });
     render(
       <MemoryRouter initialEntries={['/songs/k']}>
         <App />

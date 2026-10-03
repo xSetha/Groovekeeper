@@ -67,7 +67,7 @@ describe('the app', () => {
 
   it('deletes a song after asking', async () => {
     const user = userEvent.setup();
-    await db.songs.add({ id: 'grace', title: 'Amazing Grace', artist: '', key: 'G', text: AMAZING_GRACE, updatedAt: 0 });
+    await db.songs.add({ id: 'grace', title: 'Amazing Grace', artist: '', key: 'G', text: AMAZING_GRACE, updatedAt: 0, version: 0, dirty: 1 });
     renderApp('/songs/grace');
 
     await user.click(await screen.findByRole('button', { name: 'Delete song' }));

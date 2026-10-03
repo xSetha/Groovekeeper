@@ -13,14 +13,14 @@ import { PHONE_QUERY } from '../src/phone';
 const GRACE = 'Amazing Grace\nJohn Newton\n\nKey: G\n\n[Verse 1]\nG          C\nAmazing grace\n';
 const HOUSE = 'House of the Rising Sun\nTraditional\n\n[Verse]\nAm      C      D      F\nThere is a house\nAm     E     Am\nin New Orleans\n';
 
-const setlist = (songs: LibrarySetlist['songs'] = []): LibrarySetlist => ({ id: 'gig', name: 'Friday gig', songs, updatedAt: 0 });
+const setlist = (songs: LibrarySetlist['songs'] = []): LibrarySetlist => ({ id: 'gig', name: 'Friday gig', songs, updatedAt: 0, version: 0, dirty: 1 });
 
 beforeEach(async () => {
   await db.songs.clear();
   await db.setlists.clear();
   await db.songs.bulkAdd([
-    { id: 'grace', title: 'Amazing Grace', artist: 'John Newton', key: 'G', text: GRACE, updatedAt: 0 },
-    { id: 'house', title: 'House of the Rising Sun', artist: 'Traditional', key: '', text: HOUSE, updatedAt: 0 },
+    { id: 'grace', title: 'Amazing Grace', artist: 'John Newton', key: 'G', text: GRACE, updatedAt: 0, version: 0, dirty: 1 },
+    { id: 'house', title: 'House of the Rising Sun', artist: 'Traditional', key: '', text: HOUSE, updatedAt: 0, version: 0, dirty: 1 },
   ]);
 });
 
@@ -65,7 +65,7 @@ describe('setlist changes', () => {
   });
 
   it('calls a song without a title "Untitled song"', async () => {
-    await db.songs.add({ id: 'blank', title: '', artist: '', key: '', text: '[Verse]\nla\n', updatedAt: 0 });
+    await db.songs.add({ id: 'blank', title: '', artist: '', key: '', text: '[Verse]\nla\n', updatedAt: 0, version: 0, dirty: 1 });
     const [blank] = await setlistSongs(setlist([entry('1', 'blank')]));
     expect(blank!.title).toBe('Untitled song');
   });

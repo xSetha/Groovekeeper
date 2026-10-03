@@ -15,7 +15,7 @@ export async function listSetlists(): Promise<LibrarySetlist[]> {
 
 export async function createSetlist(): Promise<string> {
   const id = newId();
-  await db.setlists.add({ id, name: NEW_SETLIST_NAME, songs: [], updatedAt: Date.now() });
+  await db.setlists.add({ id, name: NEW_SETLIST_NAME, songs: [], updatedAt: Date.now(), version: 0, dirty: 1 });
   return id;
 }
 
@@ -23,13 +23,17 @@ export async function createSetlist(): Promise<string> {
 export async function updateSetlist(id: string, change: (setlist: LibrarySetlist) => LibrarySetlist): Promise<void> {
   await db.transaction('rw', db.setlists, async () => {
     const setlist = await db.setlists.get(id);
-    if (setlist) await db.setlists.put({ ...change(setlist), updatedAt: Date.now() });
+    if (setlist) await db.setlists.put({ ...change(setlist), updatedAt: Date.now(), dirty: 1 });
   });
 }
 
-/** Deletes the setlist; its songs stay in the library. */
+/** Deletes the setlist, here and at the next sync in the account; its songs stay in the library. */
 export async function deleteSetlist(id: string): Promise<void> {
-  await db.setlists.delete(id);
+  await db.transaction('rw', db.setlists, db.deletions, async () => {
+    const stored = await db.setlists.get(id);
+    if (stored && stored.version > 0) await db.deletions.put({ id, table: 'setlists', version: stored.version });
+    await db.setlists.delete(id);
+  });
 }
 
 // ---- Changes to a setlist's songs, each found by its own id ----

@@ -42,7 +42,7 @@ describe('on a phone', () => {
 
   it('a song is read, not edited, and transposing doesn\'t change it', async () => {
     const user = userEvent.setup();
-    await db.songs.add({ id: 'grace', title: 'Amazing Grace', artist: 'John Newton', key: 'G', text: TEXT, updatedAt: 0 });
+    await db.songs.add({ id: 'grace', title: 'Amazing Grace', artist: 'John Newton', key: 'G', text: TEXT, updatedAt: 0, version: 0, dirty: 1 });
     renderApp('/songs/grace');
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Amazing Grace' })).toBeInTheDocument();

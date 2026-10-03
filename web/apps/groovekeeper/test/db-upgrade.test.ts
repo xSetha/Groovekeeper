@@ -3,9 +3,10 @@
 import Dexie from 'dexie';
 import { expect, it } from 'vitest';
 
-it('gives the songs of setlists from version 2 their own ids, keeping everything else', async () => {
+it('upgrades a version 2 library: setlist songs get their own ids, and everything is marked to sync', async () => {
   const old = new Dexie('groovekeeper');
   old.version(2).stores({ songs: 'id, title', setlists: 'id, name' });
+  await old.table('songs').add({ id: 'grace', title: 'Amazing Grace', artist: '', key: 'G', text: 'Amazing Grace\n', updatedAt: 0 });
   await old.table('setlists').add({
     id: 'gig',
     name: 'Friday gig',
@@ -16,6 +17,8 @@ it('gives the songs of setlists from version 2 their own ids, keeping everything
 
   const { db } = await import('../src/library/db');
   const setlist = await db.setlists.get('gig');
+  const song = await db.songs.get('grace');
+  expect([song?.title, song?.version, song?.dirty]).toEqual(['Amazing Grace', 0, 1]);
 
   expect(setlist?.name).toBe('Friday gig');
   expect(setlist?.songs.map(({ songId, key }) => ({ songId, key }))).toEqual([
@@ -25,4 +28,6 @@ it('gives the songs of setlists from version 2 their own ids, keeping everything
   const [first, second] = setlist?.songs ?? [];
   expect(first?.id).toMatch(/^[0-9a-f-]{36}$/);
   expect(second?.id).not.toBe(first?.id);
+  // Version 4: nothing from before is in an account yet, so it's all to be synced.
+  expect([setlist?.version, setlist?.dirty]).toEqual([0, 1]);
 });

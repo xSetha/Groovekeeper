@@ -20,8 +20,8 @@ beforeEach(async () => {
   await db.songs.clear();
   await db.setlists.clear();
   await db.songs.bulkAdd([
-    { id: 'grace', title: 'Amazing Grace', artist: 'John Newton', key: 'G', text: GRACE, updatedAt: 0 },
-    { id: 'house', title: 'House of the Rising Sun', artist: 'Traditional', key: '', text: HOUSE, updatedAt: 0 },
+    { id: 'grace', title: 'Amazing Grace', artist: 'John Newton', key: 'G', text: GRACE, updatedAt: 0, version: 0, dirty: 1 },
+    { id: 'house', title: 'House of the Rising Sun', artist: 'Traditional', key: '', text: HOUSE, updatedAt: 0, version: 0, dirty: 1 },
   ]);
 });
 
@@ -82,7 +82,7 @@ describe('exporting a PDF', () => {
   it('exports a setlist with each song in its key, noting a changed key', async () => {
     const user = userEvent.setup();
     await db.setlists.add({
-      id: 'gig', name: 'Friday gig', updatedAt: 0,
+      id: 'gig', name: 'Friday gig', updatedAt: 0, version: 0, dirty: 1,
       songs: [{ id: '1', songId: 'grace', key: 'A' }, { id: '2', songId: 'house', key: '' }],
     });
     renderAt('/pdf?setlist=gig');

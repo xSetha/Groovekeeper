@@ -14,7 +14,7 @@ beforeEach(() => db.songs.clear());
 
 describe('typing', () => {
   it('re-renders only the line typed in', async () => {
-    await db.songs.add({ id: 'song', title: 'Song', artist: '', key: '', text: TEXT, updatedAt: 0 });
+    await db.songs.add({ id: 'song', title: 'Song', artist: '', key: '', text: TEXT, updatedAt: 0, version: 0, dirty: 1 });
     render(
       <MemoryRouter initialEntries={['/songs/song']}>
         <App />

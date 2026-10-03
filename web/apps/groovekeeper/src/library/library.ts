@@ -17,13 +17,16 @@ export function matchesSearch(song: LibrarySong, search: string): boolean {
   return [song.title, song.artist, song.key].some((field) => field.toLowerCase().includes(needle));
 }
 
-const record = (id: string, song: Song): LibrarySong => ({
+/** The song as stored, changed here: `version` is the account's version it was made from (0 for a new song). */
+const record = (id: string, song: Song, version: number): LibrarySong => ({
   id,
   title: song.title,
   artist: song.artist,
   key: song.key,
   text: songToText(song),
   updatedAt: Date.now(),
+  version,
+  dirty: 1,
 });
 
 
@@ -41,7 +44,7 @@ function keepLibrary(): void {
 
 /** Adds the songs to the library and returns their ids, in the same order. */
 export async function addSongs(songs: Song[]): Promise<string[]> {
-  const records = songs.map((song) => record(newId(), song));
+  const records = songs.map((song) => record(newId(), song, 0));
   await db.songs.bulkAdd(records);
   keepLibrary();
   return records.map((r) => r.id);
@@ -54,18 +57,25 @@ export async function getSong(id: string): Promise<Song | undefined> {
 }
 
 export async function saveSong(id: string, song: Song): Promise<void> {
-  await db.songs.put(record(id, song));
+  await db.transaction('rw', db.songs, async () => {
+    const stored = await db.songs.get(id);
+    await db.songs.put(record(id, song, stored?.version ?? 0));
+  });
   keepLibrary();
 }
 
-/** Removes the song from the library, and from every setlist it's in. */
+/** Removes the song from the library, and from every setlist it's in; the next sync removes it from the account. */
 export async function deleteSong(id: string): Promise<void> {
-  await db.transaction('rw', db.songs, db.setlists, async () => {
+  await db.transaction('rw', db.songs, db.setlists, db.deletions, async () => {
+    const stored = await db.songs.get(id);
+    if (stored && stored.version > 0) await db.deletions.put({ id, table: 'songs', version: stored.version });
     await db.songs.delete(id);
     await db.setlists
       .filter((setlist) => setlist.songs.some((entry) => entry.songId === id))
       .modify((setlist) => {
         setlist.songs = setlist.songs.filter((entry) => entry.songId !== id);
+        setlist.updatedAt = Date.now();
+        setlist.dirty = 1;
       });
   });
 }
