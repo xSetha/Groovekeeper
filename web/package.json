@@ -9,10 +9,15 @@
     "test": "npm test --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "dev": "npm run dev -w @groovekeeper/app --",
-    "build": "npm run build -w @groovekeeper/app"
+    "build": "npm run build -w @groovekeeper/app",
+    "db:start": "supabase start",
+    "db:stop": "supabase stop",
+    "db:reset": "supabase db reset",
+    "test:db": "supabase test db"
   },
   "devDependencies": {
     "@types/node": "^26.6.4",
+    "supabase": "^2.119.0",
     "typescript": "^7.0.2",
     "vitest": "^5.0.3"
   }
