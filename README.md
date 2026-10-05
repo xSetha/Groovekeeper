@@ -29,7 +29,9 @@ The installer isn't code-signed yet, so Windows may warn that it "protected your
   chords are accepted (`Am7`, `D/F#`, `Cmaj9#11`, …): anything else is refused with "Not a chord".
   Double-click a chord to change it (an empty name removes it), drag it sideways to move it,
   right-click to remove it.
-- Sections (`[Verse 1]`, `[Chorus]`, …) that you can rename, move up and down, duplicate or delete.
+- Sections (`[Verse 1]`, `[Chorus]`, …) that you can rename, duplicate or delete, and move by
+  dragging the grip (⠿) next to the heading, or with the ↑ ↓ buttons. + Section adds a section
+  after the one the caret is in (or at the end of the song).
 - Repeat markers: "play the chorus again" without copying it. Shown as `[Chorus] (repeat)`.
 - Paste a whole song at once, including chords-over-lyrics text copied from chord sites.
 - Drag with the mouse to select lyrics across lines, even across sections. Delete or Backspace

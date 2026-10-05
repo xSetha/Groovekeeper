@@ -25,11 +25,17 @@ namespace SongCreator
     {
         // How close to the top or bottom of the editor a selection drag scrolls it.
         private const double AutoScrollMargin = 24;
+        // Private drag format for a section, so text boxes don't take the drop as text.
+        private const string SectionDragFormat = "Groovekeeper.Section";
+        // The space above each section, where the drop line is drawn.
+        private const double SectionGap = 16;
 
         private readonly MainViewModel _viewModel;
         private SongDocumentViewModel? _watchedDocument;
         // Where a mouse press in the lyrics started, while the button is down.
         private TextPosition? _selectionAnchor;
+        // Where a section's grip was pressed, until the drag starts or the button goes up.
+        private Point? _sectionGripPressedAt;
 
         public MainWindow()
         {
@@ -201,7 +207,7 @@ namespace SongCreator
                 FindLineControl(this, anchor.Line)?.FocusText(anchor.Index);
             }
             Document.Select(anchor, active);
-            AutoScrollEditor(e);
+            AutoScrollEditor(e.GetPosition(EditorScroll).Y);
         }
 
         private void EditorScroll_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
@@ -218,9 +224,9 @@ namespace SongCreator
             return controls.LastOrDefault(control => e.GetPosition(control).Y >= 0) ?? controls.FirstOrDefault();
         }
 
-        private void AutoScrollEditor(MouseEventArgs e)
+        /// <summary>Scrolls the editor while a drag is near its top or bottom (<paramref name="y"/> from its top).</summary>
+        private void AutoScrollEditor(double y)
         {
-            double y = e.GetPosition(EditorScroll).Y;
             if (y < AutoScrollMargin)
                 EditorScroll.LineUp();
             else if (y > EditorScroll.ActualHeight - AutoScrollMargin)
@@ -283,6 +289,93 @@ namespace SongCreator
                     foreach (var descendant in FindDescendants<T>(child))
                         yield return descendant;
             }
+        }
+
+        // ---- The caret's section, for + Section ----
+
+        // Buttons taking the focus (such as + Section itself) don't change it.
+        private void EditorScroll_GotKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
+        {
+            if (e.NewFocus is not TextBox box)
+                return;
+            if (FindAncestor<SongLineControl>(box) is { } control)
+                Document.SetCaret(LineOf(control));   // the lyrics, or a chord being typed
+            else
+                Document.CaretSection = box.DataContext as Section;   // a section's name; null for the title and artist
+        }
+
+        // ---- Dragging a section by its grip ----
+
+        private void SectionGrip_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            _sectionGripPressedAt = e.GetPosition(this);
+            ((UIElement)sender).CaptureMouse();   // the grip is small: keep following the mouse once it leaves
+            e.Handled = true;
+        }
+
+        private void SectionGrip_MouseMove(object sender, MouseEventArgs e)
+        {
+            if (_sectionGripPressedAt is not Point start || e.LeftButton != MouseButtonState.Pressed)
+                return;
+            var moved = e.GetPosition(this) - start;
+            if (Math.Abs(moved.X) < SystemParameters.MinimumHorizontalDragDistance &&
+                Math.Abs(moved.Y) < SystemParameters.MinimumVerticalDragDistance)
+                return;
+
+            var grip = (FrameworkElement)sender;
+            _sectionGripPressedAt = null;
+            grip.ReleaseMouseCapture();
+            DragDrop.DoDragDrop(grip, new DataObject(SectionDragFormat, grip.DataContext), DragDropEffects.Move);
+            SectionDropLine.Visibility = Visibility.Collapsed;   // dropped, or let go somewhere else
+        }
+
+        private void SectionGrip_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+        {
+            _sectionGripPressedAt = null;
+            ((UIElement)sender).ReleaseMouseCapture();
+        }
+
+        // Preview events: the lyric text boxes would otherwise turn the drag away as "not text".
+        private void SectionList_PreviewDragOver(object sender, DragEventArgs e)
+        {
+            if (!e.Data.GetDataPresent(SectionDragFormat))
+                return;
+            ShowSectionDropLine(SectionInsertIndex(e));
+            AutoScrollEditor(e.GetPosition(EditorScroll).Y);
+            e.Effects = DragDropEffects.Move;
+            e.Handled = true;
+        }
+
+        private void SectionList_PreviewDrop(object sender, DragEventArgs e)
+        {
+            if (e.Data.GetData(SectionDragFormat) is not Section section)
+                return;
+            SectionDropLine.Visibility = Visibility.Collapsed;
+            Document.MoveSectionTo(section, SectionInsertIndex(e));
+            e.Handled = true;
+        }
+
+        /// <summary>Where a dropped section goes: before the section whose upper half the mouse is over, or at the end.</summary>
+        private int SectionInsertIndex(DragEventArgs e)
+        {
+            for (int i = 0; i < SectionList.Items.Count; i++)
+            {
+                if (SectionList.ItemContainerGenerator.ContainerFromIndex(i) is FrameworkElement container &&
+                    e.GetPosition(container).Y < container.ActualHeight / 2)
+                    return i;
+            }
+            return SectionList.Items.Count;
+        }
+
+        /// <summary>Draws the drop line in the gap above the section at <paramref name="index"/>, or below the last one.</summary>
+        private void ShowSectionDropLine(int index)
+        {
+            bool atEnd = index >= SectionList.Items.Count;
+            if (SectionList.ItemContainerGenerator.ContainerFromIndex(atEnd ? index - 1 : index) is not FrameworkElement section)
+                return;
+            double y = section.TranslatePoint(new Point(0, (atEnd ? section.ActualHeight : 0) + SectionGap / 2), SectionList).Y;
+            SectionDropLine.Margin = new Thickness(0, y - SectionDropLine.Height / 2, 0, 0);
+            SectionDropLine.Visibility = Visibility.Visible;
         }
 
         // ---- Line editing events → active document ----

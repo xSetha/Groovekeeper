@@ -10,6 +10,12 @@ version's section here becomes the text of its GitHub release.
 - Type chords straight onto a song: click the chord lane above a letter, type the chord and press
   Enter (Esc cancels). Only real chords are accepted; anything else shows "Not a chord". Double-click
   a chord to change it, or empty its name to remove it.
+- Drag a section by the grip (⠿) next to its heading to move it anywhere in the song; a line shows
+  where it will land. The ↑ ↓ buttons still work too.
+
+### Changed
+- + Section adds the new section right after the one you're working in (where the caret is),
+  instead of always at the end of the song.
 
 ### Removed
 - The "Looks like … · Use" key suggestion next to the Key box.

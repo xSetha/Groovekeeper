@@ -140,6 +140,15 @@ namespace SongCreator.ViewModels
         public bool HasUnsavedChanges => _savedText == null ? Song.HasContent : SongTextWriter.ToText(Song) != _savedText;
 
         /// <summary>
+        /// The section the caret was last in (a lyric line, a chord or the section's name), set by the view; null when
+        /// it was somewhere else, such as the title.
+        /// </summary>
+        public Section? CaretSection { get; set; }
+
+        /// <summary>Sets <see cref="CaretSection"/> to the section of <paramref name="line"/>.</summary>
+        public void SetCaret(SongLine line) => CaretSection = Song.Sections.FirstOrDefault(s => s.Lines.Contains(line));
+
+        /// <summary>
         /// Lyrics selected across lines with the mouse, or null. (A selection within one line is that line's own.)
         /// </summary>
         public TextRange? Selection
@@ -167,6 +176,7 @@ namespace SongCreator.ViewModels
         /// <summary>Asks the view to put the caret in a line (e.g. one that was just created).</summary>
         public event EventHandler<FocusRequest>? FocusRequested;
 
+        /// <summary>Adds a section after <see cref="CaretSection"/>, or at the end of the song.</summary>
         public ICommand AddSectionCommand { get; }
         public ICommand DeleteSectionCommand { get; }
         public ICommand MoveSectionUpCommand { get; }
@@ -222,9 +232,23 @@ namespace SongCreator.ViewModels
             var section = new Section("New Section");
             var line = new SongLine();
             section.Lines.Add(line);
-            Song.Sections.Add(section);
+            // An undo may have replaced the caret's section; then it goes at the end.
+            int caret = CaretSection == null ? -1 : Song.Sections.IndexOf(CaretSection);
+            Song.Sections.Insert(caret >= 0 ? caret + 1 : Song.Sections.Count, section);
             Focus(line, 0);
         }
+
+        /// <summary>
+        /// Moves a section so it comes before the section at <paramref name="insertAt"/> (counted before the move), or
+        /// to the end when <paramref name="insertAt"/> is the number of sections. One undo step.
+        /// </summary>
+        public void MoveSectionTo(Section section, int insertAt) => Edit(() =>
+        {
+            int from = Song.Sections.IndexOf(section);
+            int to = insertAt > from ? insertAt - 1 : insertAt;
+            if (from >= 0 && to != from)
+                Song.Sections.Move(from, Math.Clamp(to, 0, Song.Sections.Count - 1));
+        });
 
         private void AddLine(Section section)
         {

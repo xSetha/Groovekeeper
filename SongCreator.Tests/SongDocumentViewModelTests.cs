@@ -94,6 +94,67 @@ namespace SongCreator.Tests
             Assert.Equal([verse, intro], _song.Sections);
         }
 
+        [Theory]
+        [InlineData(0, new[] { "C", "A", "B", "D" })]   // before the first
+        [InlineData(1, new[] { "A", "C", "B", "D" })]
+        [InlineData(2, new[] { "A", "B", "C", "D" })]   // where it is: nothing moves
+        [InlineData(3, new[] { "A", "B", "C", "D" })]   // just after itself: nothing moves either
+        [InlineData(4, new[] { "A", "B", "D", "C" })]   // to the end
+        public void ASectionDraggedToAPlaceLandsThere(int insertAt, string[] expected)
+        {
+            foreach (string name in new[] { "A", "B", "C", "D" })
+                AddSection(name, name.ToLowerInvariant());
+
+            _document.MoveSectionTo(_song.Sections[2], insertAt);
+
+            Assert.Equal(expected, _song.Sections.Select(s => s.Name));
+        }
+
+        [Fact]
+        public void MovingASectionIsOneUndoStep()
+        {
+            var intro = AddSection("Intro", "a");
+            var verse = AddSection("Verse", "b");
+            var chorus = AddSection("Chorus", "c");
+            _document.History.Commit();
+
+            _document.MoveSectionTo(chorus, 0);
+            _document.History.Undo();
+
+            Assert.Equal(["Intro", "Verse", "Chorus"], _song.Sections.Select(s => s.Name));
+        }
+
+        [Fact]
+        public void NewSectionGoesAfterTheSectionWithTheCaret()
+        {
+            var intro = AddSection("Intro", "a");
+            var verse = AddSection("Verse", "b", "c");
+            AddSection("Chorus", "d");
+
+            _document.SetCaret(intro.Lines[0]);
+            _document.AddSectionCommand.Execute(null);
+            Assert.Equal(["Intro", "New Section", "Verse", "Chorus"], _song.Sections.Select(s => s.Name));
+
+            _document.CaretSection = verse;   // e.g. the caret in the section's name
+            _document.AddSectionCommand.Execute(null);
+            Assert.Equal(["Intro", "New Section", "Verse", "New Section", "Chorus"], _song.Sections.Select(s => s.Name));
+            Assert.Equal(new FocusRequest(_song.Sections[3].Lines[0], 0), _focus);
+        }
+
+        [Fact]
+        public void NewSectionGoesAtTheEndWithoutACaretInTheSong()
+        {
+            var intro = AddSection("Intro", "a");
+            AddSection("Verse", "b");
+
+            _document.AddSectionCommand.Execute(null);
+            Assert.Equal("New Section", _song.Sections[^1].Name);
+
+            _document.CaretSection = new Section("Gone");   // e.g. replaced by an undo
+            _document.AddSectionCommand.Execute(null);
+            Assert.Equal(["Intro", "Verse", "New Section", "New Section"], _song.Sections.Select(s => s.Name));
+        }
+
         [Fact]
         public void DuplicateInsertsAnIndependentCopyBelow()
         {

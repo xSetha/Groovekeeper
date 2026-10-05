@@ -259,84 +259,98 @@
                         <ScrollViewer x:Name="EditorScroll" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"
                                       PreviewMouseLeftButtonDown="EditorScroll_PreviewMouseLeftButtonDown"
                                       PreviewMouseMove="EditorScroll_PreviewMouseMove"
-                                      PreviewMouseLeftButtonUp="EditorScroll_PreviewMouseLeftButtonUp">
+                                      PreviewMouseLeftButtonUp="EditorScroll_PreviewMouseLeftButtonUp"
+                                      GotKeyboardFocus="EditorScroll_GotKeyboardFocus">
                             <StackPanel Margin="40,24,40,40">
                                 <TextBox x:Name="TitleBox" Text="{Binding Song.Title, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource HintTextBox}" Tag="Song title"
                                          FontSize="26" FontWeight="SemiBold" />
                                 <TextBox Text="{Binding Song.Artist, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource HintTextBox}" Tag="Artist"
                                          FontSize="16" Foreground="{DynamicResource MutedForeground}" Margin="0,2,0,6" />
 
-                                <ItemsControl x:Name="SectionList" ItemsSource="{Binding Song.Sections}" Margin="0,12,0,0">
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate>
-                                            <StackPanel Margin="0,16,0,0">
-                                                <!-- The heading, marked when a selection across lines would delete it -->
-                                                <Grid HorizontalAlignment="Left">
-                                                    <Rectangle x:Name="HeadingSelection" Fill="{DynamicResource SelectionBrush}" Opacity="0.4"
-                                                               Visibility="Collapsed" IsHitTestVisible="False" />
-                                                    <StackPanel Orientation="Horizontal" TextElement.FontFamily="{DynamicResource SongFont}"
-                                                                TextElement.FontSize="16">
-                                                        <TextBlock Text="[" />
-                                                        <TextBox Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}"
-                                                                 Style="{StaticResource BareTextBox}"
-                                                                 FontFamily="{DynamicResource SongFont}" FontSize="16" MinWidth="20" Margin="-2,0" />
-                                                        <TextBlock Text="]" />
-                                                        <TextBlock Text="(repeat)" Margin="8,0,0,0" FontStyle="Italic"
-                                                                   FontFamily="{DynamicResource UiFont}" FontSize="13" VerticalAlignment="Center"
-                                                                   Foreground="{DynamicResource MutedForeground}"
-                                                                   Visibility="{Binding IsRepeat, Converter={StaticResource BoolToVisible}}" />
-                                                        <StackPanel Orientation="Horizontal" Margin="12,0,0,0"
-                                                                    TextElement.FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
-                                                                    TextElement.FontSize="11">
-                                                            <Button Content="&#xE70E;" Style="{StaticResource FlatButton}" Padding="6,2"
-                                                                    Foreground="{DynamicResource MutedForeground}" ToolTip="Move up"
-                                                                    Command="{Binding DataContext.MoveSectionUpCommand, ElementName=EditorPanel}"
+                                <!-- The sections, and the line showing where a section dragged by its grip will land -->
+                                <Grid Margin="0,12,0,0">
+                                    <ItemsControl x:Name="SectionList" ItemsSource="{Binding Song.Sections}" AllowDrop="True"
+                                                  PreviewDragOver="SectionList_PreviewDragOver" PreviewDrop="SectionList_PreviewDrop">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <StackPanel Margin="0,16,0,0">
+                                                    <!-- The heading, marked when a selection across lines would delete it -->
+                                                    <Grid HorizontalAlignment="Left">
+                                                        <Rectangle x:Name="HeadingSelection" Fill="{DynamicResource SelectionBrush}" Opacity="0.4"
+                                                                   Visibility="Collapsed" IsHitTestVisible="False" />
+                                                        <StackPanel Orientation="Horizontal" TextElement.FontFamily="{DynamicResource SongFont}"
+                                                                    TextElement.FontSize="16">
+                                                            <!-- Grip to drag the section; out in the margin, so headings stay in line with the lyrics -->
+                                                            <TextBlock Text="&#xE76F;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="12"
+                                                                       Width="20" Margin="-24,0,4,0" VerticalAlignment="Center" TextAlignment="Center"
+                                                                       Background="Transparent" Cursor="SizeAll" ToolTip="Drag to move the section"
+                                                                       Foreground="{DynamicResource MutedForeground}"
+                                                                       MouseLeftButtonDown="SectionGrip_MouseLeftButtonDown"
+                                                                       MouseMove="SectionGrip_MouseMove" MouseLeftButtonUp="SectionGrip_MouseLeftButtonUp" />
+                                                            <TextBlock Text="[" />
+                                                            <TextBox Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}"
+                                                                     Style="{StaticResource BareTextBox}"
+                                                                     FontFamily="{DynamicResource SongFont}" FontSize="16" MinWidth="20" Margin="-2,0" />
+                                                            <TextBlock Text="]" />
+                                                            <TextBlock Text="(repeat)" Margin="8,0,0,0" FontStyle="Italic"
+                                                                       FontFamily="{DynamicResource UiFont}" FontSize="13" VerticalAlignment="Center"
+                                                                       Foreground="{DynamicResource MutedForeground}"
+                                                                       Visibility="{Binding IsRepeat, Converter={StaticResource BoolToVisible}}" />
+                                                            <StackPanel Orientation="Horizontal" Margin="12,0,0,0"
+                                                                        TextElement.FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                                                        TextElement.FontSize="11">
+                                                                <Button Content="&#xE70E;" Style="{StaticResource FlatButton}" Padding="6,2"
+                                                                        Foreground="{DynamicResource MutedForeground}" ToolTip="Move up"
+                                                                        Command="{Binding DataContext.MoveSectionUpCommand, ElementName=EditorPanel}"
+                                                                        CommandParameter="{Binding}" />
+                                                                <Button Content="&#xE70D;" Style="{StaticResource FlatButton}" Padding="6,2"
+                                                                        Foreground="{DynamicResource MutedForeground}" ToolTip="Move down"
+                                                                        Command="{Binding DataContext.MoveSectionDownCommand, ElementName=EditorPanel}"
+                                                                        CommandParameter="{Binding}" />
+                                                                <Button Content="&#xE8C8;" Style="{StaticResource FlatButton}" Padding="6,2"
+                                                                        Foreground="{DynamicResource MutedForeground}" ToolTip="Duplicate section"
+                                                                        Command="{Binding DataContext.DuplicateSectionCommand, ElementName=EditorPanel}"
+                                                                        CommandParameter="{Binding}" />
+                                                                <Button Content="&#xE8EE;" Style="{StaticResource FlatButton}" Padding="6,2"
+                                                                        Foreground="{DynamicResource MutedForeground}" ToolTip="Repeat at the end of the song"
+                                                                        Command="{Binding DataContext.RepeatSectionCommand, ElementName=EditorPanel}"
+                                                                        CommandParameter="{Binding}"
+                                                                        Visibility="{Binding IsRepeat, Converter={StaticResource BoolToCollapsed}}" />
+                                                            </StackPanel>
+                                                            <Button Content="✕" Style="{StaticResource FlatButton}" Padding="6,0" Margin="12,0,0,0"
+                                                                    FontSize="11" Foreground="{DynamicResource MutedForeground}" ToolTip="Delete section"
+                                                                    Command="{Binding DataContext.DeleteSectionCommand, ElementName=EditorPanel}"
                                                                     CommandParameter="{Binding}" />
-                                                            <Button Content="&#xE70D;" Style="{StaticResource FlatButton}" Padding="6,2"
-                                                                    Foreground="{DynamicResource MutedForeground}" ToolTip="Move down"
-                                                                    Command="{Binding DataContext.MoveSectionDownCommand, ElementName=EditorPanel}"
-                                                                    CommandParameter="{Binding}" />
-                                                            <Button Content="&#xE8C8;" Style="{StaticResource FlatButton}" Padding="6,2"
-                                                                    Foreground="{DynamicResource MutedForeground}" ToolTip="Duplicate section"
-                                                                    Command="{Binding DataContext.DuplicateSectionCommand, ElementName=EditorPanel}"
-                                                                    CommandParameter="{Binding}" />
-                                                            <Button Content="&#xE8EE;" Style="{StaticResource FlatButton}" Padding="6,2"
-                                                                    Foreground="{DynamicResource MutedForeground}" ToolTip="Repeat at the end of the song"
-                                                                    Command="{Binding DataContext.RepeatSectionCommand, ElementName=EditorPanel}"
-                                                                    CommandParameter="{Binding}"
-                                                                    Visibility="{Binding IsRepeat, Converter={StaticResource BoolToCollapsed}}" />
                                                         </StackPanel>
-                                                        <Button Content="✕" Style="{StaticResource FlatButton}" Padding="6,0" Margin="12,0,0,0"
-                                                                FontSize="11" Foreground="{DynamicResource MutedForeground}" ToolTip="Delete section"
-                                                                Command="{Binding DataContext.DeleteSectionCommand, ElementName=EditorPanel}"
-                                                                CommandParameter="{Binding}" />
-                                                    </StackPanel>
-                                                </Grid>
-                                                <!-- A repeat has no lines of its own -->
-                                                <ItemsControl ItemsSource="{Binding Lines}"
-                                                              Visibility="{Binding IsRepeat, Converter={StaticResource BoolToCollapsed}}">
-                                                    <ItemsControl.ItemTemplate>
-                                                        <DataTemplate>
-                                                            <controls:SongLineControl NumeralKey="{Binding DataContext.NumeralKey, ElementName=EditorPanel}"
-                                                                                      HighlightText="{Binding DataContext.Find.HighlightText, ElementName=EditorPanel}"
-                                                                                      CurrentMatch="{Binding DataContext.Find.CurrentMatch, ElementName=EditorPanel}"
-                                                                                      SplitRequested="Line_SplitRequested"
-                                                                                      MergeRequested="Line_MergeRequested"
-                                                                                      MoveFocusRequested="Line_MoveFocusRequested"
-                                                                                      PasteLinesRequested="Line_PasteLinesRequested" />
-                                                        </DataTemplate>
-                                                    </ItemsControl.ItemTemplate>
-                                                </ItemsControl>
-                                                <Button Content="+ Line" Style="{StaticResource FlatButton}" HorizontalAlignment="Left"
-                                                        Padding="6,1" Margin="0,4,0,0" FontSize="12"
-                                                        Foreground="{DynamicResource MutedForeground}"
-                                                        Command="{Binding DataContext.AddLineCommand, ElementName=EditorPanel}"
-                                                        CommandParameter="{Binding}"
-                                                        Visibility="{Binding IsRepeat, Converter={StaticResource BoolToCollapsed}}" />
-                                            </StackPanel>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
+                                                    </Grid>
+                                                    <!-- A repeat has no lines of its own -->
+                                                    <ItemsControl ItemsSource="{Binding Lines}"
+                                                                  Visibility="{Binding IsRepeat, Converter={StaticResource BoolToCollapsed}}">
+                                                        <ItemsControl.ItemTemplate>
+                                                            <DataTemplate>
+                                                                <controls:SongLineControl NumeralKey="{Binding DataContext.NumeralKey, ElementName=EditorPanel}"
+                                                                                          HighlightText="{Binding DataContext.Find.HighlightText, ElementName=EditorPanel}"
+                                                                                          CurrentMatch="{Binding DataContext.Find.CurrentMatch, ElementName=EditorPanel}"
+                                                                                          SplitRequested="Line_SplitRequested"
+                                                                                          MergeRequested="Line_MergeRequested"
+                                                                                          MoveFocusRequested="Line_MoveFocusRequested"
+                                                                                          PasteLinesRequested="Line_PasteLinesRequested" />
+                                                            </DataTemplate>
+                                                        </ItemsControl.ItemTemplate>
+                                                    </ItemsControl>
+                                                    <Button Content="+ Line" Style="{StaticResource FlatButton}" HorizontalAlignment="Left"
+                                                            Padding="6,1" Margin="0,4,0,0" FontSize="12"
+                                                            Foreground="{DynamicResource MutedForeground}"
+                                                            Command="{Binding DataContext.AddLineCommand, ElementName=EditorPanel}"
+                                                            CommandParameter="{Binding}"
+                                                            Visibility="{Binding IsRepeat, Converter={StaticResource BoolToCollapsed}}" />
+                                                </StackPanel>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                    <Rectangle x:Name="SectionDropLine" Height="2" VerticalAlignment="Top" Fill="{DynamicResource AccentBrush}"
+                                               Visibility="Collapsed" IsHitTestVisible="False" />
+                                </Grid>
                             </StackPanel>
                         </ScrollViewer>
                     </DockPanel>
