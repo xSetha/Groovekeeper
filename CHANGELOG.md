@@ -12,6 +12,12 @@ version's section here becomes the text of its GitHub release.
   a chord to change it, or empty its name to remove it.
 - Drag a section by the grip (⠿) next to its heading to move it anywhere in the song; a line shows
   where it will land. The ↑ ↓ buttons still work too.
+- Notes: right-click the song and choose Add note here to put a note anywhere over it. Drag a note
+  by its top edge, type in it (Shift+Enter for a new line, Enter when done), and right-click it to
+  delete it. Notes float: they stay where you put them while you edit the lyrics, and the PDF prints
+  them at the same spot. They are kept in your library with the song, not in song files.
+- A faint vertical line in the editor marks the edge of the printed page, so you can see what would
+  run off it.
 
 ### Changed
 - + Section adds the new section right after the one you're working in (where the caret is),

@@ -30,6 +30,9 @@ namespace SongCreator.Controls
         public event EventHandler<int>? MoveFocusRequested;
         public event EventHandler<PastedLines>? PasteLinesRequested;
 
+        /// <summary>"Add note here" was chosen from the line's menu; the window knows where the menu was opened.</summary>
+        public event EventHandler? AddNoteRequested;
+
         private SongLine? _line;
         private readonly Dictionary<ChordPlacement, Border> _tags = new();
         private bool _syncingText;
@@ -103,6 +106,12 @@ namespace SongCreator.Controls
             _charWidth = 0;
             Dispatcher.BeginInvoke(DispatcherPriority.Loaded, RenderChords);
         }
+
+        /// <summary>How wide a letter of the lyrics is: columns are counted in these.</summary>
+        public double ColumnWidth => CharWidth;
+
+        /// <summary>Where column 0 (the lyrics' first letter) starts, measured in <paramref name="relativeTo"/>.</summary>
+        public double ColumnLeft(Visual relativeTo) => TranslatePoint(new Point(ColumnX(0), 0), (UIElement)relativeTo).X;
 
         /// <summary>Whether <paramref name="source"/> (e.g. where the mouse was pressed) is in the lyrics' text box.</summary>
         public bool IsInLyrics(object source) => source is Visual visual && (visual == LyricBox || LyricBox.IsAncestorOf(visual));
@@ -347,6 +356,11 @@ namespace SongCreator.Controls
         }
 
         private void Lane_MouseLeave(object sender, MouseEventArgs e) => ColumnGhost.Visibility = Visibility.Collapsed;
+
+        // While the chord box is open, a right-click belongs to it rather than to the lane.
+        private void Lane_ContextMenuOpening(object sender, ContextMenuEventArgs e) => e.Handled = _chordColumn != null;
+
+        private void AddNote_Click(object sender, RoutedEventArgs e) => AddNoteRequested?.Invoke(this, EventArgs.Empty);
 
         private void Lane_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {

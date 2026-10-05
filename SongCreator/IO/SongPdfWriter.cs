@@ -14,8 +14,22 @@ namespace SongCreator.IO
         private const string TextFont = "Segoe UI";
         private const string SongFont = "Consolas";   // monospace, so chord columns line up with the lyrics
         private const float SongFontSize = 10.5f;
+        private const float NoteFontSize = 9.5f;
         private const string ChordColor = "#B4400F";
         private const string MutedColor = "#6B6F76";
+        private const float MarginCm = 2;
+
+        // The printed song's measures in points, to put notes where they float in the editor.
+        private const float PointsPerCm = 72 / 2.54f;
+        private const float SongCharWidth = SongFontSize * 0.5498f;   // a Consolas letter is 0.55 em wide
+        private const float SongRowHeight = SongFontSize * 1.17f;     // a row of Consolas text
+        private const float SectionStart = 12 + SongRowHeight + 2;    // a section's top padding and heading
+
+        /// <summary>A note as printed: its offset from the top left of the printed line it goes with, in points.</summary>
+        public record PlacedNote(SongNote Note, float X, float Y);
+
+        /// <summary>How many letters of a song's lyrics fit across a printed page; the editor marks this edge.</summary>
+        public static int PrintedColumns => (int)((PageSizes.A4.Width - 2 * MarginCm * PointsPerCm) / SongCharWidth);
 
         static SongPdfWriter()
         {
@@ -34,7 +48,7 @@ namespace SongCreator.IO
                 document.Page(page =>
                 {
                     page.Size(PageSizes.A4);
-                    page.Margin(2, Unit.Centimetre);
+                    page.Margin(MarginCm, Unit.Centimetre);
                     page.DefaultTextStyle(style => style.FontFamily(TextFont).FontSize(10).FontColor(Colors.Black));
 
                     page.Content().Column(column =>
@@ -109,9 +123,43 @@ namespace SongCreator.IO
         private static List<SongLine> ContentLines(Section section) =>
             section.Lines.Where(l => l.Text.Trim().Length > 0 || l.Chords.Count > 0).ToList();
 
+        /// <summary>
+        /// Where each note is printed. A note goes with the line its <see cref="SongNote.PrintRow"/> is on, moved across
+        /// by its column and down by how far it was towards the next line (above the first line or below the last, it
+        /// goes with that one). A note over a line that isn't printed, in a collapsed repeat, goes with the printed line
+        /// before it.
+        /// </summary>
+        public static Dictionary<SongLine, List<PlacedNote>> PlaceNotes(Song song, IReadOnlySet<Section> collapsed)
+        {
+            var lines = song.Sections.SelectMany(s => s.Lines.Select(line => (Line: line, Section: s))).ToList();
+            var placed = new Dictionary<SongLine, List<PlacedNote>>();
+            foreach (var note in song.Notes)
+            {
+                if (lines.Count == 0)
+                    break;
+                int index = Math.Clamp((int)Math.Floor(note.PrintRow), 0, lines.Count - 1);
+                double towardsNext = note.PrintRow - index;
+                int printed = Enumerable.Range(0, index + 1).Reverse().Concat(Enumerable.Range(index + 1, lines.Count - index - 1))
+                    .FirstOrDefault(i => !collapsed.Contains(lines[i].Section), -1);
+                if (printed < 0)
+                    continue;   // nothing of the song is printed but repeats
+
+                // How far down the next printed line starts: this line's rows, and a heading when a section starts there.
+                var (line, section) = lines[printed];
+                bool sectionStarts = printed + 1 < lines.Count && lines[printed + 1].Section != section;
+                float lineHeight = ((line.Chords.Count > 0 ? 1 : 0) + (line.Text.Trim().Length > 0 || line.Chords.Count == 0 ? 1 : 0)) * SongRowHeight;
+                float y = (float)(towardsNext * (lineHeight + (sectionStarts ? SectionStart : 0)));
+                if (!placed.TryGetValue(line, out var list))
+                    placed[line] = list = [];
+                list.Add(new PlacedNote(note, (float)(note.Column * SongCharWidth), y));
+            }
+            return placed;
+        }
+
         private static void ComposeSong(IContainer container, Song song, bool romanNumerals, bool collapseRepeats)
         {
             var repeated = collapseRepeats ? RepeatedSections(song) : new HashSet<Section>();
+            var notes = PlaceNotes(song, repeated);
             Func<string, string>? display = romanNumerals && MusicKeys.TryParse(song.Key, out _, out _)
                 ? name => RomanNumerals.Of(name, song.Key) ?? name
                 : null;
@@ -146,15 +194,32 @@ namespace SongCreator.IO
                         start.Item().PaddingBottom(2).Text($"[{section.Name}]")
                             .FontFamily(SongFont).FontSize(SongFontSize).Bold().FontColor(MutedColor);
                         if (lines.Count > 0)
-                            start.Item().Element(pair => ComposeLine(pair, lines[0], display));
+                            start.Item().Element(pair => ComposeLine(pair, lines[0], display, notes.GetValueOrDefault(lines[0])));
                     });
                     foreach (var line in lines.Skip(1))
-                        column.Item().ShowEntire().Element(pair => ComposeLine(pair, line, display));   // never split a chord line from its lyric
+                        column.Item().ShowEntire().Element(pair => ComposeLine(pair, line, display, notes.GetValueOrDefault(line)));   // never split a chord line from its lyric
                 }
             });
         }
 
-        private static void ComposeLine(IContainer container, SongLine line, Func<string, string>? display)
+        private static void ComposeLine(IContainer container, SongLine line, Func<string, string>? display, List<PlacedNote>? notes)
+        {
+            if (notes == null)
+            {
+                ComposeLineText(container, line, display);
+                return;
+            }
+            // Notes float over the song as in the editor, so they're drawn on top of the line and may reach past it.
+            container.Layers(layers =>
+            {
+                layers.PrimaryLayer().Element(text => ComposeLineText(text, line, display));
+                foreach (var note in notes)
+                    layers.Layer().OffsetX(note.X).OffsetY(note.Y).Unconstrained()
+                        .Text(note.Note.Text).FontFamily(TextFont).FontSize(NoteFontSize).Italic().FontColor(MutedColor);
+            });
+        }
+
+        private static void ComposeLineText(IContainer container, SongLine line, Func<string, string>? display)
         {
             container.Column(column =>
             {

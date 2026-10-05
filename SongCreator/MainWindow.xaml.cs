@@ -36,6 +36,13 @@ namespace SongCreator
         private TextPosition? _selectionAnchor;
         // Where a section's grip was pressed, until the drag starts or the button goes up.
         private Point? _sectionGripPressedAt;
+        // The notes shown over the song, and where the song was last right-clicked (for "Add note here").
+        private readonly Dictionary<SongNote, NoteControl> _noteControls = new();
+        private Song? _notesSong;
+        private Point _rightClickedAt;
+        // Where column 0 of the lyrics starts in the note layer, and how wide a letter is.
+        private double _columnLeft;
+        private double _columnWidth = 1;
 
         public MainWindow()
         {
@@ -50,6 +57,7 @@ namespace SongCreator
                     WatchSelection(_viewModel.ActiveDocument);
             };
             DataContext = _viewModel;
+            SectionList.LayoutUpdated += (_, _) => UpdateNoteLayout();
             ApplySettings(WindowSettings.Load(WindowSettings.DefaultPath));
 
             ThemePopup.CustomPopupPlacementCallback = AlignPopupRight;
@@ -236,10 +244,17 @@ namespace SongCreator
         private void WatchSelection(SongDocumentViewModel? document)
         {
             if (_watchedDocument != null)
+            {
                 _watchedDocument.PropertyChanged -= Document_PropertyChanged;
+                _watchedDocument.FocusNoteRequested -= Document_FocusNoteRequested;
+            }
             _watchedDocument = document;
             if (document != null)
+            {
                 document.PropertyChanged += Document_PropertyChanged;
+                document.FocusNoteRequested += Document_FocusNoteRequested;
+            }
+            ShowNotes(document?.Song);
             // Wait for the editor to show the song's lines.
             Dispatcher.BeginInvoke(DispatcherPriority.Loaded, ShowSelection);
         }
@@ -296,7 +311,8 @@ namespace SongCreator
         // Buttons taking the focus (such as + Section itself) don't change it.
         private void EditorScroll_GotKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
         {
-            if (e.NewFocus is not TextBox box)
+            // A note isn't in a section: typing in one leaves the caret's section as it was.
+            if (e.NewFocus is not TextBox box || FindAncestor<NoteControl>(box) != null)
                 return;
             if (FindAncestor<SongLineControl>(box) is { } control)
                 Document.SetCaret(LineOf(control));   // the lyrics, or a chord being typed
@@ -376,6 +392,108 @@ namespace SongCreator
             double y = section.TranslatePoint(new Point(0, (atEnd ? section.ActualHeight : 0) + SectionGap / 2), SectionList).Y;
             SectionDropLine.Margin = new Thickness(0, y - SectionDropLine.Height / 2, 0, 0);
             SectionDropLine.Visibility = Visibility.Visible;
+        }
+
+        // ---- Notes floating over the song ----
+
+        private void ShowNotes(Song? song)
+        {
+            if (_notesSong != null)
+                _notesSong.Notes.CollectionChanged -= Notes_CollectionChanged;
+            NoteLayer.Children.Clear();
+            _noteControls.Clear();
+            _notesSong = song;
+            if (song == null)
+                return;
+            song.Notes.CollectionChanged += Notes_CollectionChanged;
+            foreach (var note in song.Notes)
+                AddNoteControl(note);
+        }
+
+        private void Notes_CollectionChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+        {
+            foreach (SongNote note in e.OldItems ?? Array.Empty<object>())
+            {
+                if (_noteControls.Remove(note, out var control))
+                    NoteLayer.Children.Remove(control);
+            }
+            foreach (SongNote note in e.NewItems ?? Array.Empty<object>())
+                AddNoteControl(note);
+        }
+
+        private void AddNoteControl(SongNote note)
+        {
+            var control = new NoteControl { DataContext = note };
+            control.Dragging += (_, by) =>
+            {
+                Canvas.SetLeft(control, Canvas.GetLeft(control) + by.X);
+                Canvas.SetTop(control, Canvas.GetTop(control) + by.Y);
+            };
+            control.Dropped += (_, _) =>
+                Document.MoveNote(note, (Canvas.GetLeft(control) - _columnLeft) / _columnWidth, Canvas.GetTop(control));
+            control.Finished += (_, _) => _viewModel.ActiveDocument?.FinishNote(note);
+            control.DeleteRequested += (_, _) => Document.DeleteNoteCommand.Execute(note);
+            _noteControls[note] = control;
+            NoteLayer.Children.Add(control);
+            PlaceNote(note, control);
+        }
+
+        private void PlaceNote(SongNote note, NoteControl control)
+        {
+            Canvas.SetLeft(control, _columnLeft + note.Column * _columnWidth);
+            Canvas.SetTop(control, note.Top);
+        }
+
+        private void Document_FocusNoteRequested(object? sender, SongNote note) =>
+            Dispatcher.BeginInvoke(DispatcherPriority.Loaded, () =>
+            {
+                if (_noteControls.TryGetValue(note, out var control))
+                    control.FocusText();
+            });
+
+        private void EditorScroll_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e) =>
+            _rightClickedAt = e.GetPosition(NoteLayer);
+
+        // From the menu of a line, or of the space around the sections: the note goes where the song was right-clicked.
+        private void AddNoteHere_Click(object sender, EventArgs e) =>
+            _viewModel.AddNote(Document, (_rightClickedAt.X - _columnLeft) / _columnWidth, _rightClickedAt.Y);
+
+        /// <summary>
+        /// After every layout of the song: where its columns are (for the notes and the edge of the printed page), and
+        /// what each note is over now, for the PDF. Only values that changed are set, so this doesn't lay out again.
+        /// </summary>
+        private void UpdateNoteLayout()
+        {
+            if (!_viewModel.IsEditingSong)
+                return;
+            var lines = LineControls().ToList();
+            if (lines.Count > 0)
+            {
+                _columnLeft = lines[0].ColumnLeft(NoteLayer);
+                _columnWidth = Math.Max(1, lines[0].ColumnWidth);
+            }
+            SetIfChanged(PageEdge, FrameworkElement.MarginProperty,
+                new Thickness(_columnLeft + SongPdfWriter.PrintedColumns * _columnWidth, 0, 0, 0));
+
+            var tops = lines.Select(line => (line.TranslatePoint(new Point(), NoteLayer).Y, line.ActualHeight)).ToList();
+            double right = 0, bottom = 0;
+            foreach (var (note, control) in _noteControls)
+            {
+                note.PrintRow = SongNote.RowAt(tops, note.Top);
+                if (!control.IsMouseCaptureWithin)   // not while it's being dragged
+                    PlaceNote(note, control);
+                right = Math.Max(right, Canvas.GetLeft(control) + control.ActualWidth);
+                bottom = Math.Max(bottom, Canvas.GetTop(control) + control.ActualHeight);
+            }
+            // Notes past the end of the song or to its right can still be scrolled to.
+            SetIfChanged(NoteLayer, MinWidthProperty, Math.Ceiling(right));
+            SetIfChanged(NoteLayer, MinHeightProperty, Math.Ceiling(bottom));
+        }
+
+        private static void SetIfChanged(DependencyObject element, DependencyProperty property, object value)
+        {
+            if (!Equals(element.GetValue(property), value))
+                element.SetValue(property, value);
         }
 
         // ---- Line editing events → active document ----

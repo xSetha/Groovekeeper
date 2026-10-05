@@ -429,5 +429,89 @@ namespace SongCreator.Tests
             _vm.SaveAsCommand.Execute(null);
             Assert.Empty(_dialogs.AskedForSavePath);
         }
+
+        // ---- Notes ----
+
+        [Fact]
+        public void ANoteIsSavedWithALibrarySongAndMarksItChanged()
+        {
+            _vm.NewSongCommand.Execute(null);
+            var document = _vm.ActiveDocument!;
+            document.Song.Title = "Noted";
+            _vm.SaveCommand.Execute(null);
+            Assert.False(document.HasUnsavedChanges);
+
+            var note = _vm.AddNote(document, 12, 40)!;
+            note.Text = "build up";
+            Assert.True(document.HasUnsavedChanges);
+
+            _vm.SaveCommand.Execute(null);
+            Assert.False(document.HasUnsavedChanges);
+            var saved = _library.LoadSong(document.LibraryId!.Value)!;
+            Assert.Equal(("build up", 12.0, 40.0), (saved.Notes[0].Text, saved.Notes[0].Column, saved.Notes[0].Top));
+
+            note.Top = 80;   // moved
+            Assert.True(document.HasUnsavedChanges);
+        }
+
+        [Fact]
+        public void AFileSongIsSavedInTheLibraryBeforeItGetsANote()
+        {
+            string path = WriteSong("song.txt", "From a file\n\n[Verse 1]\nla\n");
+            _dialogs.FilesToOpen = [path];
+            _vm.OpenSongCommand.Execute(null);
+            var document = _vm.ActiveDocument!;
+            Assert.False(document.CanHaveNotes);
+
+            _dialogs.ConfirmAnswer = false;
+            Assert.Null(_vm.AddNote(document, 1, 2));
+            Assert.Empty(document.Song.Notes);
+            Assert.Equal(SongHome.File, document.Home);
+
+            _dialogs.ConfirmAnswer = true;
+            Assert.NotNull(_vm.AddNote(document, 1, 2));
+            Assert.Equal(SongHome.Library, document.Home);
+            Assert.Single(document.Song.Notes);
+            Assert.Equal("From a file\n\n[Verse 1]\nla\n", File.ReadAllText(path));   // the file stays as it is
+        }
+
+        [Fact]
+        public void SavingASongWithNotesAsAFileAsksFirst()
+        {
+            _vm.NewSongCommand.Execute(null);
+            var document = _vm.ActiveDocument!;
+            document.Song.Title = "Draft";
+            _vm.AddNote(document, 0, 0)!.Text = "hey";
+            _dialogs.SavePath = Path.Combine(_dir, "draft.txt");
+
+            _dialogs.ConfirmAnswer = false;
+            Assert.False(_vm.SaveAs(document));
+            Assert.Single(document.Song.Notes);
+            Assert.False(File.Exists(_dialogs.SavePath));
+
+            _dialogs.ConfirmAnswer = true;
+            Assert.True(_vm.SaveAs(document));
+            Assert.Empty(document.Song.Notes);
+            Assert.DoesNotContain("hey", File.ReadAllText(_dialogs.SavePath));
+            Assert.False(document.HasUnsavedChanges);
+        }
+
+        [Fact]
+        public void SavingALibrarySongAsAFileKeepsItsNotesInTheLibrary()
+        {
+            _vm.NewSongCommand.Execute(null);
+            var document = _vm.ActiveDocument!;
+            document.Song.Title = "Kept";
+            _vm.AddNote(document, 0, 0)!.Text = "hey";
+            _vm.SaveCommand.Execute(null);
+            _dialogs.SavePath = Path.Combine(_dir, "copy.txt");
+            int asked = _dialogs.Confirmations.Count;
+
+            Assert.True(_vm.SaveAs(document));
+
+            Assert.Equal(asked, _dialogs.Confirmations.Count);   // nothing to ask: the library keeps the notes
+            Assert.Single(document.Song.Notes);
+            Assert.Single(_library.LoadSong(document.LibraryId!.Value)!.Notes);
+        }
     }
 }

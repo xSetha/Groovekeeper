@@ -29,6 +29,9 @@ namespace SongCreator.Models
 
         public ObservableCollection<Section> Sections { get; } = new();
 
+        /// <summary>Notes floating over the song (see <see cref="SongNote"/>); not part of the song's text.</summary>
+        public ObservableCollection<SongNote> Notes { get; } = new();
+
         /// <summary>
         /// Moves every chord by some semitones. The song's key is what the user set, so it stays as it is.
         /// </summary>
@@ -49,12 +52,14 @@ namespace SongCreator.Models
             var copy = new Song { Title = Title, Artist = Artist, Key = Key };
             foreach (var section in Sections)
                 copy.Sections.Add(section.Clone());
+            foreach (var note in Notes)
+                copy.Notes.Add(note.Clone());
             return copy;
         }
 
         public bool HasContent =>
             Title.Length > 0 || Artist.Length > 0 ||
-            Sections.SelectMany(s => s.Lines).Any(l => l.Text.Length > 0 || l.Chords.Count > 0);
+            Sections.SelectMany(s => s.Lines).Any(l => l.Text.Length > 0 || l.Chords.Count > 0) || Notes.Count > 0;
 
         /// <summary>
         /// A blank song with the usual section layout, each section holding one empty line.

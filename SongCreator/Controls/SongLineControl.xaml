@@ -13,9 +13,15 @@
 
         <!-- Chord lane: a click types a chord above the letter under the mouse, whose column is highlighted -->
         <Canvas x:Name="Lane" Grid.Row="0" Background="Transparent" Cursor="IBeam"
+                ContextMenuOpening="Lane_ContextMenuOpening"
                 MouseMove="Lane_MouseMove" MouseLeave="Lane_MouseLeave" MouseLeftButtonDown="Lane_MouseLeftButtonDown">
             <Rectangle x:Name="ColumnGhost" Height="20" Canvas.Top="1" RadiusX="2" RadiusY="2"
                        Fill="{DynamicResource ColumnHighlight}" Visibility="Collapsed" IsHitTestVisible="False" />
+            <Canvas.ContextMenu>
+                <ContextMenu>
+                    <MenuItem Header="Add note here" Click="AddNote_Click" />
+                </ContextMenu>
+            </Canvas.ContextMenu>
         </Canvas>
         <!-- Chord tags, drawn from code -->
         <Canvas x:Name="ChordLayer" Grid.Row="0" />
@@ -41,6 +47,16 @@
         <TextBox x:Name="LyricBox" Grid.Row="1" Style="{StaticResource BareTextBox}"
                  FontFamily="{DynamicResource SongFont}" FontSize="16"
                  TextWrapping="NoWrap" HorizontalScrollBarVisibility="Hidden"
-                 TextChanged="LyricBox_TextChanged" PreviewKeyDown="LyricBox_PreviewKeyDown" />
+                 TextChanged="LyricBox_TextChanged" PreviewKeyDown="LyricBox_PreviewKeyDown">
+            <TextBox.ContextMenu>
+                <ContextMenu>
+                    <MenuItem Header="Add note here" Click="AddNote_Click" />
+                    <Separator />
+                    <MenuItem Command="ApplicationCommands.Cut" />
+                    <MenuItem Command="ApplicationCommands.Copy" />
+                    <MenuItem Command="ApplicationCommands.Paste" />
+                </ContextMenu>
+            </TextBox.ContextMenu>
+        </TextBox>
     </Grid>
 </UserControl>

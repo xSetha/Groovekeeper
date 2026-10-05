@@ -414,5 +414,68 @@ namespace SongCreator.Tests
             Assert.Equal(["one", "two"], _song.Sections[0].Lines.Select(l => l.Text));
             Assert.Null(_document.Selection);
         }
+
+        // ---- Notes ----
+
+        [Fact]
+        public void NotesAreAddedMovedAndRemovedOneUndoStepAtATime()
+        {
+            AddSection("Verse", "la");
+            SongNote? focused = null;
+            _document.FocusNoteRequested += (_, note) => focused = note;
+            _document.History.Commit();
+
+            var note = _document.AddNote(4, 30);
+            Assert.Same(note, focused);
+            note.Text = "softer";
+            _document.History.Commit();
+            _document.MoveNote(note, 10, 90);
+            _document.DeleteNoteCommand.Execute(note);
+            Assert.Empty(_song.Notes);
+
+            _document.History.Undo();   // the delete
+            Assert.Equal((10.0, 90.0), (_song.Notes[0].Column, _song.Notes[0].Top));
+            _document.History.Undo();   // the move
+            Assert.Equal((4.0, 30.0, "softer"), (_song.Notes[0].Column, _song.Notes[0].Top, _song.Notes[0].Text));
+            _document.History.Undo();   // the typing
+            _document.History.Undo();   // the new note
+            Assert.Empty(_song.Notes);
+        }
+
+        [Fact]
+        public void ANoteLeftEmptyIsRemoved()
+        {
+            var empty = _document.AddNote(0, 0);
+            var written = _document.AddNote(0, 50);
+            written.Text = "keep me";
+
+            _document.FinishNote(empty);
+            _document.FinishNote(written);
+
+            Assert.Equal([written], _song.Notes);
+        }
+
+        [Fact]
+        public void ACopyOfTheSongHasCopiesOfItsNotes()
+        {
+            _song.Notes.Add(new SongNote("hey", 1, 2, 3));
+            var copy = _song.Clone();
+            copy.Notes[0].Text = "changed";
+            Assert.Equal("hey", _song.Notes[0].Text);
+            Assert.Equal(3, copy.Notes[0].PrintRow);
+        }
+
+        [Theory]
+        [InlineData(100, 0)]      // the first line's top
+        [InlineData(125, 0.5)]    // halfway down the first line, towards the second
+        [InlineData(150, 1)]
+        [InlineData(220, 1.5)]    // halfway across the gap to the next section's first line
+        [InlineData(75, -0.5)]    // above the first line, in its height
+        [InlineData(340, 3)]      // past the last line, in its height
+        public void ANotesPrintRowIsTheLineUnderItAndHowFarTowardsTheNext(double top, double row)
+        {
+            (double, double)[] lines = [(100, 50), (150, 50), (290, 50)];   // a heading sits between lines 1 and 2
+            Assert.Equal(row, SongNote.RowAt(lines, top), 3);
+        }
     }
 }

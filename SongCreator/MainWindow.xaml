@@ -260,15 +260,22 @@
                                       PreviewMouseLeftButtonDown="EditorScroll_PreviewMouseLeftButtonDown"
                                       PreviewMouseMove="EditorScroll_PreviewMouseMove"
                                       PreviewMouseLeftButtonUp="EditorScroll_PreviewMouseLeftButtonUp"
-                                      GotKeyboardFocus="EditorScroll_GotKeyboardFocus">
+                                      GotKeyboardFocus="EditorScroll_GotKeyboardFocus"
+                                      PreviewMouseRightButtonDown="EditorScroll_PreviewMouseRightButtonDown">
                             <StackPanel Margin="40,24,40,40">
                                 <TextBox x:Name="TitleBox" Text="{Binding Song.Title, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource HintTextBox}" Tag="Song title"
                                          FontSize="26" FontWeight="SemiBold" />
                                 <TextBox Text="{Binding Song.Artist, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource HintTextBox}" Tag="Artist"
                                          FontSize="16" Foreground="{DynamicResource MutedForeground}" Margin="0,2,0,6" />
 
-                                <!-- The sections, and the line showing where a section dragged by its grip will land -->
+                                <!-- The sections, the line showing where a section dragged by its grip will land, the edge of
+                                     the printed page, and the notes floating over it all -->
                                 <Grid Margin="0,12,0,0">
+                                    <Grid.ContextMenu>
+                                        <ContextMenu>
+                                            <MenuItem Header="Add note here" Click="AddNoteHere_Click" />
+                                        </ContextMenu>
+                                    </Grid.ContextMenu>
                                     <ItemsControl x:Name="SectionList" ItemsSource="{Binding Song.Sections}" AllowDrop="True"
                                                   PreviewDragOver="SectionList_PreviewDragOver" PreviewDrop="SectionList_PreviewDrop">
                                         <ItemsControl.ItemTemplate>
@@ -334,7 +341,8 @@
                                                                                           SplitRequested="Line_SplitRequested"
                                                                                           MergeRequested="Line_MergeRequested"
                                                                                           MoveFocusRequested="Line_MoveFocusRequested"
-                                                                                          PasteLinesRequested="Line_PasteLinesRequested" />
+                                                                                          PasteLinesRequested="Line_PasteLinesRequested"
+                                                                                      AddNoteRequested="AddNoteHere_Click" />
                                                             </DataTemplate>
                                                         </ItemsControl.ItemTemplate>
                                                     </ItemsControl>
@@ -350,6 +358,10 @@
                                     </ItemsControl>
                                     <Rectangle x:Name="SectionDropLine" Height="2" VerticalAlignment="Top" Fill="{DynamicResource AccentBrush}"
                                                Visibility="Collapsed" IsHitTestVisible="False" />
+                                    <!-- Past this line, notes and lyrics run off the printed page -->
+                                    <Rectangle x:Name="PageEdge" Width="1" HorizontalAlignment="Left" Fill="{DynamicResource HintForeground}"
+                                               Opacity="0.6" IsHitTestVisible="False" />
+                                    <Canvas x:Name="NoteLayer" HorizontalAlignment="Left" VerticalAlignment="Top" />
                                 </Grid>
                             </StackPanel>
                         </ScrollViewer>

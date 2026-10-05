@@ -12,7 +12,7 @@ namespace SongCreator.ViewModels
     /// </summary>
     public class UndoHistory
     {
-        private record State(string Title, string Artist, string Key, IReadOnlyList<Section> Sections);
+        private record State(string Title, string Artist, string Key, IReadOnlyList<Section> Sections, IReadOnlyList<SongNote> Notes);
 
         private readonly Song _song;
         private readonly Stack<State> _undo = new();
@@ -69,7 +69,8 @@ namespace SongCreator.ViewModels
         // ---- Song state ----
 
         private State Capture() =>
-            new(_song.Title, _song.Artist, _song.Key, _song.Sections.Select(s => s.Clone()).ToList());
+            new(_song.Title, _song.Artist, _song.Key, _song.Sections.Select(s => s.Clone()).ToList(),
+                _song.Notes.Select(n => n.Clone()).ToList());
 
         private void Restore(State state)
         {
@@ -84,6 +85,10 @@ namespace SongCreator.ViewModels
                 _song.Sections.RemoveAt(_song.Sections.Count - 1);
             foreach (var section in state.Sections)
                 _song.Sections.Add(section.Clone());   // the stored state itself is never edited
+            while (_song.Notes.Count > 0)
+                _song.Notes.RemoveAt(_song.Notes.Count - 1);
+            foreach (var note in state.Notes)
+                _song.Notes.Add(note.Clone());
             _restoring = false;
             WatchAll();
         }
@@ -132,6 +137,10 @@ namespace SongCreator.ViewModels
                         Watch(chord, e => e.PropertyName == nameof(ChordPlacement.Position) ? line : null);
                 }
             }
+            Watch(_song.Notes);
+            foreach (var note in _song.Notes)
+                // Typing in a note merges into one step; moving it is a step of its own.
+                Watch(note, e => e.PropertyName == nameof(SongNote.Text) ? note : null);
         }
 
         /// <summary><paramref name="mergeKey"/> names what a change edited (null: never merge, false: not an edit).</summary>

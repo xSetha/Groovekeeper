@@ -222,11 +222,44 @@ namespace SongCreator.ViewModels
         /// </summary>
         public bool SaveAs(SongDocumentViewModel document)
         {
+            // A song that isn't in the library moves to the file, which can't hold its notes: say so first.
+            bool dropsNotes = document.LibraryId == null && document.Song.Notes.Count > 0;
+            if (dropsNotes && !_dialogs.Confirm("Save as file", $"Save “{document.Song.DisplayTitle}” without its notes?",
+                    "Notes are kept in the library, not in song files, so the file won't have them.", "Save without notes"))
+                return false;
+
             string suggestedName = document.FilePath != null
                 ? Path.GetFileName(document.FilePath)
                 : string.Concat(document.Song.DisplayTitle.Split(Path.GetInvalidFileNameChars()));
             string? path = _dialogs.PickSavePath(suggestedName, Path.GetDirectoryName(document.FilePath));
-            return path != null && WriteTo(document, path);
+            if (path == null)
+                return false;
+
+            var notes = document.Song.Notes.ToList();
+            if (dropsNotes)
+                document.Song.Notes.Clear();
+            if (WriteTo(document, path))
+                return true;
+            foreach (var note in notes.Where(n => !document.Song.Notes.Contains(n)))
+                document.Song.Notes.Add(note);   // the file couldn't be written: the song keeps its notes
+            return false;
+        }
+
+        /// <summary>
+        /// Adds a note to the song at a spot. Notes are kept in the library, so a song opened from a file is saved there
+        /// first, after asking (its file stays as it is). Returns the note, or null if the user said no or saving failed.
+        /// </summary>
+        public SongNote? AddNote(SongDocumentViewModel document, double column, double top)
+        {
+            if (!document.CanHaveNotes)
+            {
+                if (!_dialogs.Confirm("Add note", $"Save “{document.Song.DisplayTitle}” in the library to add notes?",
+                        "Notes are kept in the library, beside the song. The song file stays as it is.", "Save in library"))
+                    return null;
+                if (!SaveToLibrary(document))
+                    return null;
+            }
+            return document.AddNote(column, top);
         }
 
         private bool SaveToLibrary(SongDocumentViewModel document)

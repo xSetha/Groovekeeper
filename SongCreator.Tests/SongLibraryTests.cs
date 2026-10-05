@@ -128,5 +128,73 @@ namespace SongCreator.Tests
 
             Assert.Equal("Backed up", Assert.Single(new SongLibrary(backup).ListSongs()).Title);
         }
+
+        private static (string, double, double, double)[] NotesOf(Song song) =>
+            song.Notes.Select(n => (n.Text, n.Column, n.Top, n.PrintRow)).ToArray();
+
+        [Fact]
+        public void KeepsASongsNotesBesideItsText()
+        {
+            var song = MakeSong("Noted");
+            song.Notes.Add(new SongNote("build up here\nthen hold", 18.5, 120, 2.25));
+            song.Notes.Add(new SongNote("capo 2", 0, -30, -0.5));
+            long id = _library.AddSong(song);
+
+            var loaded = _library.LoadSong(id)!;
+            Assert.Equal([("build up here\nthen hold", 18.5, 120.0, 2.25), ("capo 2", 0.0, -30.0, -0.5)], NotesOf(loaded));
+            Assert.DoesNotContain("build up", IO.SongTextWriter.ToText(loaded));   // never part of the song's text
+
+            loaded.Notes.RemoveAt(1);
+            loaded.Notes[0].Text = "softer";
+            _library.UpdateSong(id, loaded);
+            Assert.Equal([("softer", 18.5, 120.0, 2.25)], NotesOf(_library.LoadSong(id)!));
+        }
+
+        [Fact]
+        public void DeletingASongDeletesItsNotes()
+        {
+            var song = MakeSong("Noted");
+            song.Notes.Add(new SongNote("hey", 1, 2));
+            long id = _library.AddSong(song);
+            _library.DeleteSong(id);
+
+            long again = _library.AddSong(MakeSong("Other"));
+            Assert.Empty(_library.LoadSong(again)!.Notes);
+        }
+
+        [Fact]
+        public void UpgradesALibraryFromBeforeNotes()
+        {
+            // A version 1 library, as the app made it before notes: songs and setlists only.
+            string path = Path.Combine(_dir, "old.db");
+            using (var connection = new Microsoft.Data.Sqlite.SqliteConnection($"Data Source={path};Pooling=False"))
+            {
+                connection.Open();
+                using var command = connection.CreateCommand();
+                command.CommandText = """
+                    CREATE TABLE songs (id INTEGER PRIMARY KEY, title TEXT NOT NULL, artist TEXT NOT NULL, key TEXT NOT NULL,
+                        content TEXT NOT NULL, updated TEXT NOT NULL);
+                    CREATE TABLE setlists (id INTEGER PRIMARY KEY, name TEXT NOT NULL);
+                    CREATE TABLE setlist_songs (setlist_id INTEGER NOT NULL REFERENCES setlists(id) ON DELETE CASCADE,
+                        position INTEGER NOT NULL, song_id INTEGER NOT NULL REFERENCES songs(id) ON DELETE CASCADE,
+                        key TEXT NOT NULL, PRIMARY KEY (setlist_id, position));
+                    INSERT INTO songs VALUES (7, 'Old', '', 'G', 'Old' || char(10, 10) || '[Verse 1]' || char(10) || 'la' || char(10), '2026-01-01');
+                    INSERT INTO setlists VALUES (1, 'Gig');
+                    INSERT INTO setlist_songs VALUES (1, 0, 7, 'A');
+                    PRAGMA user_version = 1;
+                    """;
+                command.ExecuteNonQuery();
+            }
+
+            var library = new SongLibrary(path);
+            var song = library.LoadSong(7)!;
+            Assert.Equal("Old", song.Title);
+            Assert.Empty(song.Notes);
+            Assert.Equal([7L], library.LoadSetlist(1)!.Songs);
+
+            song.Notes.Add(new SongNote("new note", 3, 4));
+            library.UpdateSong(7, song);
+            Assert.Equal("new note", Assert.Single(library.LoadSong(7)!.Notes).Text);
+        }
     }
 }

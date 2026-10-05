@@ -52,9 +52,10 @@ namespace SongCreator.ViewModels
             _filePath = filePath;
             _libraryId = libraryId;
             if (filePath != null || libraryId != null)
-                _savedText = SongTextWriter.ToText(song);
+                _savedText = SavedForm();
 
             AddSectionCommand = new RelayCommand(() => Edit(AddSection));
+            DeleteNoteCommand = new RelayCommand<SongNote>(note => Edit(() => Song.Notes.Remove(note)));
             DeleteSectionCommand = new RelayCommand<Section>(section => Edit(() => Song.Sections.Remove(section)));
             MoveSectionUpCommand = new RelayCommand<Section>(section => Edit(() => MoveSection(section, -1)));
             MoveSectionDownCommand = new RelayCommand<Section>(section => Edit(() => MoveSection(section, 1)));
@@ -137,7 +138,18 @@ namespace SongCreator.ViewModels
             _ => "Save (Ctrl+S) adds it to your song library",
         };
 
-        public bool HasUnsavedChanges => _savedText == null ? Song.HasContent : SongTextWriter.ToText(Song) != _savedText;
+        public bool HasUnsavedChanges => _savedText == null ? Song.HasContent : SavedForm() != _savedText;
+
+        /// <summary>
+        /// Whether the song can have notes: they are kept in the library, so a song opened from a file has to be saved
+        /// there first.
+        /// </summary>
+        public bool CanHaveNotes => FilePath == null;
+
+        /// <summary>Asks the view to put the caret in a note (e.g. one that was just added).</summary>
+        public event EventHandler<SongNote>? FocusNoteRequested;
+
+        public ICommand DeleteNoteCommand { get; }
 
         /// <summary>
         /// The section the caret was last in (a lyric line, a chord or the section's name), set by the view; null when
@@ -196,6 +208,7 @@ namespace SongCreator.ViewModels
             OnPropertyChanged(nameof(Home));
             OnPropertyChanged(nameof(HomeLabel));
             OnPropertyChanged(nameof(HomeDescription));
+            OnPropertyChanged(nameof(CanHaveNotes));
         }
 
         public void SaveTo(string path)
@@ -203,7 +216,7 @@ namespace SongCreator.ViewModels
             File.WriteAllText(path, SongFile.ToText(Song, path));
             FilePath = path;
             LibraryId = null;
-            _savedText = SongTextWriter.ToText(Song);
+            _savedText = SavedForm();
         }
 
         /// <summary>Writes a copy of the song to a file; where the song is saved doesn't change.</summary>
@@ -217,8 +230,37 @@ namespace SongCreator.ViewModels
             else
                 LibraryId = library.AddSong(Song);
             FilePath = null;
-            _savedText = SongTextWriter.ToText(Song);
+            _savedText = SavedForm();
         }
+
+        // ---- Notes ----
+
+        /// <summary>Adds an empty note at a spot (see <see cref="SongNote"/>) and asks the view to put the caret in it.</summary>
+        public SongNote AddNote(double column, double top)
+        {
+            var note = new SongNote("", column, top);
+            Edit(() => Song.Notes.Add(note));
+            FocusNoteRequested?.Invoke(this, note);
+            return note;
+        }
+
+        /// <summary>Moves a note to another spot; one undo step.</summary>
+        public void MoveNote(SongNote note, double column, double top) => Edit(() =>
+        {
+            note.Column = column;
+            note.Top = top;
+        });
+
+        /// <summary>Called when the caret leaves a note: a note left empty is removed.</summary>
+        public void FinishNote(SongNote note)
+        {
+            if (note.Text.Trim().Length == 0 && Song.Notes.Contains(note))
+                Edit(() => Song.Notes.Remove(note));
+        }
+
+        /// <summary>The song as saved: its text, and its notes (which the text doesn't have).</summary>
+        private string SavedForm() =>
+            SongTextWriter.ToText(Song) + string.Concat(Song.Notes.Select(n => $"\u0001{n.Text}\u0002{n.Column:F1}\u0002{n.Top:F1}"));
 
         /// <summary>Called when the song was deleted from the library: the tab keeps it, as a song not saved anywhere.</summary>
         public void DetachFromLibrary()

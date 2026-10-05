@@ -33,6 +33,11 @@ The installer isn't code-signed yet, so Windows may warn that it "protected your
   dragging the grip (⠿) next to the heading, or with the ↑ ↓ buttons. + Section adds a section
   after the one the caret is in (or at the end of the song).
 - Repeat markers: "play the chorus again" without copying it. Shown as `[Chorus] (repeat)`.
+- Notes anywhere over the song: right-click → Add note here. Drag a note by its top edge, type in
+  it (Shift+Enter for a new line, Enter when done), right-click it to delete it. A note floats where
+  you put it while the lyrics under it change, and the PDF prints it at the same spot. A faint
+  vertical line marks the edge of the printed page. Notes are kept in the library, not in song
+  files, so a song opened from a file is saved to the library before it gets one.
 - Paste a whole song at once, including chords-over-lyrics text copied from chord sites.
 - Drag with the mouse to select lyrics across lines, even across sections. Delete or Backspace
   deletes the selection with the chords above it and any section headings inside it, and joins
@@ -196,7 +201,7 @@ That [G]saved a wretch like [D]me
 ```
 
 **Library (`%AppData%\SongCreator\library.db`)**: a SQLite database with the songs and the
-setlists. The folder keeps the app's old name, SongCreator, so that nobody's library moves. Each song is stored as its `.txt` text. Don't keep it in a folder that a cloud service
+setlists. The folder keeps the app's old name, SongCreator, so that nobody's library moves. Each song is stored as its `.txt` text, with its notes in a table beside it. Don't keep it in a folder that a cloud service
 syncs while the app is open; use File → Back Up Library… to make a copy instead.
 
 **Older setlists (`.setlist`)**: setlists used to be JSON files that point to song files. They can

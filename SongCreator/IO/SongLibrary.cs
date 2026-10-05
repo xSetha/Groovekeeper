@@ -18,12 +18,14 @@ namespace SongCreator.IO
 
     /// <summary>
     /// The song library: songs and setlists in a SQLite database. Each song is stored as its .txt text
-    /// (<see cref="SongTextWriter"/>), with the title, artist and key copied into columns for the list.
+    /// (<see cref="SongTextWriter"/>), with the title, artist and key copied into columns for the list, and its notes
+    /// in a table of their own (they aren't part of the text).
     /// Every method throws <see cref="SqliteException"/> if the database can't be read or written.
     /// </summary>
     public class SongLibrary
     {
-        private const int SchemaVersion = 1;
+        // 1: songs and setlists. 2: notes floating over a song.
+        private const int SchemaVersion = 2;
 
         private readonly string _connectionString;
 
@@ -49,12 +51,19 @@ namespace SongCreator.IO
             return songs;
         }
 
-        /// <summary>Returns the song, or null if it isn't in the library (any more).</summary>
+        /// <summary>Returns the song with its notes, or null if it isn't in the library (any more).</summary>
         public Song? LoadSong(long id)
         {
             using var connection = Open();
-            object? content = Scalar(connection, "SELECT content FROM songs WHERE id = $id", ("$id", id));
-            return content is string text ? SongTextReader.Parse(text) : null;
+            if (Scalar(connection, "SELECT content FROM songs WHERE id = $id", ("$id", id)) is not string text)
+                return null;
+            var song = SongTextReader.Parse(text);
+            using var command = Command(connection,
+                "SELECT text, left_column, top, print_row FROM notes WHERE song_id = $id ORDER BY position", ("$id", id));
+            using var reader = command.ExecuteReader();
+            while (reader.Read())
+                song.Notes.Add(new SongNote(reader.GetString(0), reader.GetDouble(1), reader.GetDouble(2), reader.GetDouble(3)));
+            return song;
         }
 
         public long AddSong(Song song)
@@ -76,9 +85,12 @@ namespace SongCreator.IO
         public void UpdateSong(long id, Song song)
         {
             using var connection = Open();
+            using var transaction = connection.BeginTransaction();
             Execute(connection,
                 "UPDATE songs SET title = $title, artist = $artist, key = $key, content = $content, updated = $updated WHERE id = $id",
                 [("$id", id), .. SongValues(song)]);
+            SaveNotes(connection, id, song);
+            transaction.Commit();
         }
 
         /// <summary>Deletes the song; it is also taken out of every setlist.</summary>
@@ -166,11 +178,13 @@ namespace SongCreator.IO
         private void CreateSchema()
         {
             using var connection = Open();
-            if (Convert.ToInt32(Scalar(connection, "PRAGMA user_version")) >= SchemaVersion)
+            int version = Convert.ToInt32(Scalar(connection, "PRAGMA user_version"));
+            if (version >= SchemaVersion)
                 return;
 
             using var transaction = connection.BeginTransaction();
-            Execute(connection, $"""
+            if (version < 1)
+                Execute(connection, """
                 CREATE TABLE songs (
                     id INTEGER PRIMARY KEY,
                     title TEXT NOT NULL,
@@ -188,8 +202,20 @@ namespace SongCreator.IO
                     key TEXT NOT NULL,
                     PRIMARY KEY (setlist_id, position));
                 CREATE INDEX setlist_songs_song ON setlist_songs(song_id);
-                PRAGMA user_version = {SchemaVersion};
                 """);
+            // Each step upgrades an older library; an existing library keeps its songs and setlists.
+            if (version < 2)
+                Execute(connection, """
+                CREATE TABLE notes (
+                    song_id INTEGER NOT NULL REFERENCES songs(id) ON DELETE CASCADE,
+                    position INTEGER NOT NULL,
+                    text TEXT NOT NULL,
+                    left_column REAL NOT NULL,
+                    top REAL NOT NULL,
+                    print_row REAL NOT NULL,
+                    PRIMARY KEY (song_id, position));
+                """);
+            Execute(connection, $"PRAGMA user_version = {SchemaVersion}");
             transaction.Commit();
         }
 
@@ -201,10 +227,27 @@ namespace SongCreator.IO
             return connection;
         }
 
-        private static long AddSong(SqliteConnection connection, Song song) =>
-            (long)Scalar(connection,
+        private static long AddSong(SqliteConnection connection, Song song)
+        {
+            long id = (long)Scalar(connection,
                 "INSERT INTO songs (title, artist, key, content, updated) VALUES ($title, $artist, $key, $content, $updated) RETURNING id",
                 SongValues(song))!;
+            SaveNotes(connection, id, song);
+            return id;
+        }
+
+        private static void SaveNotes(SqliteConnection connection, long songId, Song song)
+        {
+            Execute(connection, "DELETE FROM notes WHERE song_id = $id", ("$id", songId));
+            for (int i = 0; i < song.Notes.Count; i++)
+            {
+                var note = song.Notes[i];
+                Execute(connection,
+                    "INSERT INTO notes (song_id, position, text, left_column, top, print_row) VALUES ($song, $position, $text, $column, $top, $row)",
+                    ("$song", songId), ("$position", i), ("$text", note.Text), ("$column", note.Column), ("$top", note.Top),
+                    ("$row", note.PrintRow));
+            }
+        }
 
         private static (string, object)[] SongValues(Song song) =>
         [

@@ -1,0 +1,33 @@
+<UserControl x:Class="SongCreator.Controls.NoteControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!-- A note floating over the song (DataContext: SongNote). Dragged by its top edge; typed into below it. -->
+    <Border Background="{DynamicResource CardBackground}" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1"
+            CornerRadius="3" Effect="{DynamicResource CardShadow}">
+        <Border.ContextMenu>
+            <ContextMenu>
+                <MenuItem Header="Delete note" Click="Delete_Click" />
+            </ContextMenu>
+        </Border.ContextMenu>
+        <DockPanel>
+            <Border x:Name="Grip" DockPanel.Dock="Top" Height="8" Background="{DynamicResource AccentBrush}" Opacity="0.45"
+                    CornerRadius="2,2,0,0" Cursor="SizeAll" ToolTip="Drag to move the note"
+                    MouseLeftButtonDown="Grip_MouseLeftButtonDown" MouseMove="Grip_MouseMove" MouseLeftButtonUp="Grip_MouseLeftButtonUp" />
+            <!-- Enter finishes the note, Shift+Enter starts a new line; lines are never wrapped, so they print as typed -->
+            <TextBox x:Name="Box" Style="{StaticResource BareTextBox}" Text="{Binding Text, UpdateSourceTrigger=PropertyChanged}"
+                     MinWidth="48" Margin="6,2,8,4" FontSize="14.5" FontStyle="Italic" TextWrapping="NoWrap"
+                     AutomationProperties.Name="Note"
+                     PreviewKeyDown="Box_PreviewKeyDown" LostKeyboardFocus="Box_LostKeyboardFocus">
+                <TextBox.ContextMenu>
+                    <ContextMenu>
+                        <MenuItem Header="Delete note" Click="Delete_Click" />
+                        <Separator />
+                        <MenuItem Command="ApplicationCommands.Cut" />
+                        <MenuItem Command="ApplicationCommands.Copy" />
+                        <MenuItem Command="ApplicationCommands.Paste" />
+                    </ContextMenu>
+                </TextBox.ContextMenu>
+            </TextBox>
+        </DockPanel>
+    </Border>
+</UserControl>
