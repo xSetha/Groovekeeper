@@ -13,6 +13,9 @@ namespace SongCreator.ViewModels
     /// </summary>
     public class LibraryViewModel : ObservableObject
     {
+        // The files a failed import names; the toast says how many more there are.
+        private const int MaxListedErrors = 5;
+
         private readonly IDialogService _dialogs;
         private IReadOnlyList<SongSummary> _all = [];
         private string _searchText = "";
@@ -71,7 +74,7 @@ namespace SongCreator.ViewModels
             catch (SqliteException ex)
             {
                 _all = [];
-                _dialogs.ShowError("Library", $"Couldn't read the song library:\n{ex.Message}");
+                _dialogs.Notify(NotificationKind.Error, "Couldn't read the song library", ex.Message);
             }
             OnPropertyChanged(nameof(IsEmpty));
             ApplySearch();
@@ -105,14 +108,21 @@ namespace SongCreator.ViewModels
             });
 
             if (errors.Count > 0)
-                _dialogs.ShowError("Import songs", $"Couldn't read these files:\n{string.Join("\n", errors)}");
+            {
+                string list = string.Join("\n", errors.Take(MaxListedErrors));
+                if (errors.Count > MaxListedErrors)
+                    list += $"\nand {errors.Count - MaxListedErrors} more";
+                _dialogs.Notify(NotificationKind.Error, "Couldn't read these files", list);
+            }
             try
             {
                 Library.AddSongs(songs);
+                if (songs.Count > 0)
+                    _dialogs.Notify(NotificationKind.Success, songs.Count == 1 ? "Imported 1 song" : $"Imported {songs.Count} songs");
             }
             catch (SqliteException ex)
             {
-                _dialogs.ShowError("Import songs", $"Couldn't add the songs to the library:\n{ex.Message}");
+                _dialogs.Notify(NotificationKind.Error, "Couldn't add the songs to the library", ex.Message);
             }
             Refresh();
         }
@@ -134,11 +144,12 @@ namespace SongCreator.ViewModels
             }
             catch (SqliteException ex)
             {
-                _dialogs.ShowError("Delete song", $"Couldn't delete \"{song.DisplayTitle}\":\n{ex.Message}");
+                _dialogs.Notify(NotificationKind.Error, $"Couldn't delete \"{song.DisplayTitle}\"", ex.Message);
                 return;
             }
             Refresh();
             SongDeleted?.Invoke(this, song.Id);
+            _dialogs.Notify(NotificationKind.Success, $"Deleted \"{song.DisplayTitle}\"");
         }
 
         /// <summary>Title, artist or key containing the search text, ignoring case.</summary>

@@ -18,8 +18,15 @@ version's section here becomes the text of its GitHub release.
   them at the same spot. They are kept in your library with the song, not in song files.
 - A faint vertical line in the editor marks the edge of the printed page, so you can see what would
   run off it.
+- Short messages in the bottom-right corner confirm that a song was saved, a PDF exported, the
+  library backed up, or songs imported or deleted, and tell you when an update is ready to install.
 
 ### Changed
+- Most problems (a file that couldn't be opened, a library that couldn't be read) now show in the
+  corner of the window instead of a pop-up box you had to close. A song that couldn't be saved still
+  stops you with a message, so it isn't missed.
+- An unexpected error no longer closes the app: it's reported in the corner and written to an error
+  log, so you can still save your songs.
 - + Section adds the new section right after the one you're working in (where the caret is),
   instead of always at the end of the song.
 - Transpose moves only the chords. The song's key stays what you set it to; change it in the Key

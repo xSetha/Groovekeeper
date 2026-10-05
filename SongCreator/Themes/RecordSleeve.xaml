@@ -29,6 +29,10 @@
     <SolidColorBrush x:Key="AccentFill" Color="#C8572B" />
     <!-- Text that isn't valid, e.g. a typed chord name that isn't a chord -->
     <SolidColorBrush x:Key="ErrorBrush" Color="#F0715F" />
+    <!-- Toasts: the bar and icon of an info, success or warning message (errors use ErrorBrush) -->
+    <SolidColorBrush x:Key="InfoBrush" Color="#8DB8E0" />
+    <SolidColorBrush x:Key="SuccessBrush" Color="#8FD18A" />
+    <SolidColorBrush x:Key="WarningBrush" Color="#F2C14E" />
     <SolidColorBrush x:Key="OnAccentForeground" Color="#FFFFFF" />
     <SolidColorBrush x:Key="SelectionBrush" Color="#A8743A" />
     <SolidColorBrush x:Key="KeyCapBorder" Color="#44564A" />

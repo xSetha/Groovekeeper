@@ -139,7 +139,7 @@ namespace SongCreator.ViewModels
                 }
                 catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
                 {
-                    _dialogs.ShowError("Open song", $"Couldn't open {Path.GetFileName(path)}:\n{ex.Message}");
+                    _dialogs.Notify(NotificationKind.Error, $"Couldn't open {Path.GetFileName(path)}", ex.Message);
                     continue;
                 }
                 Add(new SongDocumentViewModel(song, path));
@@ -172,12 +172,12 @@ namespace SongCreator.ViewModels
             }
             catch (SqliteException ex)
             {
-                _dialogs.ShowError("Open song", $"Couldn't read the song from the library:\n{ex.Message}");
+                _dialogs.Notify(NotificationKind.Error, "Couldn't read the song from the library", ex.Message);
                 return;
             }
             if (song == null)
             {
-                _dialogs.ShowError("Open song", "This song is no longer in the library.");
+                _dialogs.Notify(NotificationKind.Error, "This song is no longer in the library");
                 Library.Refresh();
                 return;
             }
@@ -274,6 +274,7 @@ namespace SongCreator.ViewModels
                 return false;
             }
             Library.Refresh();
+            _dialogs.Notify(NotificationKind.Success, $"Saved {document.Song.DisplayTitle}");
             return true;
         }
 
@@ -285,6 +286,7 @@ namespace SongCreator.ViewModels
                     document.ExportTo(path);
                 else
                     document.SaveTo(path);
+                _dialogs.Notify(NotificationKind.Success, $"Saved {Path.GetFileName(path)}");
                 return true;
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
@@ -304,10 +306,11 @@ namespace SongCreator.ViewModels
                 // The save dialog already asked before replacing a file, and a backup can't be written over one.
                 File.Delete(path);
                 _library.BackupTo(path);
+                _dialogs.Notify(NotificationKind.Success, $"Backed up the library to {Path.GetFileName(path)}");
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or SqliteException)
             {
-                _dialogs.ShowError("Back up library", $"Couldn't write {Path.GetFileName(path)}:\n{ex.Message}");
+                _dialogs.Notify(NotificationKind.Error, $"Couldn't write {Path.GetFileName(path)}", ex.Message);
             }
         }
 

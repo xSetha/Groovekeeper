@@ -71,6 +71,7 @@ namespace SongCreator.Tests
             library.DeleteCommand.Execute(song);
             Assert.Empty(library.Songs);
             Assert.Empty(_library.ListSongs());
+            Assert.Equal(["Deleted \"One\""], _dialogs.SuccessNotifications);
         }
 
         [Fact]
@@ -86,7 +87,22 @@ namespace SongCreator.Tests
 
             Assert.Equal(["Amazing Grace", "Pro"], library.Songs.Select(s => s.Title));
             Assert.Equal(before, File.ReadAllText(cho));
-            Assert.Contains("missing.txt", Assert.Single(_dialogs.Errors));
+            Assert.Contains("missing.txt", Assert.Single(_dialogs.ErrorNotifications));
+            Assert.Equal(["Imported 2 songs"], _dialogs.SuccessNotifications);
+        }
+
+        [Fact]
+        public async Task AFailedImportNamesTheFirstFiveFilesAndCountsTheRest()
+        {
+            var library = CreateWith();
+
+            await library.ImportSongsAsync(Enumerable.Range(1, 7).Select(i => Path.Combine(_dir, $"missing{i}.txt")).ToList());
+
+            string error = Assert.Single(_dialogs.ErrorNotifications);
+            Assert.Contains("missing5.txt", error);
+            Assert.DoesNotContain("missing6.txt", error);
+            Assert.EndsWith("and 2 more", error);
+            Assert.Empty(_dialogs.SuccessNotifications);
         }
     }
 }

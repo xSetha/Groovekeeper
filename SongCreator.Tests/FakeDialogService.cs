@@ -19,6 +19,9 @@ namespace SongCreator.Tests
         public List<string> AskedToSave { get; } = [];
         public List<string> AskedForSavePath { get; } = [];
         public List<string> Errors { get; } = [];
+        public List<(NotificationKind Kind, string Text)> Notifications { get; } = [];
+        public IEnumerable<string> ErrorNotifications => Notifications.Where(n => n.Kind == NotificationKind.Error).Select(n => n.Text);
+        public IEnumerable<string> SuccessNotifications => Notifications.Where(n => n.Kind == NotificationKind.Success).Select(n => n.Text);
         public List<string> Confirmations { get; } = [];
         public List<string> Opened { get; } = [];
         public ExportPdfViewModel? ShownExport { get; private set; }
@@ -40,6 +43,9 @@ namespace SongCreator.Tests
         public string? PickPdfSavePath(string suggestedFileName) => PdfPath;
 
         public void ShowError(string title, string message) => Errors.Add(message);
+
+        public void Notify(NotificationKind kind, string title, string message = "") =>
+            Notifications.Add((kind, message.Length > 0 ? $"{title}: {message}" : title));
 
         public void ShowExportPdf(ExportPdfViewModel viewModel) => ShownExport = viewModel;
 

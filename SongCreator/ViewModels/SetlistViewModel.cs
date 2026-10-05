@@ -182,7 +182,7 @@ namespace SongCreator.ViewModels
             }
             catch (SqliteException ex)
             {
-                _dialogs.ShowError("New setlist", $"Couldn't create the setlist in the library:\n{ex.Message}");
+                _dialogs.Notify(NotificationKind.Error, "Couldn't create the setlist in the library", ex.Message);
                 return;
             }
             RefreshSetlists();
@@ -202,7 +202,7 @@ namespace SongCreator.ViewModels
             }
             catch (SqliteException ex)
             {
-                _dialogs.ShowError("Delete setlist", $"Couldn't delete the setlist:\n{ex.Message}");
+                _dialogs.Notify(NotificationKind.Error, "Couldn't delete the setlist", ex.Message);
                 return;
             }
             int index = Setlists.IndexOf(setlist);
@@ -227,7 +227,7 @@ namespace SongCreator.ViewModels
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)
             {
-                _dialogs.ShowError("Import setlist", $"Couldn't open {Path.GetFileName(path)}:\n{ex.Message}");
+                _dialogs.Notify(NotificationKind.Error, $"Couldn't open {Path.GetFileName(path)}", ex.Message);
                 return;
             }
 
@@ -240,7 +240,7 @@ namespace SongCreator.ViewModels
                 }
                 catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
                 {
-                    _dialogs.ShowError("Import setlist", $"Couldn't open {Path.GetFileName(entry.Path)}:\n{ex.Message}");
+                    _dialogs.Notify(NotificationKind.Error, $"Couldn't open {Path.GetFileName(entry.Path)}", ex.Message);
                 }
             }
 
@@ -252,12 +252,13 @@ namespace SongCreator.ViewModels
             }
             catch (SqliteException ex)
             {
-                _dialogs.ShowError("Import setlist", $"Couldn't add the setlist to the library:\n{ex.Message}");
+                _dialogs.Notify(NotificationKind.Error, "Couldn't add the setlist to the library", ex.Message);
                 return;
             }
             Library.Refresh();
             RefreshSetlists();
             SelectedSetlist = Setlists.FirstOrDefault(s => s.Id == id);
+            _dialogs.Notify(NotificationKind.Success, $"Imported {SelectedSetlist?.Name ?? setlist.Name}");
         }
 
         public void Export()
@@ -275,10 +276,11 @@ namespace SongCreator.ViewModels
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
-                _dialogs.ShowError("Export PDF", $"Couldn't write {Path.GetFileName(path)}:\n{ex.Message}");
+                _dialogs.Notify(NotificationKind.Error, $"Couldn't write {Path.GetFileName(path)}", ex.Message);
                 return;
             }
 
+            _dialogs.Notify(NotificationKind.Success, $"Exported {Path.GetFileName(path)}");
             if (OpenWhenDone)
                 _dialogs.OpenWithDefaultApp(path);
         }
@@ -295,7 +297,7 @@ namespace SongCreator.ViewModels
                 }
                 catch (SqliteException ex)
                 {
-                    _dialogs.ShowError("Open setlist", $"Couldn't read the setlist from the library:\n{ex.Message}");
+                    _dialogs.Notify(NotificationKind.Error, "Couldn't read the setlist from the library", ex.Message);
                 }
             }
 
@@ -321,7 +323,7 @@ namespace SongCreator.ViewModels
             }
             catch (SqliteException ex)
             {
-                _dialogs.ShowError("Save setlist", $"Couldn't save the setlist in the library:\n{ex.Message}");
+                _dialogs.Notify(NotificationKind.Error, "Couldn't save the setlist in the library", ex.Message);
             }
         }
 
@@ -333,7 +335,7 @@ namespace SongCreator.ViewModels
             }
             catch (SqliteException ex)
             {
-                _dialogs.ShowError("Setlist", $"Couldn't read a song from the library:\n{ex.Message}");
+                _dialogs.Notify(NotificationKind.Error, "Couldn't read a song from the library", ex.Message);
                 return null;
             }
         }
@@ -348,7 +350,7 @@ namespace SongCreator.ViewModels
             }
             catch (SqliteException ex)
             {
-                _dialogs.ShowError("Setlists", $"Couldn't read the setlists from the library:\n{ex.Message}");
+                _dialogs.Notify(NotificationKind.Error, "Couldn't read the setlists from the library", ex.Message);
                 setlists = [];
             }
 

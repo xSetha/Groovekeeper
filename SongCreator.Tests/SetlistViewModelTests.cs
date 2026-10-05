@@ -271,6 +271,7 @@ namespace SongCreator.Tests
             Assert.Equal(2, setlist.Library.Songs.Count);
             Assert.Equal(["Friday"], _library.ListSetlists().Select(s => s.Name));
             Assert.Equal("Friday", setlist.SelectedSetlist?.Name);
+            Assert.Equal(["Imported Friday"], _dialogs.SuccessNotifications);
         }
 
         [Fact]
@@ -284,7 +285,7 @@ namespace SongCreator.Tests
             setlist.ImportFile(path);
 
             Assert.Equal(["Amazing Grace"], setlist.Items.Select(i => i.Song.Title));
-            Assert.Contains("Gone.txt", Assert.Single(_dialogs.Errors));
+            Assert.Contains("Gone.txt", Assert.Single(_dialogs.ErrorNotifications));
         }
 
         [Fact]
@@ -294,7 +295,7 @@ namespace SongCreator.Tests
             File.WriteAllText(path, "not json");
 
             Create().ImportFile(path);
-            Assert.Contains("broken.setlist", Assert.Single(_dialogs.Errors));
+            Assert.Contains("broken.setlist", Assert.Single(_dialogs.ErrorNotifications));
             Assert.Empty(_library.ListSetlists());
         }
 
@@ -309,6 +310,7 @@ namespace SongCreator.Tests
 
             Assert.True(new FileInfo(_dialogs.PdfPath).Length > 0);
             Assert.Equal([_dialogs.PdfPath], _dialogs.Opened);
+            Assert.Equal(["Exported set.pdf"], _dialogs.SuccessNotifications);
         }
 
         [Fact]

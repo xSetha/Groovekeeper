@@ -8,9 +8,10 @@ using SongCreator.ViewModels;
 namespace SongCreator.Views
 {
     /// <summary>
-    /// WPF implementation of <see cref="IDialogService"/>; dialogs are owned by <paramref name="owner"/>.
+    /// WPF implementation of <see cref="IDialogService"/>; dialogs are owned by <paramref name="owner"/>, and toasts
+    /// go to <paramref name="toasts"/>, shown in it.
     /// </summary>
-    public class DialogService(Window owner) : IDialogService
+    public class DialogService(Window owner, ToastsViewModel toasts) : IDialogService
     {
         private const string TextFilter = "Text file (*.txt)|*.txt";
         private static readonly string ChordProPatterns = string.Join(";", SongFile.ChordProExtensions.Select(e => "*" + e));
@@ -98,7 +99,24 @@ namespace SongCreator.Views
         // Dialogs raised from the export window must be owned by it, not the main window behind it.
         private Window ActiveWindow => owner.OwnedWindows.Cast<Window>().FirstOrDefault(w => w.IsActive) ?? owner;
 
-        public void ShowError(string title, string message) =>
-            MessageBox.Show(ActiveWindow, message, title, MessageBoxButton.OK, MessageBoxImage.Error);
+        // The message's first line is the heading, e.g. "Couldn't save Draft.txt", and the rest is the detail.
+        public void ShowError(string title, string message)
+        {
+            int lineEnd = message.IndexOf('\n');
+            string heading = lineEnd < 0 ? message : message[..lineEnd].TrimEnd(':');
+            string detail = lineEnd < 0 ? "" : message[(lineEnd + 1)..];
+            MessageDialog.Show(ActiveWindow, title, heading, detail);
+        }
+
+        public void Notify(NotificationKind kind, string title, string message = "")
+        {
+            // A toast behind a dialog (e.g. the export window) wouldn't be seen, so a problem there is shown in a box,
+            // even while the user is in another app.
+            var dialog = owner.OwnedWindows.Cast<Window>().LastOrDefault(w => w.IsVisible);
+            if (dialog != null && kind is NotificationKind.Error or NotificationKind.Warning)
+                MessageDialog.Show(dialog, title, title, message);
+            else
+                toasts.Show(kind, title, message);
+        }
     }
 }

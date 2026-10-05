@@ -85,7 +85,7 @@ namespace SongCreator.Tests
             var item = Assert.Single(vm.Items);
             Assert.Equal("Hallelujah", item.Song.Title);
             Assert.Equal("Hallelujah.txt", item.Source);
-            Assert.Single(_dialogs.Errors);
+            Assert.Single(_dialogs.ErrorNotifications);
             Assert.False(vm.IsEmpty);
         }
 
@@ -101,6 +101,7 @@ namespace SongCreator.Tests
 
             Assert.True(exported);
             Assert.Equal([_dialogs.PdfPath], _dialogs.Opened);
+            Assert.Equal(["Exported book.pdf"], _dialogs.SuccessNotifications);
             Assert.StartsWith("%PDF", File.ReadAllText(_dialogs.PdfPath)[..4]);
         }
 

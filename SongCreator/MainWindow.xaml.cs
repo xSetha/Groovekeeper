@@ -47,7 +47,10 @@ namespace SongCreator
         public MainWindow()
         {
             InitializeComponent();
-            _viewModel = new MainViewModel(new DialogService(this), OpenLibrary()) { Themes = new ThemesViewModel() };
+            var toasts = new ToastsViewModel();
+            ToastArea.DataContext = toasts;
+            Dialogs = new DialogService(this, toasts);
+            _viewModel = new MainViewModel(Dialogs, OpenLibrary()) { Themes = new ThemesViewModel() };
             _viewModel.FocusTitleRequested += (_, _) => Dispatcher.BeginInvoke(DispatcherPriority.Loaded, () => TitleBox.Focus());
             _viewModel.FocusLineRequested += (_, request) => FocusLine(request.Line, request.Caret);
             _viewModel.FindMatchFound += (_, match) => FindLineControl(this, match.Line)?.BringIntoView();
@@ -63,6 +66,9 @@ namespace SongCreator
             ThemePopup.CustomPopupPlacementCallback = AlignPopupRight;
             SourceInitialized += (_, _) => ThemeManager.ApplyTitleBar(this);
         }
+
+        /// <summary>The window's dialogs and toasts (also used by the app for errors nothing else caught).</summary>
+        public DialogService Dialogs { get; }
 
         private SongDocumentViewModel Document => _viewModel.ActiveDocument!;
 

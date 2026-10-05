@@ -105,7 +105,7 @@ namespace SongCreator.ViewModels
                 }
                 catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
                 {
-                    _dialogs.ShowError("Add song", $"Couldn't open {Path.GetFileName(path)}:\n{ex.Message}");
+                    _dialogs.Notify(NotificationKind.Error, $"Couldn't open {Path.GetFileName(path)}", ex.Message);
                 }
             }
         }
@@ -121,7 +121,7 @@ namespace SongCreator.ViewModels
                 }
                 catch (SqliteException ex)
                 {
-                    _dialogs.ShowError("Add song", $"Couldn't read {summary.Title} from the library:\n{ex.Message}");
+                    _dialogs.Notify(NotificationKind.Error, $"Couldn't read {summary.Title} from the library", ex.Message);
                     continue;
                 }
                 if (song != null)
@@ -149,10 +149,11 @@ namespace SongCreator.ViewModels
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
-                _dialogs.ShowError("Export PDF", $"Couldn't write {Path.GetFileName(path)}:\n{ex.Message}");
+                _dialogs.Notify(NotificationKind.Error, $"Couldn't write {Path.GetFileName(path)}", ex.Message);
                 return;
             }
 
+            _dialogs.Notify(NotificationKind.Success, $"Exported {Path.GetFileName(path)}");
             if (OpenWhenDone)
                 _dialogs.OpenWithDefaultApp(path);
             Exported?.Invoke(this, EventArgs.Empty);

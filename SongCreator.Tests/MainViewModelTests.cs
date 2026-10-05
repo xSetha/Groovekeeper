@@ -88,6 +88,7 @@ namespace SongCreator.Tests
             Assert.Empty(_vm.Documents);
             Assert.Empty(_dialogs.AskedForSavePath);
             Assert.Equal(["Draft"], _library.ListSongs().Select(s => s.Title));
+            Assert.Equal(["Saved Draft"], _dialogs.SuccessNotifications);
         }
 
         [Fact]
@@ -159,7 +160,7 @@ namespace SongCreator.Tests
         {
             _vm.Open([Path.Combine(_dir, "missing.txt")]);
             Assert.Empty(_vm.Documents);
-            Assert.Single(_dialogs.Errors);
+            Assert.Single(_dialogs.ErrorNotifications);
         }
 
         [Fact]
@@ -193,6 +194,7 @@ namespace SongCreator.Tests
             Assert.StartsWith("New title", File.ReadAllText(document.FilePath!));
             Assert.Empty(_dialogs.AskedForSavePath);
             Assert.False(document.HasUnsavedChanges);
+            Assert.Equal(["Saved song.txt"], _dialogs.SuccessNotifications);
         }
 
         [Fact]
@@ -330,7 +332,8 @@ namespace SongCreator.Tests
 
             _vm.BackupLibraryCommand.Execute(null);
 
-            Assert.Empty(_dialogs.Errors);
+            Assert.Empty(_dialogs.ErrorNotifications);
+            Assert.Equal(["Backed up the library to backup.db"], _dialogs.SuccessNotifications);
             Assert.Equal("Safe", Assert.Single(new SongLibrary(_dialogs.BackupPath).ListSongs()).Title);
         }
 

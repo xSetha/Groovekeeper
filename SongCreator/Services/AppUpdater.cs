@@ -1,3 +1,4 @@
+using Serilog;
 using Velopack;
 using Velopack.Sources;
 
@@ -11,21 +12,28 @@ namespace SongCreator.Services
     {
         private const string RepositoryUrl = "https://github.com/xSetha/SongCreator";
 
-        public static async Task DownloadUpdateAsync()
+        /// <summary>Returns the version downloaded, or null if there is none (or it couldn't be checked).</summary>
+        public static async Task<string?> DownloadUpdateAsync()
         {
             try
             {
                 var manager = new UpdateManager(new GithubSource(RepositoryUrl, accessToken: null, prerelease: false));
                 if (!manager.IsInstalled)
-                    return;   // run from a build (dotnet run, Visual Studio), not from an installed release
+                    return null;   // run from a build (dotnet run, Visual Studio), not from an installed release
 
                 var update = await manager.CheckForUpdatesAsync();
-                if (update != null)
-                    await manager.DownloadUpdatesAsync(update);
+                if (update == null)
+                    return null;
+                await manager.DownloadUpdatesAsync(update);
+                string version = update.TargetFullRelease.Version.ToString();
+                Log.Information("Downloaded update {Version}", version);
+                return version;
             }
-            catch (Exception)
+            catch (Exception ex)
             {
                 // Offline, GitHub unreachable or rate-limited: the next start tries again.
+                Log.Warning(ex, "Couldn't check for or download an update");
+                return null;
             }
         }
     }

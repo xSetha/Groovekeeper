@@ -29,7 +29,11 @@ namespace SongCreator.Services
 
         SaveChoice AskToSave(string songTitle);
 
+        /// <summary>A modal error, for problems the user must act on (e.g. a song that couldn't be saved).</summary>
         void ShowError(string title, string message);
+
+        /// <summary>A toast in the corner of the main window; errors and warnings become a modal while a dialog is open.</summary>
+        void Notify(NotificationKind kind, string title, string message = "");
 
         /// <summary>Shows the export window (modal) for the given view model.</summary>
         void ShowExportPdf(ExportPdfViewModel viewModel);

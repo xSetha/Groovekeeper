@@ -21,6 +21,7 @@
         <KeyBinding Key="I" Modifiers="Control" Command="{Binding ImportFromWebCommand}" />
     </Window.InputBindings>
 
+    <Grid>
     <DockPanel>
         <!-- Menu bar, with the theme button on the right -->
         <DockPanel DockPanel.Dock="Top" Background="{DynamicResource ToolbarBackground}">
@@ -370,4 +371,8 @@
             </Grid>
         </Grid>
     </DockPanel>
+
+    <!-- Toasts, over everything in the bottom-right corner -->
+    <views:ToastHost x:Name="ToastArea" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="16" />
+    </Grid>
 </Window>
