@@ -135,17 +135,5 @@ namespace SongCreator.Tests
             History.Redo();
             Assert.Equal(["hello", "world"], _song.Sections[0].Lines.Select(l => l.Text));
         }
-
-        [Fact]
-        public void PaletteFollowsAnUndo()
-        {
-            Line(0).Chords.Add(new ChordPlacement(0, "Am"));
-            History.Undo();
-            Assert.Empty(_document.Palette.UsedChords);
-
-            History.Redo();
-            Line(0).Chords[0].Name = "C";
-            Assert.Equal(["C"], _document.Palette.UsedChords.Select(c => c.Name));
-        }
     }
 }

@@ -39,7 +39,6 @@ namespace SongCreator.ViewModels
         public SongDocumentViewModel(Song song, string? filePath = null, long? libraryId = null)
         {
             Song = song;
-            Palette = new ChordPaletteViewModel(song);
             History = new UndoHistory(song);
             Find = new FindReplaceViewModel(song, Edit);
             song.PropertyChanged += (_, e) =>
@@ -69,8 +68,6 @@ namespace SongCreator.ViewModels
         }
 
         public Song Song { get; }
-
-        public ChordPaletteViewModel Palette { get; }
 
         public UndoHistory History { get; }
 

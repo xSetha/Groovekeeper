@@ -215,17 +215,6 @@
                                                   FontFamily="{DynamicResource UiFont}" FontSize="12" Content="I IV V"
                                                   ToolTip="Show chords as Roman numerals in the song's key"
                                                   IsChecked="{Binding ShowNumerals}" />
-                                    <!-- Key guessed from the chords, offered when the song isn't in it -->
-                                    <Button Style="{StaticResource FlatButton}" Margin="6,0,0,0" Padding="8,4"
-                                            ToolTip="Set the song's key (chords stay as they are)"
-                                            Command="{Binding Palette.UseDetectedKeyCommand}"
-                                            Visibility="{Binding Palette.ShowKeySuggestion, Converter={StaticResource BoolToVisible}}">
-                                        <TextBlock>
-                                            <Run Text="Looks like" Foreground="{DynamicResource MutedForeground}" />
-                                            <Run Text="{Binding Palette.DetectedKey, Mode=OneWay}" FontWeight="SemiBold" />
-                                            <Run Text="· Use" Foreground="{DynamicResource AccentBrush}" />
-                                        </TextBlock>
-                                    </Button>
                                 </StackPanel>
                             </DockPanel>
                         </Border>
@@ -265,8 +254,6 @@
                                         Foreground="{DynamicResource MutedForeground}" ToolTip="Close (Esc)" Command="{Binding Find.CloseCommand}" />
                             </StackPanel>
                         </Border>
-
-                        <views:ChordPalette DockPanel.Dock="Right" DataContext="{Binding Palette}" />
 
                         <!-- Scrolls sideways too, so a line wider than the editor (or a chord far to the right) is never hidden -->
                         <ScrollViewer x:Name="EditorScroll" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"

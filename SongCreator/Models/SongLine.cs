@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using SongCreator.Music;
 
 namespace SongCreator.Models
 {
@@ -25,6 +26,29 @@ namespace SongCreator.Models
             foreach (var chord in Chords)
                 copy.Chords.Add(new ChordPlacement(chord.Position, chord.Name));
             return copy;
+        }
+
+        /// <summary>
+        /// Puts the chord <paramref name="name"/> above the letter at <paramref name="position"/>, renaming the chord
+        /// already there; an empty name removes that chord. Returns false, and changes nothing, if the name isn't a chord.
+        /// </summary>
+        public bool SetChord(int position, string name)
+        {
+            name = name.Trim();
+            var existing = Chords.FirstOrDefault(c => c.Position == position);
+            if (name.Length == 0)
+            {
+                if (existing != null)
+                    Chords.Remove(existing);
+                return true;
+            }
+            if (!Chord.IsValid(name))
+                return false;
+            if (existing != null)
+                existing.Name = name;
+            else
+                Chords.Add(new ChordPlacement(position, name));
+            return true;
         }
 
         public SongLine WithChord(int position, string name)

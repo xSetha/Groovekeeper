@@ -11,13 +11,29 @@
         <Rectangle x:Name="SelectionMark" Grid.RowSpan="2" HorizontalAlignment="Left" Fill="{DynamicResource SelectionBrush}"
                    Opacity="0.4" Visibility="Collapsed" IsHitTestVisible="False" />
 
-        <!-- Chord lane: highlights the drop column while a chord is dragged from the palette -->
-        <Canvas x:Name="Lane" Grid.Row="0" Background="Transparent">
+        <!-- Chord lane: a click types a chord above the letter under the mouse, whose column is highlighted -->
+        <Canvas x:Name="Lane" Grid.Row="0" Background="Transparent" Cursor="IBeam"
+                MouseMove="Lane_MouseMove" MouseLeave="Lane_MouseLeave" MouseLeftButtonDown="Lane_MouseLeftButtonDown">
             <Rectangle x:Name="ColumnGhost" Height="20" Canvas.Top="1" RadiusX="2" RadiusY="2"
                        Fill="{DynamicResource ColumnHighlight}" Visibility="Collapsed" IsHitTestVisible="False" />
         </Canvas>
         <!-- Chord tags, drawn from code -->
         <Canvas x:Name="ChordLayer" Grid.Row="0" />
+
+        <!-- Typing a chord: Enter places it, Esc cancels; what isn't a chord is refused -->
+        <StackPanel x:Name="ChordEditor" Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Left"
+                    VerticalAlignment="Top" Visibility="Collapsed">
+            <Border x:Name="ChordBoxFrame" Background="{DynamicResource ChordTagBackground}" BorderBrush="{DynamicResource AccentBrush}"
+                    BorderThickness="1" CornerRadius="3" Padding="2,0">
+                <TextBox x:Name="ChordBox" Style="{StaticResource BareTextBox}" MinWidth="24"
+                         FontFamily="{DynamicResource SongFont}" FontSize="14" FontWeight="Bold"
+                         Foreground="{DynamicResource ChordTagForeground}" AutomationProperties.Name="Chord"
+                         PreviewKeyDown="ChordBox_PreviewKeyDown" LostKeyboardFocus="ChordBox_LostKeyboardFocus"
+                         TextChanged="ChordBox_TextChanged" />
+            </Border>
+            <TextBlock x:Name="ChordError" Text="Not a chord" Margin="6,0,0,0" FontSize="11" VerticalAlignment="Center"
+                       Foreground="{DynamicResource ErrorBrush}" Visibility="Collapsed" />
+        </StackPanel>
 
         <!-- Find matches, drawn from code behind the (transparent) lyric text -->
         <Canvas x:Name="HighlightLayer" Grid.Row="1" IsHitTestVisible="False" />

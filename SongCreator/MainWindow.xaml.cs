@@ -182,7 +182,7 @@ namespace SongCreator
             Document.ClearSelection();
             // Only a press in the lyrics: chord tags have a drag of their own.
             var control = FindAncestor<SongLineControl>(e.OriginalSource as DependencyObject);
-            _selectionAnchor = control != null && FindAncestor<TextBox>(e.OriginalSource as DependencyObject) != null
+            _selectionAnchor = control != null && control.IsInLyrics(e.OriginalSource)
                 ? new TextPosition(LineOf(control), control.IndexAt(e.GetPosition(control)))
                 : null;
         }

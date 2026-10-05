@@ -6,6 +6,16 @@ version's section here becomes the text of its GitHub release.
 
 ## [Unreleased]
 
+### Added
+- Type chords straight onto a song: click the chord lane above a letter, type the chord and press
+  Enter (Esc cancels). Only real chords are accepted; anything else shows "Not a chord". Double-click
+  a chord to change it, or empty its name to remove it.
+
+### Removed
+- The "Looks like … · Use" key suggestion next to the Key box.
+- The chord panel on the right of the editor, along with dragging chords from it. Chords are typed
+  instead, and the editor has more room. Chords in the song still move by dragging them sideways.
+
 ## [1.1.0] - 2026-10-02
 
 ### Changed

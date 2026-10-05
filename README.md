@@ -1,6 +1,6 @@
 # Groovekeeper
 
-A Windows desktop app for writing chord sheets: type the lyrics, drop each chord exactly on the
+A Windows desktop app for writing chord sheets: type the lyrics, type each chord exactly above the
 syllable where it changes, then transpose, print, and build setlists for a gig.
 
 Songs live in the app's library, with search, and you can still open and save song files:
@@ -25,7 +25,10 @@ The installer isn't code-signed yet, so Windows may warn that it "protected your
 
 **Writing**
 - Lyrics with a chord lane above each line. Chords stay anchored to their letter while you edit.
-- Drag chords from the palette onto a word, drag them sideways to move them, right-click to remove.
+- Click the chord lane above a letter and type a chord; Enter places it, Esc cancels. Only real
+  chords are accepted (`Am7`, `D/F#`, `Cmaj9#11`, …): anything else is refused with "Not a chord".
+  Double-click a chord to change it (an empty name removes it), drag it sideways to move it,
+  right-click to remove it.
 - Sections (`[Verse 1]`, `[Chorus]`, …) that you can rename, move up and down, duplicate or delete.
 - Repeat markers: "play the chorus again" without copying it. Shown as `[Chorus] (repeat)`.
 - Paste a whole song at once, including chords-over-lyrics text copied from chord sites.
@@ -62,11 +65,8 @@ The installer isn't code-signed yet, so Windows may warn that it "protected your
 
 **Music**
 - Transpose up or down by semitones. The key and every chord are respelled to match.
-- Key detection: when the chords point to a key the song isn't set to, the editor suggests it.
-- A chord palette with the chords of the song's key, the chords that usually come next,
-  the chords already in the song, and every chord type (including slash chords) by root.
-- Roman numerals (`I IV V vi`, `ii7`, `bVII`, `I/3`), shown on the palette chips and,
-  with the **I IV V** toggle, on the chords in the editor.
+- Roman numerals (`I IV V vi`, `ii7`, `bVII`, `I/3`), shown with the **I IV V** toggle on the
+  chords in the editor.
 
 **Printing and gigs**
 - Export one or many songs to a single PDF songbook, with an optional table of contents
@@ -217,7 +217,7 @@ keep that name.
 | `SongCreator/Models` | Song, sections, lines and chord placements |
 | `SongCreator/Music` | Chord parsing, keys, transposing, key detection, Roman numerals |
 | `SongCreator/IO` | Song library (SQLite), song files, setlist import, PDF export (QuestPDF) |
-| `SongCreator/ViewModels` | Editor, library, palette, undo history, find/replace, export and setlist logic |
+| `SongCreator/ViewModels` | Editor, library, undo history, find/replace, export and setlist logic |
 | `SongCreator/Views`, `Controls` | WPF windows and the lyric line editor |
 | `SongCreator/Themes` | The four themes |
 | `SongCreator.Tests` | xUnit tests |

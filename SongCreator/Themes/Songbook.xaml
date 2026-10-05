@@ -27,6 +27,8 @@
     <SolidColorBrush x:Key="ButtonHover" Color="#F1EBE0" />
     <SolidColorBrush x:Key="AccentBrush" Color="#9E2B25" />
     <SolidColorBrush x:Key="AccentFill" Color="#9E2B25" />
+    <!-- Text that isn't valid, e.g. a typed chord name that isn't a chord -->
+    <SolidColorBrush x:Key="ErrorBrush" Color="#C62828" />
     <SolidColorBrush x:Key="OnAccentForeground" Color="#FFFFFF" />
     <SolidColorBrush x:Key="SelectionBrush" Color="#D9A79F" />
     <SolidColorBrush x:Key="KeyCapBorder" Color="#D6CCB8" />

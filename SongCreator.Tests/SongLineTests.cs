@@ -66,5 +66,48 @@ namespace SongCreator.Tests
             Assert.Equal("hello world", line.Text);
             Assert.Equal([0, 6], Positions(line));
         }
+
+        private static (int, string)[] ChordsOf(SongLine line) => line.Chords.Select(c => (c.Position, c.Name)).ToArray();
+
+        [Fact]
+        public void SetChordPlacesATypedChord()
+        {
+            var line = new SongLine("hello world").WithChord(0, "G");
+            Assert.True(line.SetChord(6, " Am7 "));
+            Assert.Equal([(0, "G"), (6, "Am7")], ChordsOf(line));
+        }
+
+        [Fact]
+        public void SetChordRenamesTheChordAlreadyThere()
+        {
+            var line = new SongLine("hello").WithChord(0, "G");
+            var chord = line.Chords[0];
+            Assert.True(line.SetChord(0, "D/F#"));
+            Assert.Same(chord, Assert.Single(line.Chords));
+            Assert.Equal("D/F#", chord.Name);
+        }
+
+        [Fact]
+        public void SetChordWithAnEmptyNameRemovesTheChord()
+        {
+            var line = new SongLine("hello").WithChord(0, "G").WithChord(3, "C");
+            Assert.True(line.SetChord(0, "  "));
+            Assert.Equal([(3, "C")], ChordsOf(line));
+            Assert.True(line.SetChord(1, ""));   // nothing there: nothing to do
+            Assert.Equal([(3, "C")], ChordsOf(line));
+        }
+
+        [Theory]
+        [InlineData("x2")]
+        [InlineData("N.C.")]
+        [InlineData("C6/9")]
+        [InlineData("am")]
+        public void SetChordRefusesWhatIsntAChord(string name)
+        {
+            var line = new SongLine("hello").WithChord(0, "G");
+            Assert.False(line.SetChord(0, name));
+            Assert.False(line.SetChord(2, name));
+            Assert.Equal([(0, "G")], ChordsOf(line));
+        }
     }
 }

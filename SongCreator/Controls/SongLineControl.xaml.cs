@@ -22,6 +22,8 @@ namespace SongCreator.Controls
     public partial class SongLineControl : UserControl
     {
         private const double TagPadding = 3;
+        // The chord box's border and padding, so its text lines up with the chord tag it replaces.
+        private const double ChordBoxInset = 3;
 
         public event EventHandler<int>? SplitRequested;
         public event EventHandler? MergeRequested;
@@ -37,6 +39,8 @@ namespace SongCreator.Controls
         private Point _dragStart;
         private int _dragStartPosition;
         private bool _dragging;
+
+        private int? _chordColumn;   // where the chord box types a chord, while it is open
 
         public SongLineControl()
         {
@@ -56,12 +60,6 @@ namespace SongCreator.Controls
                     LyricBox.BringIntoView(caret);
             };
             DataObject.AddPastingHandler(LyricBox, OnPaste);
-
-            // Chords dragged from the palette can be dropped anywhere on the line: above a letter or onto the word.
-            AllowDrop = true;
-            PreviewDragOver += OnChordDragOver;
-            PreviewDragLeave += (_, _) => ColumnGhost.Visibility = Visibility.Collapsed;
-            PreviewDrop += OnChordDrop;
         }
 
         public int Caret => LyricBox.CaretIndex;
@@ -106,6 +104,9 @@ namespace SongCreator.Controls
             Dispatcher.BeginInvoke(DispatcherPriority.Loaded, RenderChords);
         }
 
+        /// <summary>Whether <paramref name="source"/> (e.g. where the mouse was pressed) is in the lyrics' text box.</summary>
+        public bool IsInLyrics(object source) => source is Visual visual && (visual == LyricBox || LyricBox.IsAncestorOf(visual));
+
         public void FocusText(int caret)
         {
             LyricBox.Focus();
@@ -143,6 +144,7 @@ namespace SongCreator.Controls
                     chord.PropertyChanged -= Chord_PropertyChanged;
             }
 
+            CloseChordBox();
             _line = e.NewValue as SongLine;
             if (_line == null)
                 return;
@@ -261,13 +263,24 @@ namespace SongCreator.Controls
                     CornerRadius = new CornerRadius(3),
                     Padding = new Thickness(TagPadding, 0, TagPadding, 0),
                     Cursor = Cursors.Hand,
-                    ToolTip = "Drag to move · Right-click to delete",
+                    ToolTip = "Drag to move · Double-click to change · Right-click to delete",
                     Child = label,
                 };
                 tag.SetResourceReference(Border.BackgroundProperty, "ChordTagBackground");
                 Canvas.SetLeft(tag, ColumnX(chord.Position) - TagPadding);
                 Canvas.SetTop(tag, 1);
-                tag.MouseLeftButtonDown += (_, e) => StartDrag(tag, chord, e);
+                tag.MouseLeftButtonDown += (_, e) =>
+                {
+                    if (e.ClickCount == 2)
+                    {
+                        OpenChordBox(chord.Position, chord.Name);
+                        e.Handled = true;
+                    }
+                    else
+                    {
+                        StartDrag(tag, chord, e);
+                    }
+                };
                 tag.MouseMove += (_, e) => ContinueDrag(e);
                 tag.MouseLeftButtonUp += (_, e) => EndDrag(tag, e);
                 tag.MouseRightButtonUp += (_, e) =>
@@ -318,7 +331,7 @@ namespace SongCreator.Controls
         private string Display(ChordPlacement chord) =>
             NumeralKey.Length > 0 ? RomanNumerals.Of(chord.Name, NumeralKey) ?? chord.Name : chord.Name;
 
-        // ---- Dropping a chord from the palette (the only way to add or change one) ----
+        // ---- Typing a chord: a click on the lane, or a double-click on a chord ----
 
         private void ShowColumnGhost(int column)
         {
@@ -327,28 +340,98 @@ namespace SongCreator.Controls
             ColumnGhost.Visibility = Visibility.Visible;
         }
 
-        private void OnChordDragOver(object sender, DragEventArgs e)
+        private void Lane_MouseMove(object sender, MouseEventArgs e)
         {
-            if (!e.Data.GetDataPresent(ChordDrag.Format))
-                return;
-            e.Effects = DragDropEffects.Copy;
-            e.Handled = true;
-            ShowColumnGhost(ColumnAt(e.GetPosition(Lane).X));
+            if (_chordColumn == null)
+                ShowColumnGhost(ColumnAt(e.GetPosition(Lane).X));
         }
 
-        private void OnChordDrop(object sender, DragEventArgs e)
-        {
-            if (_line == null || e.Data.GetData(ChordDrag.Format) is not string name)
-                return;
-            e.Handled = true;
-            ColumnGhost.Visibility = Visibility.Collapsed;
+        private void Lane_MouseLeave(object sender, MouseEventArgs e) => ColumnGhost.Visibility = Visibility.Collapsed;
 
-            // Dropping on an existing chord replaces it.
+        private void Lane_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
             int column = ColumnAt(e.GetPosition(Lane).X);
-            if (_line.Chords.FirstOrDefault(c => c.Position == column) is { } existing)
-                existing.Name = name;
-            else
-                _line.Chords.Add(new ChordPlacement(column, name));
+            OpenChordBox(column, _line?.Chords.FirstOrDefault(c => c.Position == column)?.Name ?? "");
+            e.Handled = true;
+        }
+
+        private void OpenChordBox(int column, string name)
+        {
+            if (_line == null)
+                return;
+            // A click on the lane doesn't take the focus, so finish a chord being typed on this line first.
+            if (_chordColumn != null && !CommitChordBox())
+                CloseChordBox();
+
+            _chordColumn = column;
+            ColumnGhost.Visibility = Visibility.Collapsed;
+            SetTagsVisibility(column, Visibility.Hidden);
+            ChordEditor.Margin = new Thickness(ColumnX(column) - TagPadding - ChordBoxInset, 0, 0, 0);
+            ChordBox.Text = name;
+            ShowChordError(false);
+            ChordEditor.Visibility = Visibility.Visible;
+            Dispatcher.BeginInvoke(DispatcherPriority.Loaded, () =>
+            {
+                ChordBox.Focus();
+                ChordBox.SelectAll();
+            });
+        }
+
+        /// <summary>Places the typed chord (an empty box removes the chord). Returns false, saying why, if it isn't a chord.</summary>
+        private bool CommitChordBox()
+        {
+            if (_line == null || _chordColumn is not int column)
+                return true;
+            if (!_line.SetChord(column, ChordBox.Text))
+            {
+                ShowChordError(true);
+                return false;
+            }
+            CloseChordBox();
+            return true;
+        }
+
+        private void CloseChordBox()
+        {
+            if (_chordColumn is not int column)
+                return;
+            _chordColumn = null;   // first: hiding the box takes its focus away, which mustn't commit again
+            ChordEditor.Visibility = Visibility.Collapsed;
+            SetTagsVisibility(column, Visibility.Visible);
+        }
+
+        private void ChordBox_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            if (_chordColumn is not int column || e.Key is not (Key.Enter or Key.Escape))
+                return;
+            if (e.Key == Key.Escape)
+                CloseChordBox();
+            if (_chordColumn == null || CommitChordBox())
+                FocusText(column);   // back to the lyrics, under the chord
+            e.Handled = true;
+        }
+
+        // Clicking away keeps a chord, and drops anything else.
+        private void ChordBox_LostKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
+        {
+            if (_chordColumn != null && !CommitChordBox())
+                CloseChordBox();
+        }
+
+        private void ChordBox_TextChanged(object sender, TextChangedEventArgs e) => ShowChordError(false);
+
+        private void ShowChordError(bool show)
+        {
+            ChordError.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
+            ChordBoxFrame.SetResourceReference(Border.BorderBrushProperty, show ? "ErrorBrush" : "AccentBrush");
+        }
+
+        /// <summary>Hides the chord tag the chord box covers (or shows it again).</summary>
+        private void SetTagsVisibility(int column, Visibility visibility)
+        {
+            foreach (var (chord, tag) in _tags)
+                if (chord.Position == column)
+                    tag.Visibility = visibility;
         }
 
         // ---- Moving a chord along its line ----
