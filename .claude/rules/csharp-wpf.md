@@ -37,7 +37,7 @@ A WPF app on .NET 10 with MVVM, no framework. Match the patterns already in the 
 ## Files and errors
 
 - Library songs live in SQLite (`IO/SongLibrary`), each stored as its `.txt` text. Song files are plain `.txt` (chords on the line above the lyrics) or ChordPro. Don't change any of these formats without asking; existing song files and libraries must keep loading (add a schema version step, never break an old `library.db`).
-- Catch specific exceptions only, in the pattern the code already uses: `catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)`, and `SqliteException` around library calls. Report to the user through `IDialogService.ShowError`; never swallow errors silently.
+- Catch specific exceptions only, in the pattern the code already uses: `catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)`, and `SqliteException` around library calls. Report to the user through `IDialogService.Notify(NotificationKind.Error, ...)` (a toast), or `ShowError` (a modal) when the user must act, e.g. a song that couldn't be saved; never swallow errors silently.
 - Never throw base `Exception`. Use a specific type (`InvalidOperationException`, `JsonException`, ...) with a message that says what went wrong.
 - Never overwrite or modify a user's song file or library song except on an explicit save. Importing never changes the files, and setlists never change their songs.
 
