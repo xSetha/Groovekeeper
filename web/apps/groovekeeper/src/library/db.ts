@@ -25,13 +25,13 @@ export interface Synced {
 }
 
 /**
- * A song in a setlist: the library song, and the key to play it in ('' plays it as written). It has its own
- * id because the same song can be in a setlist twice, and its place changes when the setlist is reordered.
+ * A song in a setlist, played as it's written. It has its own id because the same song can be in a setlist
+ * twice, and its place changes when the setlist is reordered. (Entries saved when setlists had a key for each
+ * song still carry a `key`; it's ignored.)
  */
 export interface SetlistEntry {
   id: string;
   songId: string;
-  key: string;
 }
 
 /** A setlist: songs in playing order. It only refers to its songs, so editing a song shows in every setlist. */

@@ -67,7 +67,7 @@ describe('exporting a PDF', () => {
     await waitFor(() => expect(exportPdf).toHaveBeenCalledTimes(1));
     const [fileName, title, songs, options] = vi.mocked(exportPdf).mock.calls[0]!;
     expect([fileName, title]).toEqual(['Amazing Grace.pdf', 'Amazing Grace']);
-    expect(songs.map((s) => [s.song.title, s.semitones])).toEqual([['Amazing Grace', 0]]);
+    expect(songs.map((s) => s.song.title)).toEqual(['Amazing Grace']);
     expect(options).toEqual({ collapseRepeats: true, numerals: true });
   });
 
@@ -79,27 +79,25 @@ describe('exporting a PDF', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent("Couldn't make the PDF.");
   });
 
-  it('exports a setlist with each song in its key, noting a changed key', async () => {
+  it('exports a setlist with each song as it is written', async () => {
     const user = userEvent.setup();
     await db.setlists.add({
       id: 'gig', name: 'Friday gig', updatedAt: 0, version: 0, dirty: 1,
-      songs: [{ id: '1', songId: 'grace', key: 'A' }, { id: '2', songId: 'house', key: '' }],
+      songs: [{ id: '1', songId: 'grace' }, { id: '2', songId: 'house' }],
     });
     renderAt('/pdf?setlist=gig');
 
-    expect(await screen.findByText('[Key of A (+2 semitones from the original)]')).toBeInTheDocument();
-    expect(preview().getByText('Key: A')).toBeInTheDocument();
-    expect(chordsShown().slice(0, 3)).toEqual(['A', 'D', 'E']);
-    // Played as written, in the key its chords point to.
-    expect(preview().getByText('Key: Am')).toBeInTheDocument();
-    expect(preview().getAllByRole('article')).toHaveLength(2);
+    await waitFor(() => expect(preview().getAllByRole('article')).toHaveLength(2));
+    expect(preview().getByText('Key: G')).toBeInTheDocument();
+    expect(chordsShown().slice(0, 3)).toEqual(['G', 'C', 'D']);
+    expect(screen.queryByText(/from the original/)).not.toBeInTheDocument();
     await waitFor(() => expect(document.title).toBe('Friday gig'));
 
     await user.click(screen.getByRole('button', { name: 'Export PDF' }));
     await waitFor(() => expect(exportPdf).toHaveBeenCalledTimes(1));
     const [fileName, , songs] = vi.mocked(exportPdf).mock.calls[0]!;
     expect(fileName).toBe('Friday gig.pdf');
-    expect(songs.map((s) => [s.song.key, s.semitones])).toEqual([['A', 2], ['Am', 0]]);
+    expect(songs.map((s) => s.song.title)).toEqual(['Amazing Grace', 'House of the Rising Sun']);
   });
 
   it('exports the songs ticked in the library as a songbook', async () => {

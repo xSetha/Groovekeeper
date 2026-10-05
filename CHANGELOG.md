@@ -22,6 +22,10 @@ version's section here becomes the text of its GitHub release.
 
 ### Removed
 - The "Looks like … · Use" key suggestion next to the Key box.
+- Choosing a key for each song in a setlist. Songs in a setlist are played and exported as they
+  are written, and the setlist PDF no longer notes a changed key. To play a song in another key,
+  transpose the song itself. Keys chosen in older setlists, and in imported `.setlist` files, are
+  ignored.
 - The chord panel on the right of the editor, along with dragging chords from it. Chords are typed
   instead, and the editor has more room. Chords in the song still move by dragging them sideways.
 

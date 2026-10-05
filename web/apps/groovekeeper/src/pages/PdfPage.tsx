@@ -1,10 +1,10 @@
-import { displayTitle, keyChangeNote, parseSongText, UNTITLED_TITLE, type Song } from '@groovekeeper/core';
+import { displayTitle, parseSongText, UNTITLED_TITLE, type Song } from '@groovekeeper/core';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import { db, type LibrarySong } from '../library/db';
 import { listSongs } from '../library/library';
-import { setlistSongs, songToPlay } from '../library/setlists';
+import { setlistSongs } from '../library/setlists';
 import { lineSegments, printedSections, type ExportOptions, type ExportSong, type Ink } from '../pdf/layout';
 
 /** A song in the PDF, with an id for its place in the preview. */
@@ -16,7 +16,7 @@ type Options = ExportOptions;
 
 /**
  * Export PDF: the songs as they'll be in the PDF, with the options, and a button that downloads the PDF.
- * Exports one song (`?song=id`), a setlist with each song in its setlist key (`?setlist=id`), or songs
+ * Exports one song (`?song=id`), a setlist (`?setlist=id`), or songs
  * ticked from the library as a songbook.
  */
 export default function PdfPage() {
@@ -61,7 +61,7 @@ function OneSong({ id, options, children }: ModeProps & { id: string }) {
     <PdfLayout
       title={song ? displayTitle(song) : 'Export PDF'}
       back={{ to: `/songs/${id}`, label: song ? displayTitle(song) : 'Back to the song' }}
-      songs={song ? [{ id, song, semitones: 0 }] : []}
+      songs={song ? [{ id, song }] : []}
       empty="This song isn't in your library."
       options={options}
     >
@@ -85,9 +85,8 @@ function Setlist({ id, options, children }: ModeProps & { id: string }) {
     <PdfLayout
       title={loaded?.name ?? 'Export PDF'}
       back={{ to: `/setlists/${id}`, label: loaded?.name ?? 'Setlists' }}
-      songs={loaded?.songs.map((s) => ({ id: s.entry.id, song: songToPlay(s), semitones: s.semitones })) ?? []}
+      songs={loaded?.songs.map((s) => ({ id: s.entry.id, song: s.song })) ?? []}
       empty={loaded ? 'No songs in this setlist yet.' : "This setlist isn't in your library."}
-      intro={loaded ? 'Each song is in its key for the setlist.' : undefined}
       options={options}
     >
       {children}
@@ -112,7 +111,7 @@ function Songbook({ options, children }: ModeProps) {
     <PdfLayout
       title="Songbook"
       back={{ to: '/', label: 'Library' }}
-      songs={chosen.map((stored) => ({ id: stored.id, song: parseSongText(stored.text), semitones: 0 }))}
+      songs={chosen.map((stored) => ({ id: stored.id, song: parseSongText(stored.text) }))}
       empty={library?.length === 0 ? 'The library is empty. Write or import songs first.' : 'Tick the songs to export.'}
       intro="Tick the songs for the PDF. They follow one another in title order; for another order, make a setlist."
       options={options}
@@ -216,8 +215,8 @@ function PdfLayout({ title, back, songs, empty, intro, options, children }: Layo
         {songs.length > 0 ? (
           // The paper, in the Songbook theme's ink whatever the app's theme.
           <div ref={paper} data-theme="songbook" className="mx-auto max-w-[21cm] bg-card px-[2cm] py-[1.5cm] text-fg shadow-xl max-sm:px-6">
-            {songs.map(({ id, song, semitones }) => (
-              <PreviewSong key={id} song={song} semitones={semitones} options={options} />
+            {songs.map(({ id, song }) => (
+              <PreviewSong key={id} song={song} options={options} />
             ))}
           </div>
         ) : null}
@@ -233,16 +232,12 @@ export const pdfFileName = (title: string): string => `${title.replace(/[\\/:*?"
  * One song as in the PDF (pdf/layout.ts lays out the same sections and lines): following the one before it
  * under a thin line, its sizes in points, and chord rows written as text above their lyric.
  */
-function PreviewSong({ song, semitones, options }: { song: Song; semitones: number; options: Options }) {
+function PreviewSong({ song, options }: { song: Song; options: Options }) {
   const sections = printedSections(song, options);
-  const note = keyChangeNote(song.key, semitones);
   return (
     <article className="not-first:mt-[22pt] not-first:border-t not-first:border-line not-first:pt-[22pt]">
       <div className="font-sans">
-        <h2 className="text-[18pt] leading-tight font-bold">
-          {displayTitle(song)}
-          {note ? <span className="ml-3 text-[11pt] font-normal text-muted">{note}</span> : null}
-        </h2>
+        <h2 className="text-[18pt] leading-tight font-bold">{displayTitle(song)}</h2>
         {song.artist ? <p className="text-[11pt] text-muted">{song.artist}</p> : null}
         {song.key ? <p className="mt-1 text-[9pt] text-muted">Key: {song.key}</p> : null}
       </div>

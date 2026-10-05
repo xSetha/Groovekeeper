@@ -21,10 +21,7 @@ it('upgrades a version 2 library: setlist songs get their own ids, and everythin
   expect([song?.title, song?.version, song?.dirty]).toEqual(['Amazing Grace', 0, 1]);
 
   expect(setlist?.name).toBe('Friday gig');
-  expect(setlist?.songs.map(({ songId, key }) => ({ songId, key }))).toEqual([
-    { songId: 'grace', key: 'A' },
-    { songId: 'grace', key: '' },
-  ]);
+  expect(setlist?.songs.map(({ songId }) => songId)).toEqual(['grace', 'grace']);
   const [first, second] = setlist?.songs ?? [];
   expect(first?.id).toMatch(/^[0-9a-f-]{36}$/);
   expect(second?.id).not.toBe(first?.id);

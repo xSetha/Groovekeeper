@@ -267,7 +267,6 @@ namespace SongCreator.Tests
         // ---- music/printing.json ----
 
         public static TheoryData<string> RepeatedSectionCases() => Cases("printing.json", "repeatedSections");
-        public static TheoryData<string> KeyChangeNoteCases() => Cases("printing.json", "keyChangeNotes");
 
         [Theory]
         [MemberData(nameof(RepeatedSectionCases))]
@@ -277,14 +276,6 @@ namespace SongCreator.Tests
             var song = SongTextReader.Parse((string)c["song"]!);
             var expected = c["expected"]!.AsArray().Select(n => song.Sections[n!.GetValue<int>()]);
             Assert.Equal(expected, song.Sections.Where(SongPdfWriter.RepeatedSections(song).Contains));
-        }
-
-        [Theory]
-        [MemberData(nameof(KeyChangeNoteCases))]
-        public void NotesATransposedKey(string json)
-        {
-            var c = Case(json);
-            Assert.Equal((string?)c["expected"], SongPdfWriter.KeyChangeNote((string)c["key"]!, (int)c["semitones"]!));
         }
     }
 }

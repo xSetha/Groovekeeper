@@ -59,7 +59,7 @@ namespace SongCreator.Tests
         {
             var library = CreateWith(new Song { Title = "One" });
             var song = library.Songs[0];
-            _library.SaveSetlist(null, "Gig", [new(song.Id, "")]);
+            _library.SaveSetlist(null, "Gig", [song.Id]);
             _dialogs.ConfirmAnswer = false;
 
             library.DeleteCommand.Execute(song);

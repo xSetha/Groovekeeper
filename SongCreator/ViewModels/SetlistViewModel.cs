@@ -10,8 +10,8 @@ using SongCreator.Services;
 namespace SongCreator.ViewModels
 {
     /// <summary>
-    /// The Setlists tab: the library's setlists, and the selected one's songs in playing order, each in the key chosen
-    /// for the gig. Every change is saved in the library right away. A setlist only refers to its songs: they are
+    /// The Setlists tab: the library's setlists, and the selected one's songs in playing order, played as they are
+    /// written. Every change is saved in the library right away. A setlist only refers to its songs: they are
     /// edited in the song editor, and the same song can be in several setlists. Older .setlist files can be imported.
     /// </summary>
     public class SetlistViewModel : ObservableObject
@@ -36,14 +36,8 @@ namespace SongCreator.ViewModels
             _dialogs = dialogs;
             _library = library.Library;
             Library = library;
-            Items.CollectionChanged += (_, e) =>
+            Items.CollectionChanged += (_, _) =>
             {
-                foreach (SetlistItemViewModel item in e.NewItems ?? Array.Empty<object>())
-                    item.PropertyChanged += (_, change) =>
-                    {
-                        if (change.PropertyName == nameof(SetlistItemViewModel.Key))
-                            Save();
-                    };
                 for (int i = 0; i < Items.Count; i++)
                     Items[i].Position = i + 1;
                 OnPropertyChanged(nameof(IsEmpty));
@@ -164,10 +158,10 @@ namespace SongCreator.ViewModels
             Load();
         }
 
-        /// <summary>Adds a library song at <paramref name="index"/> in the selected setlist, in its own key.</summary>
+        /// <summary>Adds a library song at <paramref name="index"/> in the selected setlist.</summary>
         public void AddSong(SongSummary song, int index)
         {
-            if (SelectedSetlist != null && LoadSong(song.Id, "") is { } item)
+            if (SelectedSetlist != null && LoadSong(song.Id) is { } item)
                 Items.Insert(Math.Clamp(index, 0, Items.Count), item);
         }
 
@@ -237,12 +231,12 @@ namespace SongCreator.ViewModels
                 return;
             }
 
-            var songs = new List<(Song Song, string Key)>();
+            var songs = new List<Song>();
             foreach (var entry in setlist.Songs)
             {
                 try
                 {
-                    songs.Add((SongFile.Load(entry.Path), entry.Key));
+                    songs.Add(SongFile.Load(entry.Path));
                 }
                 catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
                 {
@@ -253,10 +247,8 @@ namespace SongCreator.ViewModels
             long id;
             try
             {
-                var ids = _library.AddSongs(songs.Select(s => s.Song));
-                // The key is checked against the song's keys when the setlist is shown, like any saved key.
-                id = _library.SaveSetlist(null, setlist.Name.Trim().Length > 0 ? setlist.Name.Trim() : NewSetlistName,
-                    songs.Select((s, i) => new LibrarySetlistEntry(ids[i], s.Key)).ToList());
+                var ids = _library.AddSongs(songs);
+                id = _library.SaveSetlist(null, setlist.Name.Trim().Length > 0 ? setlist.Name.Trim() : NewSetlistName, ids);
             }
             catch (SqliteException ex)
             {
@@ -278,8 +270,8 @@ namespace SongCreator.ViewModels
 
             try
             {
-                File.WriteAllBytes(path, SongPdfWriter.Create(Items.Select(i => i.SongToPlay()).ToList(), IncludeTableOfContents, RomanNumerals,
-                    Items.Select(i => i.Semitones).ToList(), CollapseRepeats));
+                File.WriteAllBytes(path, SongPdfWriter.Create(Items.Select(i => i.Song).ToList(), IncludeTableOfContents, RomanNumerals,
+                    collapseRepeats: CollapseRepeats));
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
@@ -311,7 +303,7 @@ namespace SongCreator.ViewModels
             Items.Clear();
             if (setlist != null)
             {
-                foreach (var item in setlist.Songs.Select(entry => LoadSong(entry.SongId, entry.Key)).OfType<SetlistItemViewModel>())
+                foreach (var item in setlist.Songs.Select(LoadSong).OfType<SetlistItemViewModel>())
                     Items.Add(item);
             }
             _name = setlist?.Name ?? "";
@@ -325,7 +317,7 @@ namespace SongCreator.ViewModels
                 return;
             try
             {
-                _library.SaveSetlist(setlist.Id, Name, Items.Select(i => new LibrarySetlistEntry(i.SongId, i.Key)).ToList());
+                _library.SaveSetlist(setlist.Id, Name, Items.Select(i => i.SongId).ToList());
             }
             catch (SqliteException ex)
             {
@@ -333,11 +325,11 @@ namespace SongCreator.ViewModels
             }
         }
 
-        private SetlistItemViewModel? LoadSong(long songId, string key)
+        private SetlistItemViewModel? LoadSong(long songId)
         {
             try
             {
-                return _library.LoadSong(songId) is { } song ? new SetlistItemViewModel(song, songId, key) : null;
+                return _library.LoadSong(songId) is { } song ? new SetlistItemViewModel(song, songId) : null;
             }
             catch (SqliteException ex)
             {

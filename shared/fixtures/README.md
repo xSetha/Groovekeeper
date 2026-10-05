@@ -31,4 +31,4 @@ be past the end of the text (chord-only lines).
 | `roman-numerals.json` | A chord written as a Roman numeral in a key; `null` when the chord or key isn't valid |
 | `key-detection.json` | The key guessed from a song's chords; `null` when there's no clear key |
 | `chord-theory.json` | The chords of a key, the palette root of a key, whether a chord fits a key, and what usually comes next |
-| `printing.json` | Printed songs: which sections repeat an earlier one exactly (as indexes), and the note on a transposed key |
+| `printing.json` | Printed songs: which sections repeat an earlier one exactly (as indexes) |

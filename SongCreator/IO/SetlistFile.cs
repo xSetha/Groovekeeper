@@ -3,8 +3,8 @@ using System.Text.Json;
 
 namespace SongCreator.IO
 {
-    /// <summary>A song in a setlist: its file and the key to play it in (empty: as written).</summary>
-    public record SetlistEntry(string Path, string Key);
+    /// <summary>A song in a setlist: its file. (The key these files can name for a song is ignored.)</summary>
+    public record SetlistEntry(string Path);
 
     public record Setlist(string Name, IReadOnlyList<SetlistEntry> Songs);
 
@@ -31,7 +31,6 @@ namespace SongCreator.IO
                 Songs = (setlist.Songs ?? []).Select(song => song with
                 {
                     Path = System.IO.Path.GetFullPath(System.IO.Path.Combine(folder, song.Path)),
-                    Key = song.Key ?? "",
                 }).ToList(),
             };
         }

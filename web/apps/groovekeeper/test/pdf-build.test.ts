@@ -21,8 +21,8 @@ const CONSTANTINE =
   '[Verse 1]\nDm           A        Dm\nConstantine, Constantine\nDm        A        Dm\nMă mir şi mă uit la tine\n\n[Intro]\nDm  Gm  Dm  Dm\n';
 
 describe('the PDF file', () => {
-  it('is written with the fonts, letters like ă and ş, numerals and a transposed key', () => {
-    const songs = [0, 3].map((semitones) => ({ song: parseSongText(CONSTANTINE), semitones }));
+  it('is written with the fonts, letters like ă and ş, and numerals', () => {
+    const songs = [0, 1].map(() => ({ song: parseSongText(CONSTANTINE) }));
     const doc = buildPdf(new jsPDF({ unit: 'pt', format: 'a4' }), fonts, 'Songbook', songs, { collapseRepeats: true, numerals: true }, inks);
     const bytes = new Uint8Array(doc.output('arraybuffer'));
     const pdf = new TextDecoder('latin1').decode(bytes);

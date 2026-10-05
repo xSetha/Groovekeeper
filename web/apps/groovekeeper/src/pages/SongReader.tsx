@@ -15,8 +15,6 @@ interface Props {
   song: Song;
   /** Where "‹ back" goes: the library, or the setlist the song is played from. */
   back?: { to: string; label: string };
-  /** How far to transpose the song to start with: a setlist's key for it. */
-  startSemitones?: number;
   /** In a setlist: the songs before and after, and which one this is ("2 of 5"). */
   steps?: { previous: string | null; next: string | null; position: string };
 }
@@ -26,12 +24,11 @@ interface Props {
  * and next song) at the bottom within thumb reach. Transposing here only changes what's shown, never the
  * saved song.
  */
-export function SongReader({ song, back = { to: '/', label: 'Library' }, startSemitones = 0, steps }: Props) {
-  const [semitones, setSemitones] = useState(startSemitones);
+export function SongReader({ song, back = { to: '/', label: 'Library' }, steps }: Props) {
+  const [semitones, setSemitones] = useState(0);
   const shown = semitones === 0 ? song : transposeSong(song, semitones);
   // The song's key, or the one its chords point to, moved with the song.
   const original = songKey(song).key;
-  const startKey = transposeKey(original, startSemitones);
   const fontSize = useFittedFontSize(song);
 
   useEffect(() => {
@@ -60,9 +57,9 @@ export function SongReader({ song, back = { to: '/', label: 'Library' }, startSe
             <span className="text-muted">Key </span>
             <span className="font-semibold" data-testid="song-key">{transposeKey(original, semitones) || '–'}</span>
           </div>
-          {semitones !== startSemitones ? (
-            <button type="button" className="min-h-8 text-sm text-accent short:min-h-6" onClick={() => setSemitones(startSemitones)}>
-              Back to {startKey || 'the original key'}
+          {semitones !== 0 ? (
+            <button type="button" className="min-h-8 text-sm text-accent short:min-h-6" onClick={() => setSemitones(0)}>
+              Back to {original || 'the original key'}
             </button>
           ) : (
             <div className="min-h-8 text-sm text-muted short:min-h-6">Transpose</div>

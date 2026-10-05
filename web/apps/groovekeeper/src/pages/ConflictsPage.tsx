@@ -107,10 +107,10 @@ function Content({ table, row }: { table: Conflict['table']; row: LibrarySong | 
     );
   }
   const setlist = row as LibrarySetlist | RemoteSetlist;
-  return <SetlistContent name={setlist.name} songIds={setlist.songs.map((entry) => entry.songId)} keys={setlist.songs.map((e) => e.key)} />;
+  return <SetlistContent name={setlist.name} songIds={setlist.songs.map((entry) => entry.songId)} />;
 }
 
-function SetlistContent({ name, songIds, keys }: { name: string; songIds: string[]; keys: string[] }) {
+function SetlistContent({ name, songIds }: { name: string; songIds: string[] }) {
   const songs = useLiveQuery(() => db.songs.bulkGet(songIds), [songIds.join()]);
   return (
     <>
@@ -119,7 +119,6 @@ function SetlistContent({ name, songIds, keys }: { name: string; songIds: string
         {songIds.map((id, i) => (
           <li key={`${id}-${i}`}>
             {songs?.[i]?.title || UNTITLED_TITLE}
-            {keys[i] ? <span className="text-muted"> in {keys[i]}</span> : null}
           </li>
         ))}
       </ol>

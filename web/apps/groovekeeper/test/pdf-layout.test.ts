@@ -55,7 +55,7 @@ describe('the pages', () => {
   const short = parseSongText('Short Song\nSomeone\n\nKey: G\n\n[Chorus]\nG\nhey\n');
 
   it('flows a long song onto more pages, with every chord row on the same page as its lyric', () => {
-    const pages = layoutPdf([{ song: long, semitones: 0 }], options, measure);
+    const pages = layoutPdf([{ song: long }], options, measure);
     expect(pages.length).toBeGreaterThan(1);
     for (const page of pages) {
       const rows = texts(page);
@@ -66,11 +66,11 @@ describe('the pages', () => {
   });
 
   it('puts the next song after a line, and keeps its title with its first lines', () => {
-    const pages = layoutPdf([{ song: long, semitones: 0 }, { song: short, semitones: 2 }], options, measure);
+    const pages = layoutPdf([{ song: long }, { song: short }], options, measure);
     const last = pages.at(-1)!;
     const title = texts(last).indexOf('Short Song');
     expect(title).toBeGreaterThanOrEqual(0);
-    expect(texts(last).slice(title)).toEqual(['Short Song', '[Key of G (+2 semitones from the original)]', 'Someone', 'Key: G', '[Chorus]', 'G', 'hey']);
+    expect(texts(last).slice(title)).toEqual(['Short Song', 'Someone', 'Key: G', '[Chorus]', 'G', 'hey']);
     // The line between the songs is on the same page, above the title, unless the title starts the page.
     const rule = last.find((mark) => mark.kind === 'rule');
     const titleMark = last.find((mark) => mark.kind === 'text' && mark.text === 'Short Song');
@@ -79,13 +79,13 @@ describe('the pages', () => {
 
   it('writes a repeated section as [name] (repeat)', () => {
     const song = parseSongText('Song\n\n[Chorus]\nG\nhey\n\n[Chorus]\nG\nhey\n');
-    expect(texts(layoutPdf([{ song, semitones: 0 }], options, measure)[0]!)).toEqual(['Song', '[Chorus]', 'G', 'hey', '[Chorus]', '(repeat)']);
+    expect(texts(layoutPdf([{ song }], options, measure)[0]!)).toEqual(['Song', '[Chorus]', 'G', 'hey', '[Chorus]', '(repeat)']);
   });
 
   it('wraps a line longer than the page', () => {
     const lyric = 'word '.repeat(30).trim();
     const song = parseSongText(`Song\n\n[Verse]\nG\n${lyric}\n`);
-    const rows = texts(layoutPdf([{ song, semitones: 0 }], options, measure)[0]!).slice(2);
+    const rows = texts(layoutPdf([{ song }], options, measure)[0]!).slice(2);
     expect(rows[0]).toBe('G');
     expect(rows.filter((row) => row.startsWith('word')).join(' ')).toBe(lyric);
     expect(rows.length).toBeGreaterThan(3);

@@ -2,7 +2,7 @@
 // pages follow the desktop's PDF export (SongPdfWriter): A4, 2 cm margins, songs one after another under a
 // thin line, and nothing split that's read together.
 import {
-  chordLine, displayTitle, keyChangeNote, parseKey, printedLines, repeatedSections, romanNumeral, type Song,
+  chordLine, displayTitle, parseKey, printedLines, repeatedSections, romanNumeral, type Song,
 } from '@groovekeeper/core';
 
 export interface ExportOptions {
@@ -10,10 +10,9 @@ export interface ExportOptions {
   numerals: boolean;
 }
 
-/** A song to export: `semitones` is how far a setlist moved it from its own key. */
+/** A song to export, as it's written. */
 export interface ExportSong {
   song: Song;
-  semitones: number;
 }
 
 /** A section as it's printed: collapsed to "[Chorus] (repeat)", or its lines as chord row and lyric. */
@@ -169,25 +168,10 @@ export function layoutPdf(songs: ExportSong[], options: ExportOptions, measure: 
     ];
   };
 
-  const header = ({ song, semitones }: ExportSong): Block => {
-    const title = displayTitle(song);
-    const note = keyChangeNote(song.key, semitones);
-    const titleLines = wrapWords(title, 'sansBold', TITLE_SIZE, width, measure);
+  const header = ({ song }: ExportSong): Block => {
+    const titleLines = wrapWords(displayTitle(song), 'sansBold', TITLE_SIZE, width, measure);
     const rows: Block = titleLines.map((line) =>
       row(TITLE_SIZE * 1.25, (top) => [text(left, baseline(top, TITLE_SIZE * 1.25), line, 'sansBold', TITLE_SIZE, 'fg')]));
-    if (note) {
-      // Next to the title when it fits, as on the desktop; under it otherwise.
-      const titleEnd = left + measure(titleLines.at(-1) ?? '', 'sansBold', TITLE_SIZE) + 9;
-      const last = rows.at(-1);
-      if (last && titleEnd + measure(note, 'sans', SUBTITLE_SIZE) <= left + width) {
-        rows[rows.length - 1] = row(last.height, (top) => [
-          ...last.marks(top),
-          text(titleEnd, baseline(top, last.height), note, 'sans', SUBTITLE_SIZE, 'muted'),
-        ]);
-      } else {
-        rows.push(row(SUBTITLE_SIZE * 1.4, (top) => [text(left, baseline(top, SUBTITLE_SIZE * 1.4), note, 'sans', SUBTITLE_SIZE, 'muted')]));
-      }
-    }
     if (song.artist) {
       rows.push(row(SUBTITLE_SIZE * 1.4, (top) => [text(left, baseline(top, SUBTITLE_SIZE * 1.4), song.artist, 'sans', SUBTITLE_SIZE, 'muted')]));
     }

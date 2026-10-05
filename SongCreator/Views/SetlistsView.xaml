@@ -45,7 +45,7 @@
         <TextBlock Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center"
                    Foreground="{DynamicResource MutedForeground}" LineHeight="22"
                    Visibility="{Binding HasSelection, Converter={StaticResource BoolToCollapsed}}"
-                   Text="Pick a setlist on the left, or create one with + New setlist.&#10;A setlist puts library songs in playing order, each in the key you'll play it in." />
+                   Text="Pick a setlist on the left, or create one with + New setlist.&#10;A setlist puts library songs in playing order." />
         <DockPanel Grid.Column="1" Margin="32,24,32,20" Visibility="{Binding HasSelection, Converter={StaticResource BoolToVisible}}">
             <!-- Name, and delete -->
             <DockPanel DockPanel.Dock="Top" Margin="0,0,0,16">
@@ -119,15 +119,6 @@
                                                         Foreground="{DynamicResource MutedForeground}"
                                                         Command="{Binding DataContext.RemoveCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                                         CommandParameter="{Binding}" />
-                                            </StackPanel>
-                                            <!-- Key to play it in -->
-                                            <StackPanel DockPanel.Dock="Right" Width="150" Margin="12,0" VerticalAlignment="Center" Cursor="Arrow">
-                                                <ComboBox Style="{StaticResource DarkComboBox}" ItemsSource="{Binding KeyOptions}"
-                                                          SelectedItem="{Binding Key}" FontWeight="SemiBold" MinHeight="26"
-                                                          HorizontalAlignment="Left" MinWidth="70" ToolTip="Key to play it in"
-                                                          Visibility="{Binding HasKey, Converter={StaticResource BoolToVisible}}" />
-                                                <TextBlock Text="{Binding KeyNote}" FontSize="11" Margin="0,2,0,0"
-                                                           Foreground="{DynamicResource MutedForeground}" TextTrimming="CharacterEllipsis" />
                                             </StackPanel>
                                             <StackPanel VerticalAlignment="Center">
                                                 <TextBlock Text="{Binding Song.DisplayTitle}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />

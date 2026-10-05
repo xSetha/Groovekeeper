@@ -20,10 +20,5 @@
       "song": "Song\n\n[Chorus]\nC\nhey\n\n[Verse]\nla\n\n[Chorus]\nC\nhey\n\n[Chorus]\nC\nhey\n",
       "expected": [2, 3]
     }
-  ],
-  "keyChangeNotes": [
-    { "key": "E", "semitones": 4, "expected": "[Key of E (+4 semitones from the original)]" },
-    { "key": "Bb", "semitones": -1, "expected": "[Key of Bb (−1 semitone from the original)]" },
-    { "key": "G", "semitones": 0, "expected": null }
   ]
 }

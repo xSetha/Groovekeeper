@@ -2,13 +2,6 @@
 import type { Section, Song, SongLine } from '../models/song';
 import { chordLine } from './song-text';
 
-/** E.g. "[Key of E (+4 semitones from the original)]", or null when the song wasn't transposed. */
-export function keyChangeNote(key: string, semitones: number): string | null {
-  if (semitones === 0) return null;
-  const unit = Math.abs(semitones) === 1 ? 'semitone' : 'semitones';
-  return `[Key of ${key} (${semitones > 0 ? '+' : '−'}${Math.abs(semitones)} ${unit} from the original)]`;
-}
-
 /** The lines that are printed: blank lines are left out. */
 export const printedLines = (section: Section): SongLine[] =>
   section.lines.filter((line) => line.text.trim().length > 0 || line.chords.length > 0);

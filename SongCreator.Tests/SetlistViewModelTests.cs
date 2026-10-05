@@ -68,16 +68,14 @@ namespace SongCreator.Tests
         }
 
         [Fact]
-        public void AddedSongsStartInTheirOwnKeyAndAreSavedRightAway()
+        public void AddedSongsAreSavedRightAway()
         {
             var grace = LibrarySample("Amazing Grace");
             var sun = LibrarySample("House of the Rising Sun");
             var setlist = CreateWith(grace, sun);
 
             Assert.Equal([1, 2], setlist.Items.Select(i => i.Position));
-            Assert.Equal(["G", "Am"], setlist.Items.Select(i => i.Key));
-            Assert.Equal("original key", setlist.Items[0].KeyNote);
-            Assert.Equal([grace.Id, sun.Id], Saved(setlist).Songs.Select(s => s.SongId));
+            Assert.Equal([grace.Id, sun.Id], Saved(setlist).Songs);
         }
 
         [Fact]
@@ -90,7 +88,7 @@ namespace SongCreator.Tests
             setlist.AddSong(sun, 1);
 
             Assert.Equal([grace.Id, sun.Id, grace.Id], setlist.Items.Select(i => i.SongId));
-            Assert.Equal([grace.Id, sun.Id, grace.Id], Saved(setlist).Songs.Select(s => s.SongId));
+            Assert.Equal([grace.Id, sun.Id, grace.Id], Saved(setlist).Songs);
         }
 
         [Fact]
@@ -103,20 +101,19 @@ namespace SongCreator.Tests
         }
 
         [Fact]
-        public void KeysOrderAndRemovalsAreSavedRightAway()
+        public void OrderAndRemovalsAreSavedRightAway()
         {
             var grace = LibrarySample("Amazing Grace");
             var sun = LibrarySample("House of the Rising Sun");
             var graceCopy = LibrarySample("Amazing Grace");
             var setlist = CreateWith(grace, sun, graceCopy);
 
-            setlist.Items[1].Key = "Em";
             setlist.MoveUpCommand.Execute(setlist.Items[1]);
             setlist.Move(2, 0);
             setlist.RemoveCommand.Execute(setlist.Items[2]);
 
             Assert.Equal([1, 2], setlist.Items.Select(i => i.Position));
-            Assert.Equal([new LibrarySetlistEntry(graceCopy.Id, "G"), new LibrarySetlistEntry(sun.Id, "Em")], Saved(setlist).Songs);
+            Assert.Equal([graceCopy.Id, sun.Id], Saved(setlist).Songs);
         }
 
         [Fact]
@@ -161,13 +158,12 @@ namespace SongCreator.Tests
         }
 
         [Fact]
-        public void SelectingASetlistShowsItsSongsAndKeys()
+        public void SelectingASetlistShowsItsSongs()
         {
             var grace = LibrarySample("Amazing Grace");
             var sun = LibrarySample("House of the Rising Sun");
             var setlist = CreateWith(sun);
             setlist.Name = "Friday";
-            setlist.Items[0].Key = "Em";
             setlist.New();
             setlist.Name = "Sunday";
             setlist.AddSongCommand.Execute(grace);
@@ -177,23 +173,20 @@ namespace SongCreator.Tests
 
             Assert.Equal("Friday", reopened.Name);
             Assert.Equal([sun.Id], reopened.Items.Select(i => i.SongId));
-            Assert.Equal(["Em"], reopened.Items.Select(i => i.Key));
-            Assert.Equal(sun.Id, Assert.Single(Saved(reopened).Songs).SongId);   // showing it didn't change it
+            Assert.Equal(sun.Id, Assert.Single(Saved(reopened).Songs));   // showing it didn't change it
         }
 
         [Fact]
-        public void TheSameSongCanBeInTwoSetlistsInDifferentKeys()
+        public void TheSameSongCanBeInTwoSetlists()
         {
             var grace = LibrarySample("Amazing Grace");
             var setlist = CreateWith(grace);
-            setlist.Items[0].Key = "A";
             long first = setlist.SelectedSetlist!.Id;
             setlist.New();
             setlist.AddSongCommand.Execute(grace);
-            setlist.Items[0].Key = "Bb";
 
-            Assert.Equal("A", Assert.Single(_library.LoadSetlist(first)!.Songs).Key);
-            Assert.Equal("Bb", Assert.Single(Saved(setlist).Songs).Key);
+            Assert.Equal(grace.Id, Assert.Single(_library.LoadSetlist(first)!.Songs));
+            Assert.Equal(grace.Id, Assert.Single(Saved(setlist).Songs));
             Assert.Equal(2, _library.SetlistCountFor(grace.Id));
         }
 
@@ -262,51 +255,6 @@ namespace SongCreator.Tests
         }
 
         [Fact]
-        public void KeyOptionsAreTheTwelveKeysOfTheSameMode()
-        {
-            var item = new SetlistItemViewModel(IO.SongFile.Load(Sample("House of the Rising Sun")), 1);
-            Assert.Equal(["Cm", "C#m", "Dm", "Ebm", "Em", "Fm", "F#m", "Gm", "G#m", "Am", "Bbm", "Bm"], item.KeyOptions);
-        }
-
-        [Fact]
-        public void ChangingTheKeyTransposesACopyForTheGig()
-        {
-            var song = IO.SongFile.Load(Sample("Amazing Grace"));
-            var item = new SetlistItemViewModel(song, 1) { Key = "Bb" };
-
-            Assert.Equal(3, item.Semitones);
-            Assert.Equal("+3 from G", item.KeyNote);
-            var played = item.SongToPlay();
-            Assert.Equal("Bb", played.Key);
-            Assert.Equal("Bb", played.Sections[0].Lines[0].Chords[0].Name);
-            Assert.Equal("G", song.Sections[0].Lines[0].Chords[0].Name);   // the song itself is untouched
-
-            item.Key = "E";
-            Assert.Equal(-3, item.Semitones);                               // the short way round
-        }
-
-        [Fact]
-        public void ASongWithoutAKeyUsesTheDetectedOne()
-        {
-            var song = SongTextReader.Parse("Untitled\n\n[Verse]\nAm  F  C  G  Am\nla la");
-            var item = new SetlistItemViewModel(song, 1) { Key = "Bm" };
-
-            Assert.Equal("Am", item.OriginalKey);
-            Assert.Equal("+2 from Am (detected)", item.KeyNote);
-            Assert.Equal("Bm", item.SongToPlay().Key);
-        }
-
-        [Fact]
-        public void ASongWithNoKeyAtAllPlaysAsWritten()
-        {
-            var song = SongTextReader.Parse("Untitled\n\n[Verse]\nla la");
-            var item = new SetlistItemViewModel(song, 1);
-
-            Assert.False(item.HasKey);
-            Assert.Same(song, item.SongToPlay());
-        }
-
-        [Fact]
         public void ImportsASetlistFileAndItsSongsIntoTheLibrary()
         {
             SongFile("Grace", File.ReadAllText(Sample("Amazing Grace")));
@@ -319,7 +267,6 @@ namespace SongCreator.Tests
 
             Assert.Equal("Friday", setlist.Name);
             Assert.Equal(["House of the Rising Sun", "Amazing Grace"], setlist.Items.Select(i => i.Song.Title));
-            Assert.Equal(["Em", "G"], setlist.Items.Select(i => i.Key));
             Assert.Equal(2, _library.ListSongs().Count);
             Assert.Equal(2, setlist.Library.Songs.Count);
             Assert.Equal(["Friday"], _library.ListSetlists().Select(s => s.Name));
@@ -352,11 +299,10 @@ namespace SongCreator.Tests
         }
 
         [Fact]
-        public void ExportsThePdfInTheChosenKeys()
+        public void ExportsThePdf()
         {
             var setlist = CreateWith(LibrarySample("Amazing Grace"));
             setlist.OpenWhenDone = true;
-            setlist.Items[0].Key = "A";
             _dialogs.PdfPath = Path.Combine(_dir, "set.pdf");
 
             setlist.Export();

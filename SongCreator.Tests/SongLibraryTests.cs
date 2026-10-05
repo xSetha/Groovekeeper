@@ -80,16 +80,16 @@ namespace SongCreator.Tests
         public void SavesAndLoadsASetlistInOrder()
         {
             var ids = _library.AddSongs([MakeSong("One"), MakeSong("Two")]);
-            long setlistId = _library.SaveSetlist(null, "Friday", [new(ids[1], "A"), new(ids[0], "")]);
+            long setlistId = _library.SaveSetlist(null, "Friday", [ids[1], ids[0]]);
 
             var setlist = _library.LoadSetlist(setlistId)!;
             Assert.Equal("Friday", setlist.Name);
-            Assert.Equal([new LibrarySetlistEntry(ids[1], "A"), new LibrarySetlistEntry(ids[0], "")], setlist.Songs);
+            Assert.Equal([ids[1], ids[0]], setlist.Songs);
 
-            _library.SaveSetlist(setlistId, "Saturday", [new(ids[0], "C")]);
+            _library.SaveSetlist(setlistId, "Saturday", [ids[0]]);
             setlist = _library.LoadSetlist(setlistId)!;
             Assert.Equal("Saturday", setlist.Name);
-            Assert.Equal([new LibrarySetlistEntry(ids[0], "C")], setlist.Songs);
+            Assert.Equal([ids[0]], setlist.Songs);
             Assert.Equal(["Saturday"], _library.ListSetlists().Select(s => s.Name));
         }
 
@@ -97,20 +97,20 @@ namespace SongCreator.Tests
         public void DeletingASongTakesItOutOfSetlists()
         {
             var ids = _library.AddSongs([MakeSong("One"), MakeSong("Two")]);
-            long setlistId = _library.SaveSetlist(null, "Gig", [new(ids[0], ""), new(ids[1], "")]);
+            long setlistId = _library.SaveSetlist(null, "Gig", [ids[0], ids[1]]);
             Assert.Equal(1, _library.SetlistCountFor(ids[0]));
 
             _library.DeleteSong(ids[0]);
 
             Assert.Equal(["Two"], _library.ListSongs().Select(s => s.Title));
-            Assert.Equal([ids[1]], _library.LoadSetlist(setlistId)!.Songs.Select(s => s.SongId));
+            Assert.Equal([ids[1]], _library.LoadSetlist(setlistId)!.Songs);
         }
 
         [Fact]
         public void DeletesASetlistButNotItsSongs()
         {
             long songId = _library.AddSong(MakeSong("One"));
-            long setlistId = _library.SaveSetlist(null, "Gig", [new(songId, "")]);
+            long setlistId = _library.SaveSetlist(null, "Gig", [songId]);
 
             _library.DeleteSetlist(setlistId);
 

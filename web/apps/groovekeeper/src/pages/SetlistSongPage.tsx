@@ -4,7 +4,7 @@ import { db } from '../library/db';
 import { setlistSongs } from '../library/setlists';
 import { SongReader } from './SongReader';
 
-/** On a phone: a song of a setlist, read in the setlist's key, with the previous and next song at hand. */
+/** On a phone: a song of a setlist, with the previous and next song at hand. */
 export function SetlistSongPage() {
   const { id = '', position = '' } = useParams();
   const place = Number(position);
@@ -34,11 +34,10 @@ export function SetlistSongPage() {
   const at = (n: number) => (n >= 1 && n <= songs.songs.length ? `/setlists/${id}/${n}` : null);
   return (
     <SongReader
-      // A new song starts in its own setlist key, not the transposing done on the one before.
+      // A new song starts as it's written, not with the transposing done on the one before.
       key={place}
       song={song.song}
       back={{ to: `/setlists/${id}`, label: songs.name }}
-      startSemitones={song.semitones}
       steps={{ previous: at(place - 1), next: at(place + 1), position: `${place} of ${songs.songs.length}` }}
     />
   );

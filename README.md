@@ -79,16 +79,15 @@ The installer isn't code-signed yet, so Windows may warn that it "protected your
   exactly the same as an earlier one, with the same name, chords and lyrics, is printed as
   `[Chorus] (repeat)` instead of in full. The song itself isn't changed.
 - Setlists, on their own tab (Ctrl+L, or Songs / Setlists at the top of the window): as many
-  as you like, each with library songs in playing order and the key you'll play each one in.
-  The same song can be in several setlists, in a different key in each.
+  as you like, each with library songs in playing order, played as they are written. The same
+  song can be in several setlists.
 - Drag songs to reorder a setlist, and drag them in from the library next to it (or press +).
   Every change is saved in the library right away.
 - Double-click a song in a setlist to edit it in the song editor. A setlist only refers to its
-  songs, so the edit shows in every setlist that has it; choosing a key in a setlist never
-  changes the song.
-- Export a setlist to one PDF. Each transposed song is marked in the PDF, e.g.
-  `[Key of E (+4 semitones from the original)]`. Older `.setlist` files can be imported,
-  together with their songs.
+  songs, so the edit shows in every setlist that has it. To play a song in another key,
+  transpose the song itself.
+- Export a setlist to one PDF. Older `.setlist` files can be imported, together with their
+  songs.
 
 **Looks**
 - Four themes: Amp (black and blood red), Backstage (charcoal and brass), Record Sleeve (forest
@@ -199,7 +198,8 @@ setlists. The folder keeps the app's old name, SongCreator, so that nobody's lib
 syncs while the app is open; use File → Back Up Library… to make a copy instead.
 
 **Older setlists (`.setlist`)**: setlists used to be JSON files that point to song files. They can
-be imported on the Setlists tab (Import…), which adds their songs to the library.
+be imported on the Setlists tab (Import…), which adds their songs to the library. The key these
+files can give each song is ignored: the songs are added as they are written.
 
 ```json
 {

@@ -13,10 +13,8 @@ namespace SongCreator.IO
         public string Details => string.Join("  ·  ", new[] { Artist, Key }.Where(part => part.Length > 0));
     }
 
-    /// <summary>A song in a library setlist and the key to play it in (empty: as written).</summary>
-    public record LibrarySetlistEntry(long SongId, string Key);
-
-    public record LibrarySetlist(long Id, string Name, IReadOnlyList<LibrarySetlistEntry> Songs);
+    /// <summary>A library setlist: its songs' ids, in playing order.</summary>
+    public record LibrarySetlist(long Id, string Name, IReadOnlyList<long> Songs);
 
     /// <summary>
     /// The song library: songs and setlists in a SQLite database. Each song is stored as its .txt text
@@ -117,17 +115,17 @@ namespace SongCreator.IO
             if (Scalar(connection, "SELECT name FROM setlists WHERE id = $id", ("$id", id)) is not string name)
                 return null;
 
-            var songs = new List<LibrarySetlistEntry>();
+            var songs = new List<long>();
             using var command = Command(connection,
-                "SELECT song_id, key FROM setlist_songs WHERE setlist_id = $id ORDER BY position", ("$id", id));
+                "SELECT song_id FROM setlist_songs WHERE setlist_id = $id ORDER BY position", ("$id", id));
             using var reader = command.ExecuteReader();
             while (reader.Read())
-                songs.Add(new LibrarySetlistEntry(reader.GetInt64(0), reader.GetString(1)));
+                songs.Add(reader.GetInt64(0));
             return new LibrarySetlist(id, name, songs);
         }
 
         /// <summary>Saves a setlist, as a new one when <paramref name="id"/> is null. Returns its id.</summary>
-        public long SaveSetlist(long? id, string name, IReadOnlyList<LibrarySetlistEntry> songs)
+        public long SaveSetlist(long? id, string name, IReadOnlyList<long> songIds)
         {
             using var connection = Open();
             using var transaction = connection.BeginTransaction();
@@ -143,10 +141,11 @@ namespace SongCreator.IO
                 setlistId = (long)Scalar(connection, "INSERT INTO setlists (name) VALUES ($name) RETURNING id", ("$name", name))!;
             }
 
-            for (int i = 0; i < songs.Count; i++)
+            // The key column is from when setlists had a key for each song; it's kept so older libraries still open.
+            for (int i = 0; i < songIds.Count; i++)
                 Execute(connection,
-                    "INSERT INTO setlist_songs (setlist_id, position, song_id, key) VALUES ($setlist, $position, $song, $key)",
-                    ("$setlist", setlistId), ("$position", i), ("$song", songs[i].SongId), ("$key", songs[i].Key));
+                    "INSERT INTO setlist_songs (setlist_id, position, song_id, key) VALUES ($setlist, $position, $song, '')",
+                    ("$setlist", setlistId), ("$position", i), ("$song", songIds[i]));
             transaction.Commit();
             return setlistId;
         }

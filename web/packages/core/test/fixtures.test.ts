@@ -3,7 +3,7 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
-  chordToString, detectKey, diatonicChords, fitsKey, isChord, keyChangeNote, keyUsesFlats, parseChord, parseChordPro,
+  chordToString, detectKey, diatonicChords, fitsKey, isChord, keyUsesFlats, parseChord, parseChordPro,
   parseSongText, pitchClass, repeatedSections, romanNumeral, rootOf, songToChordPro, songToText, suggestNext,
   transposeChordName, transposeKey, transposeSong, triadOf, noteToString, type Song,
 } from '../src';
@@ -144,7 +144,6 @@ describe('chord theory', () => {
 
 interface PrintingFixture {
   repeatedSections: { name: string; song: string; expected: number[] }[];
-  keyChangeNotes: { key: string; semitones: number; expected: string | null }[];
 }
 
 describe('printing', () => {
@@ -152,9 +151,5 @@ describe('printing', () => {
 
   it.each(fixture.repeatedSections)('repeated sections: $name', ({ song, expected }) => {
     expect([...repeatedSections(parseSongText(song))]).toEqual(expected);
-  });
-
-  it.each(fixture.keyChangeNotes)('$key, $semitones semitones: $expected', ({ key, semitones, expected }) => {
-    expect(keyChangeNote(key, semitones)).toBe(expected);
   });
 });

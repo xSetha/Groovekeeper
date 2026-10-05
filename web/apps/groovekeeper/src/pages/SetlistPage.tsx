@@ -7,7 +7,7 @@ import { trackDrag } from '../components/drag';
 import { db, type LibrarySetlist } from '../library/db';
 import { listSongs, matchesSearch } from '../library/library';
 import {
-  addEntry, deleteSetlist, keyNote, moveEntry, removeEntry, setEntryKey, setlistSongs, updateSetlist, type SetlistSong,
+  addEntry, deleteSetlist, moveEntry, removeEntry, setlistSongs, updateSetlist, type SetlistSong,
 } from '../library/setlists';
 import { isNewFrom } from '../navigation';
 import { useIsPhone } from '../phone';
@@ -52,7 +52,7 @@ interface Loaded {
   songs: SetlistSong[];
 }
 
-/** On a phone: the songs in order; each opens in the reading view, in its setlist key. */
+/** On a phone: the songs in order; each opens in the reading view. */
 function SetlistToPlay({ setlist, songs }: Loaded) {
   return (
     <main className="min-h-0 flex-1 overflow-y-auto px-4 py-3">
@@ -70,7 +70,7 @@ function SetlistToPlay({ setlist, songs }: Loaded) {
                 <span className="block truncate font-semibold">{song.title}</span>
                 {song.artist ? <span className="block truncate text-sm text-muted">{song.artist}</span> : null}
               </span>
-              {song.key ? <span className="shrink-0 rounded bg-chip px-1.5 py-0.5 font-mono text-sm">{song.key}</span> : null}
+              {song.song.key ? <span className="shrink-0 rounded bg-chip px-1.5 py-0.5 font-mono text-sm">{song.song.key}</span> : null}
             </Link>
           </li>
         ))}
@@ -79,7 +79,7 @@ function SetlistToPlay({ setlist, songs }: Loaded) {
   );
 }
 
-/** On a computer or tablet: rename the setlist, order its songs, pick their keys, and add songs from the library. */
+/** On a computer or tablet: rename the setlist, order its songs, and add songs from the library. */
 function SetlistEditor({ setlist, songs }: Loaded) {
   const navigate = useNavigate();
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -147,8 +147,7 @@ function SetlistEditor({ setlist, songs }: Loaded) {
           </button>
         </div>
         <p className="mt-1 text-sm text-muted">
-          {songs.length === 1 ? '1 song' : `${songs.length} songs`}. Changes are saved right away; a song's key here
-          never changes the song.
+          {songs.length === 1 ? '1 song' : `${songs.length} songs`}. Changes are saved right away.
         </p>
         {error ? (
           <p role="alert" className="mt-2 text-sm text-chord">
@@ -179,26 +178,6 @@ function SetlistEditor({ setlist, songs }: Loaded) {
                 </Link>
                 {song.artist ? <span className="block text-sm text-muted">{song.artist}</span> : null}
               </span>
-              <label className="flex items-center gap-1.5 text-sm">
-                <span className="text-muted">Key</span>
-                <select
-                  value={song.key}
-                  disabled={song.keyOptions.length === 0}
-                  className="rounded border border-line bg-window px-1 py-1 font-semibold pointer-coarse:min-h-11"
-                  onChange={(event) => {
-                    const key = event.target.value;
-                    change((s) => setEntryKey(s, song.entry.id, key));
-                  }}
-                >
-                  {song.keyOptions.length === 0 ? <option value="">–</option> : null}
-                  {song.keyOptions.map((key) => (
-                    <option key={key} value={key}>
-                      {key}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <span className="w-40 text-sm text-muted">{keyNote(song)}</span>
               <span className="flex items-center text-sm">
                 <RowButton label={`Move ${song.title} up`} disabled={position === 0} onClick={() => moveNextTo(song, position - 1, 'before')}>↑</RowButton>
                 <RowButton label={`Move ${song.title} down`} disabled={position === songs.length - 1} onClick={() => moveNextTo(song, position + 1, 'after')}>↓</RowButton>

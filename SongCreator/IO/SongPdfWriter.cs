@@ -25,10 +25,9 @@ namespace SongCreator.IO
         }
 
         /// <param name="romanNumerals">Write chords as Roman numerals in each song's key (songs without a key keep chord names).</param>
-        /// <param name="semitones">How far each song was transposed for this PDF (e.g. by a setlist), noted next to its title.</param>
         /// <param name="collapseRepeats">Print a section that is an exact copy of an earlier one as a repeat (see <see cref="RepeatedSections"/>).</param>
         public static byte[] Create(IReadOnlyList<Song> songs, bool tableOfContents, bool romanNumerals = false,
-            IReadOnlyList<int>? semitones = null, bool collapseRepeats = false)
+            bool collapseRepeats = false)
         {
             return Document.Create(document =>
             {
@@ -51,7 +50,7 @@ namespace SongCreator.IO
                             if (i > 0)
                                 column.Item().PaddingVertical(22).LineHorizontal(0.75f).LineColor(Colors.Grey.Lighten2);
                             // Keep a song's title from being stranded at the bottom of a page.
-                            column.Item().Section(SectionId(i)).EnsureSpace(110).Element(container => ComposeSong(container, songs[i], romanNumerals, semitones?[i] ?? 0, collapseRepeats));
+                            column.Item().Section(SectionId(i)).EnsureSpace(110).Element(container => ComposeSong(container, songs[i], romanNumerals, collapseRepeats));
                         }
                     });
                 });
@@ -85,15 +84,6 @@ namespace SongCreator.IO
             });
         }
 
-        /// <summary>E.g. "[Key of E (+4 semitones from the original)]", or null when the song wasn't transposed.</summary>
-        public static string? KeyChangeNote(string key, int semitones)
-        {
-            if (semitones == 0)
-                return null;
-            string unit = Math.Abs(semitones) == 1 ? "semitone" : "semitones";
-            return $"[Key of {key} ({semitones:+0;−0} {unit} from the original)]";
-        }
-
         /// <summary>
         /// The sections that are exact copies of an earlier section: the same name (ignoring case), chords and lyrics.
         /// Blank lines and trailing spaces don't count, as they aren't printed.
@@ -119,7 +109,7 @@ namespace SongCreator.IO
         private static List<SongLine> PrintedLines(Section section) =>
             section.Lines.Where(l => l.Text.Trim().Length > 0 || l.Chords.Count > 0).ToList();
 
-        private static void ComposeSong(IContainer container, Song song, bool romanNumerals, int semitones, bool collapseRepeats)
+        private static void ComposeSong(IContainer container, Song song, bool romanNumerals, bool collapseRepeats)
         {
             var repeated = collapseRepeats ? RepeatedSections(song) : new HashSet<Section>();
             Func<string, string>? display = romanNumerals && MusicKeys.TryParse(song.Key, out _, out _)
@@ -128,12 +118,7 @@ namespace SongCreator.IO
 
             container.Column(column =>
             {
-                column.Item().Text(text =>
-                {
-                    text.Span(song.DisplayTitle).FontSize(18).Bold();
-                    if (KeyChangeNote(song.Key, semitones) is { } note)
-                        text.Span("   " + note).FontSize(11).FontColor(MutedColor);
-                });
+                column.Item().Text(song.DisplayTitle).FontSize(18).Bold();
                 if (song.Artist.Length > 0)
                     column.Item().Text(song.Artist).FontSize(11).FontColor(MutedColor);
 
