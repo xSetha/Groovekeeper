@@ -32,10 +32,11 @@ describe('the app', () => {
 
     await user.click(screen.getByRole('button', { name: 'Transpose up' }));
 
-    await waitFor(() => expect(screen.getByTestId('song-key')).toHaveValue('Ab'));
-    expect(sheet.getByText('Ab7')).toBeInTheDocument();
+    // Only the chords move; the key stays as it was set.
+    expect(await sheet.findByText('Ab7')).toBeInTheDocument();
+    expect(screen.getByTestId('song-key')).toHaveValue('G');
     const library = screen.getByRole('navigation', { name: 'Library' });
-    expect(await within(library).findByTitle('Key of Ab')).toBeInTheDocument();
+    expect(await within(library).findByTitle('Key of G')).toBeInTheDocument();
   });
 
   it('adds the sample songs to an empty library', async () => {

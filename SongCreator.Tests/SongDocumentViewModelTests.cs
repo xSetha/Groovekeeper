@@ -200,7 +200,7 @@ namespace SongCreator.Tests
         public static TheoryData<string> AllKeys() => new(Music.MusicKeys.All);
 
         [Fact]
-        public void TransposeUpdatesTheKeyAndChords()
+        public void TransposeMovesTheChordsAndLeavesTheKey()
         {
             _song.Key = "G";
             AddSection("Verse", "x").Lines[0].Chords.Add(new ChordPlacement(0, "Em"));
@@ -208,7 +208,7 @@ namespace SongCreator.Tests
             _document.TransposeUpCommand.Execute(null);
             _document.TransposeUpCommand.Execute(null);
 
-            Assert.Equal("A", _song.Key);
+            Assert.Equal("G", _song.Key);
             Assert.Equal("F#m", _song.Sections[0].Lines[0].Chords[0].Name);
         }
 
@@ -223,7 +223,7 @@ namespace SongCreator.Tests
             _document.AddSectionCommand.Execute(null);
             _document.DeleteSectionCommand.Execute(verse);
 
-            Assert.Equal("A#m", verse.Lines[0].Chords[0].Name);
+            Assert.Equal("Bbm", verse.Lines[0].Chords[0].Name);   // Am moves to Bb minor, written with flats
             Assert.Equal(2, verse.Lines.Count);
             Assert.Equal("New Section", Assert.Single(_song.Sections).Name);
         }

@@ -185,7 +185,7 @@ namespace SongCreator.Tests
 
         [Theory]
         [MemberData(nameof(SongTransposeCases))]
-        public void TransposesSongInItsNewKey(string json)
+        public void TransposesSongChordsInTheirOwnKey(string json)
         {
             var c = Case(json);
             var song = new Song { Key = (string)c["key"]! };

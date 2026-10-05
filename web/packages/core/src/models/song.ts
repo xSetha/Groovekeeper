@@ -53,16 +53,17 @@ export const createTemplate = (): Song => ({
 });
 
 /**
- * The song moved by some semitones. The key gets its usual name, and every chord is spelled with that
- * key's sharps or flats (so going up and back down returns the same names). Without a key, chords keep
- * their own spelling.
+ * The song with every chord moved by some semitones. The song's key is what the user set, so it stays as
+ * it is. Chords are spelled with the sharps or flats of the key they move to: the key their chords are in,
+ * moved too (so going up and back down returns the same names). When no key stands out, each chord keeps
+ * its own kind of accidental.
  */
 export function transposeSong<S extends Song>(song: S, semitones: number): S {
-  const key = transposeKey(song.key, semitones);
-  const useFlats = keyUsesFlats(key);
+  const chords = song.sections.flatMap((s) => s.lines).flatMap((l) => l.chords.toSorted((a, b) => a.position - b.position));
+  const key = detectKey(chords.map((c) => c.name));
+  const useFlats = key === null ? null : keyUsesFlats(transposeKey(key, semitones));
   return {
     ...song,
-    key,
     sections: song.sections.map((section) => ({
       ...section,
       lines: section.lines.map((line) => ({

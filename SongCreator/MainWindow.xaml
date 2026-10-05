@@ -199,7 +199,7 @@
                                                Foreground="{DynamicResource MutedForeground}" />
                                     <Button Content="−" Style="{StaticResource FlatButton}" Command="{Binding TransposeDownCommand}" ToolTip="Down one semitone" />
                                     <Button Content="+" Style="{StaticResource FlatButton}" Command="{Binding TransposeUpCommand}" ToolTip="Up one semitone" />
-                                    <!-- Transposing updates the key -->
+                                    <!-- The key the song is in, as the user sets it; transposing moves only the chords -->
                                     <TextBlock Text="Key" Margin="20,0,6,0" VerticalAlignment="Center"
                                                Foreground="{DynamicResource MutedForeground}" />
                                     <ComboBox Style="{StaticResource DarkComboBox}" ItemsSource="{x:Static music:MusicKeys.All}"

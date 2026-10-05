@@ -2,7 +2,7 @@ using SongCreator.Models;
 
 namespace SongCreator.Tests
 {
-    /// <summary>Transposing a whole song: the key sets how every chord is spelled.</summary>
+    /// <summary>Transposing a whole song: only the chords move, spelled in the key they move to.</summary>
     public class SongTransposeTests
     {
         private static Song SongIn(string key, params string[] chords)
@@ -27,18 +27,29 @@ namespace SongCreator.Tests
             song.Transpose(1);
             song.Transpose(-1);
 
-            Assert.Equal("Bb", song.Key);
             Assert.Equal(["Bb", "Eb", "F", "Gm/D", "Bbm7/F"], Chords(song));
         }
 
         [Fact]
-        public void ChordsAreSpelledForTheNewKey()
+        public void TheKeyStaysAsTheUserSetIt()
         {
             var song = SongIn("E", "E", "A", "B7", "C#m");
 
             song.Transpose(1);
 
-            Assert.Equal("F", song.Key);
+            Assert.Equal("E", song.Key);
+            Assert.Equal(["F", "Bb", "C7", "Dm"], Chords(song));
+        }
+
+        [Fact]
+        public void ChordsAreSpelledByTheirOwnKeyNotTheKeyField()
+        {
+            // The field says G, but the chords are in E: they move to F, which is written with flats.
+            var song = SongIn("G", "E", "A", "B7", "C#m");
+
+            song.Transpose(1);
+
+            Assert.Equal("G", song.Key);
             Assert.Equal(["F", "Bb", "C7", "Dm"], Chords(song));
         }
 
@@ -49,23 +60,22 @@ namespace SongCreator.Tests
 
             song.Transpose(1);
 
-            Assert.Equal("Db", song.Key);
-            Assert.Equal(["Db", "Gb", "Ab", "Bbm"], Chords(song));
+            Assert.Equal(["Db", "Gb", "Ab", "Bbm"], Chords(song));   // in Db, not C#
         }
 
         [Fact]
-        public void BorrowedChordsAreAllowedAndSpelledConsistently()
+        public void BorrowedChordsAreSpelledConsistently()
         {
+            // These chords point to G minor, which moves up to G# minor, written with sharps.
             var song = SongIn("G", "G", "Bb", "Eb/G", "D/F#");
 
             song.Transpose(1);
 
-            Assert.Equal("Ab", song.Key);
-            Assert.Equal(["Ab", "B", "E/Ab", "Eb/G"], Chords(song));
+            Assert.Equal(["G#", "B", "E/G#", "D#/G"], Chords(song));
         }
 
         [Fact]
-        public void WithoutAKeyEachChordKeepsItsOwnSpelling()
+        public void WhenNoKeyStandsOutEachChordKeepsItsOwnSpelling()
         {
             var song = SongIn("", "Bb", "F#m", "D/F#");
 

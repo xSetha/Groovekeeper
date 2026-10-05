@@ -16,6 +16,9 @@ version's section here becomes the text of its GitHub release.
 ### Changed
 - + Section adds the new section right after the one you're working in (where the caret is),
   instead of always at the end of the song.
+- Transpose moves only the chords. The song's key stays what you set it to; change it in the Key
+  box when you want to. The chords are still spelled for the key they move to (Bb rather than A#
+  in F).
 
 ### Removed
 - The "Looks like … · Use" key suggestion next to the Key box.

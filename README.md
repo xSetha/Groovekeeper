@@ -66,9 +66,11 @@ The installer isn't code-signed yet, so Windows may warn that it "protected your
   stays in the library.
 
 **Music**
-- Transpose up or down by semitones. The key and every chord are respelled to match.
+- The song's key is yours to set in the Key box; nothing else changes it.
+- Transpose up or down by a semitone moves every chord in the song, and only the chords. They are
+  spelled in the key they move to: `E A B7` moved up one becomes `F Bb C7`, not `F A# C7`.
 - Roman numerals (`I IV V vi`, `ii7`, `bVII`, `I/3`), shown with the **I IV V** toggle on the
-  chords in the editor.
+  chords in the editor, in the key set in the Key box.
 
 **Printing and gigs**
 - Export one or many songs to a single PDF songbook, with an optional table of contents

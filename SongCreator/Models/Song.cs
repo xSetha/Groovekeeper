@@ -29,13 +29,18 @@ namespace SongCreator.Models
 
         public ObservableCollection<Section> Sections { get; } = new();
 
+        /// <summary>
+        /// Moves every chord by some semitones. The song's key is what the user set, so it stays as it is.
+        /// </summary>
         public void Transpose(int semitones)
         {
-            // The key gets its usual name, and every chord is spelled with that key's sharps or flats
-            // (so going up and back down returns the same names). Without a key, chords keep their own spelling.
-            Key = MusicKeys.Transpose(Key, semitones);
-            bool? useFlats = MusicKeys.UsesFlats(Key);
-            foreach (var chord in Sections.SelectMany(s => s.Lines).SelectMany(l => l.Chords))
+            // Chords are spelled with the sharps or flats of the key they move to: the key their chords are in,
+            // moved too (so going up and back down returns the same names). When no key stands out, each chord
+            // keeps its own kind of accidental.
+            var chords = Sections.SelectMany(s => s.Lines).SelectMany(l => l.Chords.OrderBy(c => c.Position)).ToList();
+            string? key = KeyDetector.Detect(chords.Select(c => c.Name).ToList());
+            bool? useFlats = key == null ? null : MusicKeys.UsesFlats(MusicKeys.Transpose(key, semitones));
+            foreach (var chord in chords)
                 chord.Name = ChordTransposer.Transpose(chord.Name, semitones, useFlats);
         }
 

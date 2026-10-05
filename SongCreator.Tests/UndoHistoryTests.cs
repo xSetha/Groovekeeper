@@ -93,14 +93,14 @@ namespace SongCreator.Tests
             _document.TransposeUpCommand.Execute(null);
 
             History.Undo();
-            Assert.Equal(("G", "G"), (_song.Key, Line(0).Chords[0].Name));
+            Assert.Equal("G", Line(0).Chords[0].Name);
             History.Redo();
-            Assert.Equal(("Ab", "Ab"), (_song.Key, Line(0).Chords[0].Name));
+            Assert.Equal("Ab", Line(0).Chords[0].Name);
 
             History.Undo();
             Type(Line(0), "changed");
             History.Redo();
-            Assert.Equal("G", _song.Key);
+            Assert.Equal("G", Line(0).Chords[0].Name);
         }
 
         [Fact]

@@ -50,10 +50,11 @@
     { "key": "E#", "expected": null }
   ],
   "songs": [
+    { "key": "G", "chords": ["E", "A", "B7", "C#m"], "steps": [1], "expectedKey": "G", "expectedChords": ["F", "Bb", "C7", "Dm"] },
     { "key": "Bb", "chords": ["Bb", "Eb", "F", "Gm/D", "Bbm7/F"], "steps": [1, -1], "expectedKey": "Bb", "expectedChords": ["Bb", "Eb", "F", "Gm/D", "Bbm7/F"] },
-    { "key": "E", "chords": ["E", "A", "B7", "C#m"], "steps": [1], "expectedKey": "F", "expectedChords": ["F", "Bb", "C7", "Dm"] },
-    { "key": "C", "chords": ["C", "F", "G", "Am"], "steps": [1], "expectedKey": "Db", "expectedChords": ["Db", "Gb", "Ab", "Bbm"] },
-    { "key": "G", "chords": ["G", "Bb", "Eb/G", "D/F#"], "steps": [1], "expectedKey": "Ab", "expectedChords": ["Ab", "B", "E/Ab", "Eb/G"] },
+    { "key": "E", "chords": ["E", "A", "B7", "C#m"], "steps": [1], "expectedKey": "E", "expectedChords": ["F", "Bb", "C7", "Dm"] },
+    { "key": "C", "chords": ["C", "F", "G", "Am"], "steps": [1], "expectedKey": "C", "expectedChords": ["Db", "Gb", "Ab", "Bbm"] },
+    { "key": "G", "chords": ["G", "Bb", "Eb/G", "D/F#"], "steps": [1], "expectedKey": "G", "expectedChords": ["G#", "B", "E/G#", "D#/G"] },
     { "key": "", "chords": ["Bb", "F#m", "D/F#"], "steps": [2], "expectedKey": "", "expectedChords": ["C", "G#m", "E/G#"] },
     { "key": "", "chords": ["E#", "B#m", "Fb7", "Cb"], "steps": [1], "expectedKey": "", "expectedChords": ["F#", "C#m", "F7", "C"] }
   ]

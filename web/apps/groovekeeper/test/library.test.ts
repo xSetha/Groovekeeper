@@ -26,9 +26,9 @@ describe('library', () => {
     const [id] = await addSongs([song('Amazing Grace', 'John Newton', 'G')]);
     await saveSong(id!, transposeSong((await getSong(id!))!, 2));
     const saved = await getSong(id!);
-    expect(saved?.key).toBe('A');
+    expect(saved?.key).toBe('G');   // transposing moves only the chords
     expect(saved?.sections[0]?.lines[0]?.chords.map((c) => c.name)).toEqual(['A', 'D']);
-    expect((await listSongs())[0]?.key).toBe('A');
+    expect((await listSongs())[0]?.key).toBe('G');
   });
 
   it('deletes a song', async () => {
