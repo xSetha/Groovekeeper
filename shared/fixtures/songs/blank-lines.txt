@@ -1,0 +1,15 @@
+Blank Lines
+
+[Verse 1]
+first
+
+second
+
+
+[Chorus]
+
+
+
+[Outro]
+end
+

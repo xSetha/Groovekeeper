@@ -155,7 +155,9 @@ Closing a song (or the app) with unsaved changes asks whether to save it first.
 ## File formats
 
 **Songs (`.txt`)**: title, artist, key, then sections. Chords sit above the letter they
-belong to, and a `(Repeat)` line under a heading marks a repeat of that section.
+belong to, and a `(Repeat)` line under a heading marks a repeat of that section. One blank line
+separates sections; any other blank line is a blank line of the song, and an empty section is
+just its heading, so a song reads back exactly as it was saved.
 
 ```text
 Amazing Grace

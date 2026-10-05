@@ -8,8 +8,8 @@ namespace SongCreator.IO
     /// <summary>
     /// Reads the ChordPro format: {directive: value} lines and lyrics with chords in brackets ("[G]Amazing").
     /// Sections come from start_of_…/end_of_… environments, from {comment:} headings, or from paragraphs
-    /// separated by blank lines. {chorus} and a heading naming an earlier section with nothing under it are
-    /// repeats. Directives the song has no place for (capo, tempo, …) are skipped.
+    /// separated by blank lines; in an environment, a blank line is a blank line of the song. {chorus} and a
+    /// heading naming an earlier section with nothing under it are repeats. Directives the song has no place for (capo, tempo, …) are skipped.
     /// </summary>
     public static partial class ChordProReader
     {
@@ -50,8 +50,11 @@ namespace SongCreator.IO
                     continue;
                 if (trimmed.Length == 0)
                 {
-                    // A blank line ends a paragraph, but not an environment or a heading still waiting for its lines.
-                    if (!inEnvironment && section?.Lines.Count > 0)
+                    // A blank line ends a paragraph, but not an environment (where it's kept) or a heading still
+                    // waiting for its lines.
+                    if (inEnvironment && section != null)
+                        section.Lines.Add(new SongLine());
+                    else if (section?.Lines.Count > 0)
                         section = null;
                     continue;
                 }

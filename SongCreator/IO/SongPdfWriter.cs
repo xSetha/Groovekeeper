@@ -94,10 +94,10 @@ namespace SongCreator.IO
             var repeated = new HashSet<Section>();
             foreach (var section in song.Sections.Where(s => !s.IsRepeat))
             {
-                var lines = PrintedLines(section);
+                var lines = ContentLines(section);
                 if (lines.Count == 0)
                     continue;
-                // The name without case, then the lines exactly as printed: chord row and lyric row.
+                // The name without case, then the lines with something on them: chord row and lyric row.
                 string printed = section.Name.Trim().ToUpperInvariant() + "\n" +
                     string.Join("\n", lines.Select(l => SongTextWriter.ChordLine(l) + "\n" + l.Text.TrimEnd()));
                 if (!seen.Add(printed))
@@ -106,7 +106,7 @@ namespace SongCreator.IO
             return repeated;
         }
 
-        private static List<SongLine> PrintedLines(Section section) =>
+        private static List<SongLine> ContentLines(Section section) =>
             section.Lines.Where(l => l.Text.Trim().Length > 0 || l.Chords.Count > 0).ToList();
 
         private static void ComposeSong(IContainer container, Song song, bool romanNumerals, bool collapseRepeats)
@@ -137,16 +137,16 @@ namespace SongCreator.IO
                         continue;
                     }
 
-                    var lines = PrintedLines(section);
-                    if (lines.Count == 0)
-                        continue;
+                    // Printed as the editor shows it: every section, even an empty one, and its blank lines.
+                    var lines = section.Lines;
 
                     // The heading stays with the section's first line, so it's never stranded at the bottom of a page.
                     column.Item().PaddingTop(12).ShowEntire().Column(start =>
                     {
                         start.Item().PaddingBottom(2).Text($"[{section.Name}]")
                             .FontFamily(SongFont).FontSize(SongFontSize).Bold().FontColor(MutedColor);
-                        start.Item().Element(pair => ComposeLine(pair, lines[0], display));
+                        if (lines.Count > 0)
+                            start.Item().Element(pair => ComposeLine(pair, lines[0], display));
                     });
                     foreach (var line in lines.Skip(1))
                         column.Item().ShowEntire().Element(pair => ComposeLine(pair, line, display));   // never split a chord line from its lyric
@@ -166,6 +166,8 @@ namespace SongCreator.IO
                 }
                 if (line.Text.Trim().Length > 0)
                     column.Item().Text(line.Text.TrimEnd()).FontFamily(SongFont).FontSize(SongFontSize);
+                else if (line.Chords.Count == 0)
+                    column.Item().Text(" ").FontFamily(SongFont).FontSize(SongFontSize);   // a blank line keeps its height
             });
         }
     }

@@ -29,6 +29,11 @@ version's section here becomes the text of its GitHub release.
 - The chord panel on the right of the editor, along with dragging chords from it. Chords are typed
   instead, and the editor has more room. Chords in the song still move by dragging them sideways.
 
+### Fixed
+- Empty sections and blank lines are kept. Saving a song used to drop them, so they were gone the next
+  time the song was opened, and the PDF left them out too. Now the PDF prints what the editor shows:
+  an empty section as its heading, a blank line as space.
+
 ## [1.1.0] - 2026-10-02
 
 ### Changed

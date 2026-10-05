@@ -1,0 +1,18 @@
+{title: Blank Lines}
+
+{start_of_verse: Verse 1}
+first
+
+second
+
+{end_of_verse}
+
+{start_of_chorus: Chorus}
+
+
+{end_of_chorus}
+
+{start_of_verse: Outro}
+end
+
+{end_of_verse}

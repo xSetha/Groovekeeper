@@ -20,7 +20,7 @@ namespace SongCreator.Tests
         }
 
         [Fact]
-        public void WritesHeaderAndSkipsEmptySections()
+        public void WritesEverySectionAndBlankLineSoTheSongReadsBackTheSame()
         {
             var song = Song.CreateTemplate();
             song.Title = "My Song";
@@ -31,19 +31,21 @@ namespace SongCreator.Tests
 
             string[] expected =
             [
-                "My Song",
-                "",
-                "Key: Am",
-                "",
-                "[Verse 1]",
-                "      Am",
-                "Hello there",
-                "",
-                "[Chorus]",
-                "C   G",
-                "",
+                "My Song", "", "Key: Am", "",
+                "[Intro]", "", "",
+                "[Verse 1]", "      Am", "Hello there", "",
+                "[Chorus]", "", "C   G", "",
+                "[Verse 2]", "", "",
+                "[Bridge]", "", "",
+                "[Outro]", "", "",
             ];
-            Assert.Equal(expected, SongTextWriter.ToText(song).Split(Environment.NewLine));
+            string text = SongTextWriter.ToText(song);
+            Assert.Equal(expected, text.Split(Environment.NewLine));
+
+            var reread = SongTextReader.Parse(text);
+            Assert.Equal(["Intro", "Verse 1", "Chorus", "Verse 2", "Bridge", "Outro"], reread.Sections.Select(s => s.Name));
+            Assert.Equal([1, 1, 2, 1, 1, 1], reread.Sections.Select(s => s.Lines.Count));
+            Assert.Equal(text, SongTextWriter.ToText(reread));
         }
 
         [Fact]

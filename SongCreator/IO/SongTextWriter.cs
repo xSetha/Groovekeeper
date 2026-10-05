@@ -37,18 +37,20 @@ namespace SongCreator.IO
                     continue;
                 }
 
-                var lines = section.Lines.Where(l => l.Text.Trim().Length > 0 || l.Chords.Count > 0).ToList();
-                if (lines.Count == 0)
-                    continue;
+                // Every section and line is written, empty ones too, so the song reads back as it was.
+                // A line with nothing on it is a blank line; the blank line before the next heading separates sections.
                 if (text.Length > 0)
                     text.AppendLine();
                 text.AppendLine($"[{section.Name}]");
-                foreach (var line in lines)
+                foreach (var line in section.Lines)
                 {
+                    bool hasText = line.Text.Trim().Length > 0;
                     if (line.Chords.Count > 0)
                         text.AppendLine(ChordLine(line));
-                    if (line.Text.Trim().Length > 0)
+                    if (hasText)
                         text.AppendLine(line.Text.TrimEnd());
+                    else if (line.Chords.Count == 0)
+                        text.AppendLine();
                 }
             }
             return text.ToString();

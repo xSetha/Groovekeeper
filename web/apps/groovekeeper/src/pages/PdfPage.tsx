@@ -265,6 +265,8 @@ function PreviewSong({ song, options }: { song: Song; options: Options }) {
 
 /** A chord row and its lyric. A line too long for the page wraps between words, each piece with its chords. */
 function PreviewLine({ chords, text }: { chords: string; text: string }) {
+  // A blank line keeps the height of a lyric.
+  if (!chords && !text.trim()) return <div aria-hidden="true">&nbsp;</div>;
   return (
     <div className="flex flex-wrap">
       {lineSegments(chords, text).map((segment, index) => (

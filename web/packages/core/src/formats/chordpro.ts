@@ -1,7 +1,7 @@
 // The ChordPro format: {directive: value} lines and lyrics with chords in brackets ("[G]Amazing").
 // Sections come from start_of_…/end_of_… environments, from {comment:} headings, or from paragraphs
-// separated by blank lines. {chorus} and a heading naming an earlier section with nothing under it are
-// repeats. Directives the song has no place for (capo, tempo, …) are skipped.
+// separated by blank lines; in an environment, a blank line is a blank line of the song. {chorus} and a
+// heading naming an earlier section with nothing under it are repeats. Directives the song has no place for (capo, tempo, …) are skipped.
 import { isChord } from '../music/chord';
 import type { Section, Song, SongLine } from '../models/song';
 import { emptySong } from '../models/song';
@@ -38,8 +38,10 @@ export function parseChordPro(text: string): Song {
 
     if (trimmed.startsWith('#')) continue;
     if (trimmed.length === 0) {
-      // A blank line ends a paragraph, but not an environment or a heading still waiting for its lines.
-      if (!inEnvironment && section !== null && section.lines.length > 0) section = null;
+      // A blank line ends a paragraph, but not an environment (where it's kept) or a heading still waiting
+      // for its lines.
+      if (inEnvironment && section !== null) section.lines.push({ text: '', chords: [] });
+      else if (section !== null && section.lines.length > 0) section = null;
       continue;
     }
 
@@ -173,12 +175,12 @@ export function songToChordPro(song: Song): string {
       continue;
     }
 
-    const lines = section.lines.filter((l) => l.text.trim().length > 0 || l.chords.length > 0);
-    if (lines.length === 0) continue;
+    // Every section and line is written, empty ones too (a blank line in an environment), so the song reads
+    // back as it was.
     if (out.length > 0) out.push('');
     const environment = environmentOf(section.name);
     out.push(`{start_of_${environment}: ${section.name}}`);
-    for (const line of lines) out.push(inlineChords(line));
+    for (const line of section.lines) out.push(inlineChords(line));
     out.push(`{end_of_${environment}}`);
   }
   return out.map((line) => line + '\n').join('');

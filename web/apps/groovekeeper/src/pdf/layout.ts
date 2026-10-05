@@ -2,7 +2,7 @@
 // pages follow the desktop's PDF export (SongPdfWriter): A4, 2 cm margins, songs one after another under a
 // thin line, and nothing split that's read together.
 import {
-  chordLine, displayTitle, parseKey, printedLines, repeatedSections, romanNumeral, type Song,
+  chordLine, displayTitle, parseKey, repeatedSections, romanNumeral, type Song,
 } from '@groovekeeper/core';
 
 export interface ExportOptions {
@@ -22,7 +22,10 @@ export interface PrintedSection {
   lines: { chords: string; text: string }[];
 }
 
-/** The song's sections as printed, with the options applied. Sections with nothing to print are left out. */
+/**
+ * The song's sections as printed, with the options applied: as the editor shows them, every section (an empty
+ * one is its heading) and every blank line.
+ */
 export function printedSections(song: Song, options: ExportOptions): PrintedSection[] {
   const repeated = options.collapseRepeats ? repeatedSections(song) : new Set<number>();
   const display = options.numerals && parseKey(song.key) ? (name: string) => romanNumeral(name, song.key) ?? name : undefined;
@@ -30,11 +33,11 @@ export function printedSections(song: Song, options: ExportOptions): PrintedSect
     const collapsed = section.repeat || repeated.has(index);
     const lines = collapsed
       ? []
-      : printedLines(section).map((line) => ({
+      : section.lines.map((line) => ({
           chords: line.chords.length > 0 ? chordLine(line, display) : '',
           text: line.text.trimEnd(),
         }));
-    return collapsed || lines.length > 0 ? [{ name: section.name, collapsed, lines }] : [];
+    return [{ name: section.name, collapsed, lines }];
   });
 }
 
@@ -143,7 +146,8 @@ export function layoutPdf(songs: ExportSong[], options: ExportOptions, measure: 
   const baseline = (top: number, height: number) => top + height * 0.8;
 
   const songRows = (chords: string, lyric: string): Block =>
-    wrapLine(chords, lyric, columns).flatMap((r) => [
+    // A blank line keeps the height of a lyric.
+    !chords && !lyric ? [gap(SONG_ROW)] : wrapLine(chords, lyric, columns).flatMap((r) => [
       ...(chords ? [row(SONG_ROW, (top) => [text(left, baseline(top, SONG_ROW), r.chords, 'monoBold', SONG_SIZE, 'chord')])] : []),
       ...(lyric ? [row(SONG_ROW, (top) => [text(left, baseline(top, SONG_ROW), r.text, 'mono', SONG_SIZE, 'fg')])] : []),
     ]);

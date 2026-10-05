@@ -77,6 +77,16 @@ describe('the pages', () => {
     if (rule && titleMark) expect(rule.y).toBeLessThan(titleMark.y);
   });
 
+  it('prints what the editor shows: an empty section as its heading, and a blank line as space', () => {
+    const song = parseSongText('Song\n\n[Intro]\n\n\n[Verse]\nla\n\nla\n');
+    const page = layoutPdf([{ song }], options, measure)[0]!;
+    expect(texts(page)).toEqual(['Song', '[Intro]', '[Verse]', 'la', 'la']);
+    const [first, second] = page.filter((mark) => mark.kind === 'text' && mark.text === 'la');
+    const next = page.find((mark) => mark.kind === 'text' && mark.text === '[Verse]');
+    // The blank line between the two lyrics is as tall as a lyric row.
+    expect(second!.y - first!.y).toBeCloseTo(2 * (first!.y - next!.y - 2), 0);
+  });
+
   it('writes a repeated section as [name] (repeat)', () => {
     const song = parseSongText('Song\n\n[Chorus]\nG\nhey\n\n[Chorus]\nG\nhey\n');
     expect(texts(layoutPdf([{ song }], options, measure)[0]!)).toEqual(['Song', '[Chorus]', 'G', 'hey', '[Chorus]', '(repeat)']);

@@ -18,6 +18,10 @@ Each case is a song as JSON plus one or more song files with the same base name:
 | `name.in.txt`, `name.in.cho` | Read only: reading the file gives `name.json` (input in a form the app doesn't write) |
 | `name.out.txt`, `name.out.cho` | Write only: writing `name.json` gives the file |
 
+Every section and line is written, empty ones too, so a song reads back as it was: in `.txt` one blank
+line separates sections and the other blank lines are blank lines of the song; in ChordPro a blank line
+inside an environment is one (see `empty-sections` and `blank-lines`).
+
 `.txt` is the app's text format, `.cho` is ChordPro. Files use `\n` line endings; compare after
 turning `\r\n` into `\n`. A chord's `position` is the index of the letter it sits above, and may
 be past the end of the text (chord-only lines).

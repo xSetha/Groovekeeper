@@ -30,14 +30,13 @@ namespace SongCreator.IO
                     continue;
                 }
 
-                var lines = section.Lines.Where(l => l.Text.Trim().Length > 0 || l.Chords.Count > 0).ToList();
-                if (lines.Count == 0)
-                    continue;
+                // Every section and line is written, empty ones too (a blank line in an environment), so the song
+                // reads back as it was.
                 if (text.Length > 0)
                     text.AppendLine();
                 string environment = EnvironmentOf(section.Name);
                 text.AppendLine($"{{start_of_{environment}: {section.Name}}}");
-                foreach (var line in lines)
+                foreach (var line in section.Lines)
                     text.AppendLine(InlineChords(line));
                 text.AppendLine($"{{end_of_{environment}}}");
             }

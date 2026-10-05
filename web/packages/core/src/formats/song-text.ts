@@ -1,5 +1,6 @@
 // The plain text format: title and artist lines, a "Key: …" line, then "[Section]" headings with each
-// chord line above its lyric line. A heading followed by "(Repeat)" is a repeat of that section.
+// chord line above its lyric line. A heading followed by "(Repeat)" is a repeat of that section. One blank
+// line separates sections; other blank lines in a section are blank lines of the song.
 // Files from older versions have "Tuning: … · Key: …" there; the tuning is ignored.
 import { isChord } from '../music/chord';
 import type { Section, Song, SongLine } from '../models/song';
@@ -17,17 +18,27 @@ export function parseSongText(text: string): Song {
   const headerLines: string[] = [];
   let section: Section | null = null;
   let pendingChords: SongLine | null = null;
+  // Blank lines in a section not yet added: the last one before a heading separates sections.
+  let blankLines = 0;
+  const addBlankLines = (count: number) => {
+    for (let i = 0; i < count; i++) section!.lines.push({ text: '', chords: [] });
+    blankLines = 0;
+  };
 
-  for (const raw of text.replaceAll('\r\n', '\n').split('\n')) {
+  const rows = text.replaceAll('\r\n', '\n').split('\n');
+  if (rows.at(-1) === '') rows.pop(); // the newline that ends the last line
+  for (const raw of rows) {
     const line = raw.trimEnd();
     const heading = HEADING.exec(line.trim());
 
     if (heading) {
+      if (section !== null) addBlankLines(Math.max(0, blankLines - 1));
       section = { name: heading[1]!, repeat: false, lines: [] };
       song.sections.push(section);
       pendingChords = null;
     } else if (line.trim().length === 0) {
       pendingChords = null;
+      if (section !== null) blankLines++;
     } else if (section === null && headerLines.length < 2 && !isInfoLine(line)) {
       headerLines.push(line.trim());
     } else if (section === null && isInfoLine(line)) {
@@ -37,6 +48,7 @@ export function parseSongText(text: string): Song {
         section = { name: DEFAULT_SECTION, repeat: false, lines: [] };
         song.sections.push(section);
       }
+      addBlankLines(blankLines);
 
       if (section.lines.length === 0 && line.trim() === REPEAT_MARKER) {
         section.repeat = true;
@@ -54,6 +66,8 @@ export function parseSongText(text: string): Song {
       }
     }
   }
+
+  if (section !== null) addBlankLines(blankLines);
 
   song.title = headerLines[0] ?? '';
   song.artist = headerLines[1] ?? '';
@@ -100,13 +114,15 @@ export function songToText(song: Song): string {
       continue;
     }
 
-    const lines = section.lines.filter((l) => l.text.trim().length > 0 || l.chords.length > 0);
-    if (lines.length === 0) continue;
+    // Every section and line is written, empty ones too, so the song reads back as it was. A line with
+    // nothing on it is a blank line; the blank line before the next heading separates sections.
     if (out.length > 0) out.push('');
     out.push(`[${section.name}]`);
-    for (const line of lines) {
+    for (const line of section.lines) {
+      const hasText = line.text.trim().length > 0;
       if (line.chords.length > 0) out.push(chordLine(line));
-      if (line.text.trim().length > 0) out.push(line.text.trimEnd());
+      if (hasText) out.push(line.text.trimEnd());
+      else if (line.chords.length === 0) out.push('');
     }
   }
   return out.map((line) => line + '\n').join('');

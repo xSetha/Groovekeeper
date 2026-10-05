@@ -1,0 +1,8 @@
+{
+  "title": "Blank Lines", "artist": "", "key": "",
+  "sections": [
+    { "name": "Verse 1", "repeat": false, "lines": [{ "text": "first", "chords": [] }, { "text": "", "chords": [] }, { "text": "second", "chords": [] }, { "text": "", "chords": [] }] },
+    { "name": "Chorus", "repeat": false, "lines": [{ "text": "", "chords": [] }, { "text": "", "chords": [] }] },
+    { "name": "Outro", "repeat": false, "lines": [{ "text": "end", "chords": [] }, { "text": "", "chords": [] }] }
+  ]
+}
