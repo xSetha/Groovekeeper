@@ -1,5 +1,5 @@
 import { createTemplate, parseSongText } from '@groovekeeper/core';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { db, type RemoteRow, type RemoteSong, type SyncedTable } from '../src/library/db';
 import { addSongs, deleteSong, saveSong } from '../src/library/library';
 import { addEntry, createSetlist, updateSetlist } from '../src/library/setlists';
@@ -224,7 +224,33 @@ describe('syncing', () => {
     expect((await db.songs.get(grace!))?.title).toBe('Changed there');
   });
 
-  it('keeps a change made while it was being pushed, to push it next time', async () => {
+  describe('with the clock stopped, so a change and the one before it have the same time', () => {
+    beforeEach(() => {
+      vi.useFakeTimers({ toFake: ['Date'] });
+      vi.setSystemTime(Date.parse('2026-10-06T12:00:00Z'));
+    });
+    afterEach(() => vi.useRealTimers());
+
+    it('keeps a change made while it was being pushed, to push it next time', async () => {
+      const [grace] = await addSongs([song('Amazing Grace')]);
+      account.duringInsert = () => saveSong(grace!, song('Typed meanwhile'));
+      await syncNow();
+      expect(await db.songs.get(grace!)).toMatchObject({ version: 1, dirty: 1 });
+
+      await syncNow();
+      expect(account.song(grace!)).toMatchObject({ title: 'Typed meanwhile', version: 2 });
+      expect((await db.songs.get(grace!))?.dirty).toBe(0);
+    });
+
+    it('keeps a setlist changed while it was being pushed', async () => {
+      const gig = await createSetlist();
+      account.duringInsert = () => updateSetlist(gig, (s) => ({ ...s, name: 'Renamed meanwhile' }));
+      await syncNow();
+      expect(await db.setlists.get(gig)).toMatchObject({ version: 1, dirty: 1 });
+    });
+  });
+
+  it('keeps a change made while it was being pushed, with the clock running', async () => {
     const [grace] = await addSongs([song('Amazing Grace')]);
     account.duringInsert = () => saveSong(grace!, song('Typed meanwhile'));
     await syncNow();

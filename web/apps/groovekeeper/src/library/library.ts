@@ -1,5 +1,5 @@
 import { parseSongText, songToText, type Song } from '@groovekeeper/core';
-import { db, type LibrarySong, type SongNote } from './db';
+import { changedAt, db, type LibrarySong, type SongNote } from './db';
 import { newId } from './ids';
 
 const byTitle = (a: LibrarySong, b: LibrarySong): number =>
@@ -17,15 +17,18 @@ export function matchesSearch(song: LibrarySong, search: string): boolean {
   return [song.title, song.artist, song.key].some((field) => field.toLowerCase().includes(needle));
 }
 
-/** The song as stored, changed here: `version` is the account's version it was made from (0 for a new song). */
-const record = (id: string, song: Song, notes: SongNote[], version: number): LibrarySong => ({
+/**
+ * The song as stored, changed here: `version` is the account's version it was made from (0 for a new song),
+ * `previous` the time of its last change.
+ */
+const record = (id: string, song: Song, notes: SongNote[], version: number, previous?: number): LibrarySong => ({
   id,
   title: song.title,
   artist: song.artist,
   key: song.key,
   text: songToText(song),
   notes,
-  updatedAt: Date.now(),
+  updatedAt: changedAt(previous),
   version,
   dirty: 1,
 });
@@ -61,7 +64,7 @@ export async function openSong(id: string): Promise<{ song: Song; notes: SongNot
 export async function saveSong(id: string, song: Song, notes?: SongNote[]): Promise<void> {
   await db.transaction('rw', db.songs, async () => {
     const stored = await db.songs.get(id);
-    await db.songs.put(record(id, song, notes ?? stored?.notes ?? [], stored?.version ?? 0));
+    await db.songs.put(record(id, song, notes ?? stored?.notes ?? [], stored?.version ?? 0, stored?.updatedAt));
   });
   keepLibrary();
 }
@@ -76,7 +79,7 @@ export async function deleteSong(id: string): Promise<void> {
       .filter((setlist) => setlist.songs.some((entry) => entry.songId === id))
       .modify((setlist) => {
         setlist.songs = setlist.songs.filter((entry) => entry.songId !== id);
-        setlist.updatedAt = Date.now();
+        setlist.updatedAt = changedAt(setlist.updatedAt);
         setlist.dirty = 1;
       });
   });

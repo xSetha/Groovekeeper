@@ -74,6 +74,12 @@ export interface Deletion {
 export type SyncedTable = 'songs' | 'setlists';
 
 /**
+ * The time of a change to a row last changed at `previous`: always later, even within the same millisecond,
+ * so a sync can tell that a row was changed again while it was being pushed.
+ */
+export const changedAt = (previous = 0): number => Math.max(Date.now(), previous + 1);
+
+/**
  * A song or setlist changed both here and in the account since the last sync; the user picks the copy to
  * keep. `remote` is the account's copy, as the database has it.
  */

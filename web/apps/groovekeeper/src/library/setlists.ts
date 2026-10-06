@@ -1,6 +1,6 @@
 // Setlists in the library. Every change is saved right away, as in the desktop app.
 import { parseSongText, UNTITLED_TITLE, type Song } from '@groovekeeper/core';
-import { db, type LibrarySetlist, type LibrarySong, type SetlistEntry, type SongNote } from './db';
+import { changedAt, db, type LibrarySetlist, type LibrarySong, type SetlistEntry, type SongNote } from './db';
 import { newId } from './ids';
 
 /** What a new setlist is called until it's renamed. */
@@ -21,7 +21,7 @@ export async function createSetlist(): Promise<string> {
 export async function updateSetlist(id: string, change: (setlist: LibrarySetlist) => LibrarySetlist): Promise<void> {
   await db.transaction('rw', db.setlists, async () => {
     const setlist = await db.setlists.get(id);
-    if (setlist) await db.setlists.put({ ...change(setlist), updatedAt: Date.now(), dirty: 1 });
+    if (setlist) await db.setlists.put({ ...change(setlist), updatedAt: changedAt(setlist.updatedAt), dirty: 1 });
   });
 }
 
