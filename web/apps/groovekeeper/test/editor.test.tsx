@@ -368,7 +368,12 @@ describe('notes', () => {
     await user.keyboard('Capo 2{Enter}');
     URL.createObjectURL = () => 'blob:song';
     URL.revokeObjectURL = () => {};
-    await user.click(screen.getByRole('button', { name: 'Save as .txt' }));
+    // The save button opens and closes its menu.
+    await user.click(screen.getByRole('button', { name: 'Save as file' }));
+    await user.click(screen.getByRole('button', { name: 'Save as file' }));
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Save as file' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Save as .txt' }));
     expect(screen.getByRole('status')).toHaveTextContent('Its notes stay in the library');
   });
 });

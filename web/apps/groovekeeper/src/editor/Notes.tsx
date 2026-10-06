@@ -1,21 +1,11 @@
-// Notes floating over the song, the edge of the printed page, and the small menu that adds and deletes notes.
-import { memo, useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react';
+// Notes floating over the song, and the edge of the printed page.
+import { memo, useLayoutEffect, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react';
+import type { MenuAt } from '../components/ContextMenu';
 import { trackDrag } from '../components/drag';
 import { rowAt } from '../components/notes';
 import { PRINTED_COLUMNS } from '../pdf/layout';
 import { deleteNote, finishNote, moveNote, setNoteText } from './edit';
 import { useEditor, useEditorStore } from './store';
-
-export interface MenuItem {
-  label: string;
-  onSelect: () => void;
-}
-
-export interface MenuAt {
-  x: number;
-  y: number;
-  items: MenuItem[];
-}
 
 /**
  * Laid over the song's sections (inside them, so its `ch` is a lyric letter): the line past which the PDF
@@ -155,51 +145,3 @@ const NoteBox = memo(function NoteBox({ id, charWidth, onMenu }: { id: string; c
     </div>
   );
 });
-
-/** A small menu at the pointer, for right-click and long press. It closes on a pick, Esc, or a click elsewhere. */
-export function ContextMenu({ menu, onClose }: { menu: MenuAt; onClose: () => void }) {
-  const list = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    list.current?.querySelector('button')?.focus();
-    const away = (event: Event) => {
-      if (!list.current?.contains(event.target as Node)) onClose();
-    };
-    const escape = (event: globalThis.KeyboardEvent) => event.key === 'Escape' && onClose();
-    window.addEventListener('pointerdown', away, true);
-    window.addEventListener('scroll', onClose, true);
-    window.addEventListener('resize', onClose);
-    window.addEventListener('keydown', escape);
-    return () => {
-      window.removeEventListener('pointerdown', away, true);
-      window.removeEventListener('scroll', onClose, true);
-      window.removeEventListener('resize', onClose);
-      window.removeEventListener('keydown', escape);
-    };
-  }, [onClose]);
-
-  return (
-    <div
-      ref={list}
-      role="menu"
-      className="fixed z-40 min-w-40 rounded border border-line bg-card py-1 font-sans text-sm shadow-lg"
-      // Kept inside the window.
-      style={{ left: Math.min(menu.x, window.innerWidth - 176), top: Math.min(menu.y, window.innerHeight - 48 * menu.items.length) }}
-    >
-      {menu.items.map((item) => (
-        <button
-          key={item.label}
-          type="button"
-          role="menuitem"
-          className="block w-full px-3 py-1.5 text-left hover:bg-hover focus:bg-hover focus:outline-none pointer-coarse:min-h-11"
-          onClick={() => {
-            onClose();
-            item.onSelect();
-          }}
-        >
-          {item.label}
-        </button>
-      ))}
-    </div>
-  );
-}

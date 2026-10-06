@@ -114,23 +114,26 @@ export const SectionBlock = memo(function SectionBlock({ index, lineIds, first, 
         </h2>
         <span className="flex items-center font-sans text-sm text-muted">
           <SectionButton label="Move section up" disabled={first} onClick={() => edit((s) => moveSection(s, index, -1))}>
-            ↑
+            <Icon d="M12 19V5M6 11l6-6 6 6" />
           </SectionButton>
           <SectionButton label="Move section down" disabled={last} onClick={() => edit((s) => moveSection(s, index, 1))}>
-            ↓
+            <Icon d="M12 5v14M6 13l6 6 6-6" />
           </SectionButton>
           {repeat ? null : (
             <>
               <SectionButton label="Duplicate section" onClick={() => edit((s) => duplicateSection(s, index))}>
-                Duplicate
+                {/* Two sheets, one over the other. */}
+                <Icon d="M9 9h10v10H9zM5 15V5h10" />
               </SectionButton>
               <SectionButton label="Repeat section at the end" onClick={() => edit((s) => repeatSection(s, index))}>
-                Repeat
+                {/* Arrows going round, as on a repeat button. */}
+                <Icon d="M17 2l3 3-3 3M4 11V9a4 4 0 0 1 4-4h12M7 22l-3-3 3-3M20 13v2a4 4 0 0 1-4 4H4" />
               </SectionButton>
             </>
           )}
           <SectionButton label="Delete section" onClick={() => edit((s) => deleteSection(s, index))}>
-            Delete
+            {/* A bin. */}
+            <Icon d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" />
           </SectionButton>
         </span>
       </div>
@@ -152,6 +155,15 @@ export const SectionBlock = memo(function SectionBlock({ index, lineIds, first, 
   );
 });
 
+/** A section action's picture; its name is the button's label and tooltip. */
+function Icon({ d }: { d: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d={d} />
+    </svg>
+  );
+}
+
 function SectionButton(props: { label: string; disabled?: boolean; onClick: () => void; children: ReactNode }) {
   return (
     <button
@@ -160,7 +172,7 @@ function SectionButton(props: { label: string; disabled?: boolean; onClick: () =
       title={props.label}
       disabled={props.disabled}
       onClick={props.onClick}
-      className="rounded px-1.5 py-0.5 hover:bg-hover hover:text-fg disabled:opacity-30 disabled:hover:bg-transparent pointer-coarse:min-h-11 pointer-coarse:min-w-11"
+      className="inline-flex items-center justify-center rounded p-1 hover:bg-hover hover:text-fg disabled:opacity-30 disabled:hover:bg-transparent pointer-coarse:min-h-11 pointer-coarse:min-w-11"
     >
       {props.children}
     </button>

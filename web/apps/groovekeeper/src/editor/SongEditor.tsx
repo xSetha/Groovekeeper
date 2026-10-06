@@ -4,6 +4,7 @@ import {
 import { Fragment, useCallback, useEffect, useRef, useState, type MouseEvent, type PointerEvent, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { ConfirmDialog } from '../components/ConfirmDialog';
+import { ContextMenu, type MenuAt } from '../components/ContextMenu';
 import { useCharWidth } from '../components/useCharWidth';
 import type { SongNote } from '../library/db';
 import { download, songFile, type SongFormat } from '../library/files';
@@ -12,7 +13,7 @@ import { useNewSong } from '../navigation';
 import { holdOpenSong } from '../sync/account';
 import { dismissToast, toast } from '../toasts';
 import { addNote, addSection, setArtist, setKey, setTitle, withIds, type KeyedSong } from './edit';
-import { ContextMenu, NoteLayer, type MenuAt } from './Notes';
+import { NoteLayer } from './Notes';
 import { SectionBlock } from './SectionBlock';
 import { createEditorStore, EditorContext, useEditor, useEditorStore, type EditorStore } from './store';
 
@@ -184,10 +185,14 @@ function EditorBody() {
   );
 }
 
-/** Where a section dragged by its grip will land: a line in the gap between sections, taking no room of its own. */
+/**
+ * Where a section dragged by its grip will land: a line in the gap above the next section, taking no room of its
+ * own. The holder is a pixel tall (and a pixel back up): an empty one would let that section's top margin run
+ * through it, and the line would land on the section's heading instead of in the gap.
+ */
 function DropLine() {
   return (
-    <div aria-hidden="true" className="relative">
+    <div aria-hidden="true" className="relative -mb-px h-px">
       <div className="absolute inset-x-0 top-3 h-0.5 rounded bg-accent" />
     </div>
   );
@@ -199,6 +204,8 @@ function Toolbar(props: { id: string; onDelete: () => void; onDeleteFailed: () =
   const navigate = useNavigate();
   const newSong = useNewSong();
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [fileMenu, setFileMenu] = useState<MenuAt | null>(null);
+  const closeFileMenu = useCallback(() => setFileMenu(null), []);
   const canUndo = useEditor((s) => s.past.length > 0);
   const canRedo = useEditor((s) => s.future.length > 0);
   const key = useEditor((s) => s.song.key);
@@ -261,11 +268,39 @@ function Toolbar(props: { id: string; onDelete: () => void; onDeleteFailed: () =
         </button>
       ) : null}
       <span className="ml-auto flex items-center gap-1">
-        <ToolButton onClick={() => saveFile('text')}>Save as .txt</ToolButton>
-        <ToolButton onClick={() => saveFile('chordpro')}>Save as ChordPro</ToolButton>
-        <ToolButton onClick={() => navigate(`/pdf?song=${id}`)}>Export PDF</ToolButton>
-        <ToolButton onClick={() => setConfirmDelete(true)}>Delete song</ToolButton>
+        <IconButton
+          label="Save as file"
+          menuOpen={fileMenu !== null}
+          onClick={(button) => {
+            if (fileMenu) {
+              setFileMenu(null);
+              return;
+            }
+            const box = button.getBoundingClientRect();
+            setFileMenu({
+              opener: button,
+              x: box.left,
+              y: box.bottom + 4,
+              items: [
+                { label: 'Save as .txt', onSelect: () => saveFile('text') },
+                { label: 'Save as ChordPro', onSelect: () => saveFile('chordpro') },
+              ],
+            });
+          }}
+        >
+          {/* An arrow down into a tray: a file to keep. */}
+          <ToolIcon d="M12 4v11M7 10l5 5 5-5M5 20h14" />
+        </IconButton>
+        <IconButton label="Export PDF" onClick={() => navigate(`/pdf?song=${id}`)}>
+          {/* A printed page. */}
+          <ToolIcon d="M14 3H6v18h12V7zM14 3v4h4M9 12h6M9 16h6" />
+        </IconButton>
+        <IconButton label="Delete song" onClick={() => setConfirmDelete(true)}>
+          {/* A bin, as on a section's Delete. */}
+          <ToolIcon d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" />
+        </IconButton>
       </span>
+      {fileMenu ? <ContextMenu menu={fileMenu} onClose={closeFileMenu} /> : null}
       {confirmDelete ? (
         <ConfirmDialog
           title={`Delete “${displayTitle(store.getState().song)}”?`}
@@ -290,6 +325,31 @@ function Toolbar(props: { id: string; onDelete: () => void; onDeleteFailed: () =
         />
       ) : null}
     </div>
+  );
+}
+
+/** A toolbar action shown as its picture; its name is the tooltip (and what screen readers read). */
+function IconButton(props: { label: string; menuOpen?: boolean; onClick: (button: HTMLButtonElement) => void; children: ReactNode }) {
+  return (
+    <button
+      type="button"
+      aria-label={props.label}
+      title={props.label}
+      aria-haspopup={props.menuOpen === undefined ? undefined : 'menu'}
+      aria-expanded={props.menuOpen}
+      onClick={(event) => props.onClick(event.currentTarget)}
+      className="inline-flex items-center justify-center rounded p-1.5 text-muted hover:bg-hover hover:text-fg aria-expanded:bg-hover aria-expanded:text-fg pointer-coarse:min-h-11 pointer-coarse:min-w-11"
+    >
+      {props.children}
+    </button>
+  );
+}
+
+function ToolIcon({ d }: { d: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d={d} />
+    </svg>
   );
 }
 
