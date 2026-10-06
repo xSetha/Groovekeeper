@@ -4,22 +4,33 @@
 import {
   chordLine, displayTitle, parseKey, repeatedSections, romanNumeral, type Song,
 } from '@groovekeeper/core';
+import type { SongNote } from '../library/db';
 
 export interface ExportOptions {
   collapseRepeats: boolean;
   numerals: boolean;
 }
 
-/** A song to export, as it's written. */
+/** A song to export, as it's written, with the notes floating over it. */
 export interface ExportSong {
   song: Song;
+  notes?: SongNote[];
 }
 
-/** A section as it's printed: collapsed to "[Chorus] (repeat)", or its lines as chord row and lyric. */
+/**
+ * A section as it's printed: collapsed to "[Chorus] (repeat)", or its lines as chord row and lyric, each with
+ * its index among the song's lines (which notes are placed by).
+ */
 export interface PrintedSection {
   name: string;
   collapsed: boolean;
-  lines: { chords: string; text: string }[];
+  lines: PrintedLine[];
+}
+
+export interface PrintedLine {
+  index: number;
+  chords: string;
+  text: string;
 }
 
 /**
@@ -29,15 +40,43 @@ export interface PrintedSection {
 export function printedSections(song: Song, options: ExportOptions): PrintedSection[] {
   const repeated = options.collapseRepeats ? repeatedSections(song) : new Set<number>();
   const display = options.numerals && parseKey(song.key) ? (name: string) => romanNumeral(name, song.key) ?? name : undefined;
-  return song.sections.flatMap((section, index) => {
+  let lineIndex = 0;
+  return song.sections.map((section, index) => {
     const collapsed = section.repeat || repeated.has(index);
+    const first = lineIndex;
+    lineIndex += section.lines.length;
     const lines = collapsed
       ? []
-      : section.lines.map((line) => ({
+      : section.lines.map((line, i) => ({
+          index: first + i,
           chords: line.chords.length > 0 ? chordLine(line, display) : '',
           text: line.text.trimEnd(),
         }));
-    return [{ name: section.name, collapsed, lines }];
+    return { name: section.name, collapsed, lines };
+  });
+}
+
+/** A note as printed: the printed line it goes with (by its index), and how far towards the next line it starts. */
+export interface PlacedNote {
+  note: SongNote;
+  line: number;
+  towardsNext: number;
+}
+
+/**
+ * Where each note is printed, as on the desktop: with the line its row is on (above the first line or below the
+ * last, with that one), moved down by how far it was towards the next line. A note over a line that isn't
+ * printed, in a collapsed repeat, goes with the printed line before it (or after, at the start of the song).
+ */
+export function placeNotes(song: Song, sections: PrintedSection[], notes: readonly SongNote[]): PlacedNote[] {
+  const count = song.sections.reduce((sum, section) => sum + section.lines.length, 0);
+  const printed = new Set(sections.flatMap((section) => section.lines.map((line) => line.index)));
+  if (count === 0 || printed.size === 0) return [];
+  return notes.map((note) => {
+    const index = Math.min(Math.max(Math.floor(note.printRow), 0), count - 1);
+    const before = [...printed].filter((line) => line <= index);
+    const line = before.length > 0 ? Math.max(...before) : Math.min(...printed);
+    return { note, line, towardsNext: note.printRow - index };
   });
 }
 
@@ -116,6 +155,8 @@ const SUBTITLE_SIZE = 11;
 const KEY_SIZE = 9;
 const SECTION_GAP = 12; // above a section's heading
 const SONG_GAP = 22; // above and below the line between two songs
+const NOTE_SIZE = 9;
+const NOTE_ROW = NOTE_SIZE * 1.3;
 
 /** A run of rows kept on one page; each row is its height and its marks, placed from the row's top. */
 type Block = { height: number; marks: (top: number) => Mark[] }[];
@@ -156,7 +197,27 @@ export function layoutPdf(songs: ExportSong[], options: ExportOptions, measure: 
       ...(lyric ? [row(SONG_ROW, (top) => [text(left, baseline(top, SONG_ROW), r.text, 'mono', SONG_SIZE, 'fg')])] : []),
     ]);
 
-  const sectionStart = (section: PrintedSection): Block => {
+  /**
+   * A line's rows, with the notes that go with it drawn over them. A note starts below the line's top by how far
+   * it was towards the next line, measured in what comes before that line: these rows, and a heading when the
+   * line ends its section.
+   */
+  const lineRows = (line: PrintedLine, notes: Map<number, PlacedNote[]>, endsSection: boolean): Block => {
+    const rows = songRows(line.chords, line.text);
+    const placed = notes.get(line.index);
+    if (!placed || rows.length === 0) return rows;
+    const height = rows.reduce((sum, r) => sum + r.height, 0) + (endsSection ? SECTION_GAP + SONG_ROW + 2 : 0);
+    const letter = measure('M', 'mono', SONG_SIZE);
+    const [first, ...others] = rows;
+    const noteMarks = (top: number): Mark[] =>
+      placed.flatMap(({ note, towardsNext }) =>
+        note.text.split('\n').map((textLine, i) =>
+          text(left + note.column * letter, top + towardsNext * height + NOTE_ROW * i + NOTE_SIZE, textLine, 'sansItalic', NOTE_SIZE, 'muted')));
+    // Drawn after the line, so the notes are on top of it.
+    return [row(first!.height, (top) => [...first!.marks(top), ...noteMarks(top)]), ...others];
+  };
+
+  const sectionStart = (section: PrintedSection, notes: Map<number, PlacedNote[]>, last: boolean): Block => {
     const heading = `[${section.name}]`;
     if (section.collapsed) {
       const after = left + measure(heading, 'monoBold', SONG_SIZE) + 6;
@@ -172,7 +233,7 @@ export function layoutPdf(songs: ExportSong[], options: ExportOptions, measure: 
     return [
       gap(SECTION_GAP),
       row(SONG_ROW + 2, (top) => [text(left, baseline(top, SONG_ROW), heading, 'monoBold', SONG_SIZE, 'muted')]),
-      ...(first ? songRows(first.chords, first.text) : []),
+      ...(first ? lineRows(first, notes, !last && section.lines.length === 1) : []),
     ];
   };
 
@@ -200,15 +261,22 @@ export function layoutPdf(songs: ExportSong[], options: ExportOptions, measure: 
       }
     }
     const sections = printedSections(exported.song, options);
-    // The title is kept with the start of the first section, so it's never left alone at the bottom of a page.
-    const [opening, ...rest] = sections;
-    place([...header(exported), ...(opening ? sectionStart(opening) : [])]);
-    if (opening) for (const line of opening.lines.slice(1)) place(songRows(line.chords, line.text));
-    for (const section of rest) {
-      // A section's heading is kept with its first line; every chord row stays with its lyric.
-      place(sectionStart(section));
-      for (const line of section.lines.slice(1)) place(songRows(line.chords, line.text));
+    const notes = new Map<number, PlacedNote[]>();
+    for (const placed of placeNotes(exported.song, sections, exported.notes ?? [])) {
+      notes.set(placed.line, [...(notes.get(placed.line) ?? []), placed]);
     }
+    const rest = (section: PrintedSection, index: number) => {
+      const last = index === sections.length - 1;
+      section.lines.slice(1).forEach((line, i) => place(lineRows(line, notes, !last && i === section.lines.length - 2)));
+    };
+    // The title is kept with the start of the first section, so it's never left alone at the bottom of a page.
+    sections.forEach((section, index) => {
+      const start = sectionStart(section, notes, index === sections.length - 1);
+      // A section's heading is kept with its first line; every chord row stays with its lyric.
+      place(index === 0 ? [...header(exported), ...start] : start);
+      rest(section, index);
+    });
+    if (sections.length === 0) place(header(exported));
   });
   return pages;
 }

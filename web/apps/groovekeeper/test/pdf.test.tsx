@@ -71,6 +71,19 @@ describe('exporting a PDF', () => {
     expect(options).toEqual({ collapseRepeats: true, numerals: true });
   });
 
+  it('previews and exports a song’s notes', async () => {
+    const user = userEvent.setup();
+    const note = { id: 'n1', text: 'Capo 2', column: 4, top: 0, printRow: 0.5 };
+    await db.songs.update('grace', { notes: [note] });
+    renderAt('/pdf?song=grace');
+    await screen.findByRole('heading', { name: 'Amazing Grace' });
+    expect(preview().getByText('Capo 2')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Export PDF' }));
+    await waitFor(() => expect(exportPdf).toHaveBeenCalledTimes(1));
+    expect(vi.mocked(exportPdf).mock.calls[0]![2][0]!.notes).toEqual([note]);
+  });
+
   it('says so when the PDF could not be made', async () => {
     const user = userEvent.setup();
     vi.mocked(exportPdf).mockRejectedValueOnce(new Error('offline'));

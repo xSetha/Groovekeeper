@@ -1,11 +1,11 @@
 import { displayTitle, parseSongText, UNTITLED_TITLE, type Song } from '@groovekeeper/core';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, useSearchParams } from 'react-router';
-import { db, type LibrarySong } from '../library/db';
+import { db, type LibrarySong, type SongNote } from '../library/db';
 import { listSongs } from '../library/library';
 import { setlistSongs } from '../library/setlists';
-import { lineSegments, printedSections, type ExportOptions, type ExportSong, type Ink } from '../pdf/layout';
+import { lineSegments, placeNotes, printedSections, type ExportOptions, type ExportSong, type Ink } from '../pdf/layout';
 import { toast } from '../toasts';
 
 /** A song in the PDF, with an id for its place in the preview. */
@@ -62,7 +62,7 @@ function OneSong({ id, options, children }: ModeProps & { id: string }) {
     <PdfLayout
       title={song ? displayTitle(song) : 'Export PDF'}
       back={{ to: `/songs/${id}`, label: song ? displayTitle(song) : 'Back to the song' }}
-      songs={song ? [{ id, song }] : []}
+      songs={song ? [{ id, song, notes: stored.notes }] : []}
       empty="This song isn't in your library."
       options={options}
     >
@@ -86,7 +86,7 @@ function Setlist({ id, options, children }: ModeProps & { id: string }) {
     <PdfLayout
       title={loaded?.name ?? 'Export PDF'}
       back={{ to: `/setlists/${id}`, label: loaded?.name ?? 'Setlists' }}
-      songs={loaded?.songs.map((s) => ({ id: s.entry.id, song: s.song })) ?? []}
+      songs={loaded?.songs.map((s) => ({ id: s.entry.id, song: s.song, notes: s.notes })) ?? []}
       empty={loaded ? 'No songs in this setlist yet.' : "This setlist isn't in your library."}
       options={options}
     >
@@ -112,7 +112,7 @@ function Songbook({ options, children }: ModeProps) {
     <PdfLayout
       title="Songbook"
       back={{ to: '/', label: 'Library' }}
-      songs={chosen.map((stored) => ({ id: stored.id, song: parseSongText(stored.text) }))}
+      songs={chosen.map((stored) => ({ id: stored.id, song: parseSongText(stored.text), notes: stored.notes }))}
       empty={library?.length === 0 ? 'The library is empty. Write or import songs first.' : 'Tick the songs to export.'}
       intro="Tick the songs for the PDF. They follow one another in title order; for another order, make a setlist."
       options={options}
@@ -214,8 +214,8 @@ function PdfLayout({ title, back, songs, empty, intro, options, children }: Layo
         {songs.length > 0 ? (
           // The paper, in the Songbook theme's ink whatever the app's theme.
           <div ref={paper} data-theme="songbook" className="mx-auto max-w-[21cm] bg-card px-[2cm] py-[1.5cm] text-fg shadow-xl max-sm:px-6">
-            {songs.map(({ id, song }) => (
-              <PreviewSong key={id} song={song} options={options} />
+            {songs.map(({ id, song, notes }) => (
+              <PreviewSong key={id} song={song} notes={notes} options={options} />
             ))}
           </div>
         ) : null}
@@ -231,8 +231,33 @@ export const pdfFileName = (title: string): string => `${title.replace(/[\\/:*?"
  * One song as in the PDF (pdf/layout.ts lays out the same sections and lines): following the one before it
  * under a thin line, its sizes in points, and chord rows written as text above their lyric.
  */
-function PreviewSong({ song, options }: { song: Song; options: Options }) {
+function PreviewSong({ song, notes = [], options }: { song: Song; notes?: SongNote[]; options: Options }) {
   const sections = printedSections(song, options);
+  const placed = placeNotes(song, sections, notes);
+  const lyrics = useRef<HTMLDivElement>(null);
+  // Where each note's top is, worked out from the printed lines once they're laid out, as the PDF does.
+  const [tops, setTops] = useState<number[]>([]);
+  // What the tops depend on, as one value: `placed` is a new list on every render.
+  const placing = JSON.stringify(placed.map((p) => [p.line, p.towardsNext]));
+
+  useLayoutEffect(() => {
+    const box = lyrics.current;
+    if (!box || placed.length === 0) return;
+    const origin = box.getBoundingClientRect().top;
+    const lines = [...box.querySelectorAll<HTMLElement>('[data-printed-line]')];
+    const next = placed.map(({ line, towardsNext }) => {
+      const at = lines.findIndex((element) => element.dataset.printedLine === String(line));
+      const element = lines[at];
+      if (!element) return 0;
+      const top = element.getBoundingClientRect().top - origin;
+      const after = lines[at + 1];
+      const height = after ? after.getBoundingClientRect().top - origin - top : element.getBoundingClientRect().height;
+      return top + towardsNext * height;
+    });
+    setTops((current) => (current.length === next.length && current.every((top, i) => top === next[i]) ? current : next));
+    // `placed` follows `placing`; the lines move with the options.
+  }, [placing, options]);
+
   return (
     <article className="not-first:mt-[22pt] not-first:border-t not-first:border-line not-first:pt-[22pt]">
       <div className="font-sans">
@@ -240,7 +265,7 @@ function PreviewSong({ song, options }: { song: Song; options: Options }) {
         {song.artist ? <p className="text-[11pt] text-muted">{song.artist}</p> : null}
         {song.key ? <p className="mt-1 text-[9pt] text-muted">Key: {song.key}</p> : null}
       </div>
-      <div className="font-mono text-[10.5pt]">
+      <div ref={lyrics} className="relative font-mono text-[10.5pt]">
         {sections.map((section, index) => (
           <section key={index}>
             {section.collapsed ? (
@@ -250,12 +275,24 @@ function PreviewSong({ song, options }: { song: Song; options: Options }) {
             ) : (
               <>
                 <h3 className="mt-[1.2em] mb-[0.2em] font-bold text-muted">[{section.name}]</h3>
-                {section.lines.map((line, lineIndex) => (
-                  <PreviewLine key={lineIndex} chords={line.chords} text={line.text} />
+                {section.lines.map((line) => (
+                  <div key={line.index} data-printed-line={line.index}>
+                    <PreviewLine chords={line.chords} text={line.text} />
+                  </div>
                 ))}
               </>
             )}
           </section>
+        ))}
+        {placed.map(({ note }, i) => (
+          // In the lyrics' font, so `ch` is a lyric letter; the note itself is smaller, in italics.
+          <div
+            key={note.id}
+            className="pointer-events-none absolute"
+            style={{ left: `${note.column}ch`, top: tops[i] ?? 0, visibility: tops[i] === undefined ? 'hidden' : undefined }}
+          >
+            <p className="font-sans text-[9pt] leading-[1.3] whitespace-pre text-muted italic">{note.text}</p>
+          </div>
         ))}
       </div>
     </article>

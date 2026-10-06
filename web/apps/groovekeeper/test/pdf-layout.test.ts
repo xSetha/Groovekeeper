@@ -1,6 +1,8 @@
 import { parseSongText } from '@groovekeeper/core';
 import { describe, expect, it } from 'vitest';
-import { layoutPdf, lineSegments, PAGE, wrapLine, type Mark, type Measure } from '../src/pdf/layout';
+import {
+  layoutPdf, lineSegments, PAGE, placeNotes, printedSections, PRINTED_COLUMNS, wrapLine, type Mark, type Measure,
+} from '../src/pdf/layout';
 
 // Letters of a fixed width: 0.6 of the size, as in Cascadia Mono, and half the size for the sans font.
 const measure: Measure = (text, face, size) => text.length * size * (face.startsWith('mono') ? 0.6 : 0.5);
@@ -99,5 +101,59 @@ describe('the pages', () => {
     expect(rows[0]).toBe('G');
     expect(rows.filter((row) => row.startsWith('word')).join(' ')).toBe(lyric);
     expect(rows.length).toBeGreaterThan(3);
+  });
+});
+
+describe('notes in the PDF', () => {
+  const song = parseSongText('Notes\n\n[Verse]\nG\nla la\nC\nhey hey\n\n[Chorus]\nD\nooh\n\n[Chorus]\nD\nooh\n');
+  const note = (printRow: number, text = 'Capo 2') => ({ id: `n${printRow}`, text, column: 10, top: 0, printRow });
+  const marks = (notes: ReturnType<typeof note>[], song_ = song) =>
+    layoutPdf([{ song: song_, notes }], options, measure)[0]!.flatMap((m) => (m.kind === 'text' ? [m] : []));
+  const at = (all: Extract<Mark, { kind: 'text' }>[], text: string) => all.filter((m) => m.text === text);
+
+  it('prints a note across by its column and down by how far it was towards the next line', () => {
+    const all = marks([note(0.5)]);
+    const [printed] = at(all, 'Capo 2');
+    const [chord] = at(all, 'G');
+    expect(printed).toMatchObject({ x: PAGE.margin + 10 * 0.6 * 10.5, face: 'sansItalic', ink: 'muted' });
+    // Half of the line's chord row and lyric (13 points each), from the line's top, where the chord row starts.
+    expect(printed!.y - chord!.y).toBeCloseTo(0.5 * 26 + 9 - 13 * 0.8);
+  });
+
+  it('counts the next section’s heading in the last line of a section', () => {
+    const all = marks([note(1.5)]);
+    // Line 1 ends the verse: below it come the gap (12) and the chorus's heading (15).
+    expect(at(all, 'Capo 2')[0]!.y - at(all, 'C')[0]!.y).toBeCloseTo(0.5 * (26 + 12 + 15) + 9 - 13 * 0.8);
+  });
+
+  it('prints each of a note’s lines below the one before', () => {
+    const [first, second] = [...at(marks([note(0, 'Build up\ncapo 2')]), 'Build up'), ...at(marks([note(0, 'Build up\ncapo 2')]), 'capo 2')];
+    expect(second!.y - first!.y).toBeCloseTo(9 * 1.3);
+  });
+
+  it('puts a note over a collapsed repeat with the printed line before it', () => {
+    // Line 3 is the second chorus, printed as "[Chorus] (repeat)"; line 2 is the first chorus's "ooh".
+    const placed = placeNotes(song, printedSections(song, options), [note(3.25)]);
+    expect(placed).toEqual([{ note: note(3.25), line: 2, towardsNext: 0.25 }]);
+  });
+
+  it('keeps a note above the first line or below the last with that line', () => {
+    const sections = printedSections(song, { ...options, collapseRepeats: false });
+    expect(placeNotes(song, sections, [note(-0.5), note(5)]).map(({ line, towardsNext }) => [line, towardsNext])).toEqual([
+      [0, -0.5],
+      [3, 2],
+    ]);
+  });
+
+  it('measures a wrapped line by all its rows', () => {
+    const long = parseSongText('Long\n\n[Verse]\nG\n' + 'la '.repeat(40) + '\n');
+    const all = marks([note(0.5)], long);
+    const [chord] = at(all, 'G');
+    // The line wraps into two rows of chords and lyrics: four rows of 13 points.
+    expect(at(all, 'Capo 2')[0]!.y - chord!.y).toBeCloseTo(0.5 * 52 + 9 - 13 * 0.8);
+  });
+
+  it('has the same page width the editor marks', () => {
+    expect(PRINTED_COLUMNS).toBe(78);
   });
 });
