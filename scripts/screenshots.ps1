@@ -217,7 +217,8 @@ try {
             Submit-FileDialog $app $samples
             Submit-FileDialog $app $sampleNames
             Wait-DialogClosed $app
-            Start-Sleep -Seconds 1
+            # The "Imported 6 songs" toast closes on its own after 4 seconds: not in the screenshot
+            Start-Sleep -Seconds 5
             $imported = $true
         }
 
