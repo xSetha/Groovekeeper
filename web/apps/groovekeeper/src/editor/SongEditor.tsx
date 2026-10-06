@@ -9,6 +9,7 @@ import { download, songFile, type SongFormat } from '../library/files';
 import { deleteSong, saveSong } from '../library/library';
 import { useNewSong } from '../navigation';
 import { holdOpenSong } from '../sync/account';
+import { dismissToast, toast } from '../toasts';
 import { addSection, setArtist, setKey, setTitle, withIds } from './edit';
 import { SectionBlock } from './SectionBlock';
 import { createEditorStore, EditorContext, useEditor, useEditorStore, type EditorStore } from './store';
@@ -35,7 +36,7 @@ export function SongEditor({ id, initial, isNew = false }: Props) {
 
   return (
     <EditorContext value={store}>
-      <Toolbar id={id} onDelete={save.cancel} />
+      <Toolbar id={id} onDelete={save.cancel} onDeleteFailed={save.resume} />
       <EditorBody />
     </EditorContext>
   );
@@ -118,7 +119,8 @@ function DropLine() {
   );
 }
 
-function Toolbar({ id, onDelete }: { id: string; onDelete: () => void }) {
+function Toolbar(props: { id: string; onDelete: () => void; onDeleteFailed: () => void }) {
+  const { id, onDelete, onDeleteFailed } = props;
   const store = useEditorStore();
   const navigate = useNavigate();
   const newSong = useNewSong();
@@ -132,6 +134,7 @@ function Toolbar({ id, onDelete }: { id: string; onDelete: () => void }) {
   const saveFile = (format: SongFormat) => {
     const file = songFile(store.getState().song, format);
     download(file.name, file.text);
+    toast('success', `Saved ${file.name}`);
   };
 
   return (
@@ -196,7 +199,18 @@ function Toolbar({ id, onDelete }: { id: string; onDelete: () => void }) {
           onCancel={() => setConfirmDelete(false)}
           onConfirm={() => {
             onDelete();
-            void deleteSong(id).then(() => navigate('/'));
+            const title = displayTitle(store.getState().song);
+            deleteSong(id).then(
+              () => {
+                toast('success', `Deleted “${title}”`);
+                navigate('/');
+              },
+              () => {
+                onDeleteFailed();
+                setConfirmDelete(false);
+                toast('error', `Couldn't delete “${title}”`, 'Reload the page and try again.');
+              },
+            );
           }}
         />
       ) : null}
@@ -240,7 +254,8 @@ function useShortcuts(store: EditorStore) {
 /**
  * Saves the song to the library shortly after each change, and right away when leaving the song, or when
  * the app is hidden (a phone may freeze or close a hidden app without any other warning). A new song left
- * empty is removed instead. `cancel` drops a pending save (when the song is being deleted).
+ * empty is removed instead. `cancel` drops a pending save and stops saving (when the song is being deleted);
+ * `resume` saves again (the delete failed).
  */
 function useAutosave(id: string, store: EditorStore, isNew: boolean) {
   const pending = useRef<Song | null>(null);
@@ -250,8 +265,23 @@ function useAutosave(id: string, store: EditorStore, isNew: boolean) {
   useEffect(() => {
     const flush = () => {
       clearTimeout(timer.current);
-      if (pending.current) void saveSong(id, pending.current);
+      const song = pending.current;
       pending.current = null;
+      if (!song) return;
+      // A song that couldn't be saved mustn't go unnoticed: the toast stays until a save works again.
+      saveSong(id, song).then(
+        () => dismissToast(`save:${id}`),
+        () => {
+          toast(
+            'error',
+            `Couldn't save “${displayTitle(song)}”`,
+            "Your latest changes aren't stored yet. Free some space on this device, then change the song to save again.",
+            `save:${id}`,
+          );
+          // Saved again with the next change, or when leaving the song.
+          pending.current ??= song;
+        },
+      );
     };
     const unsubscribe = store.subscribe((state, previous) => {
       if (state.song === previous.song) return;
@@ -280,6 +310,9 @@ function useAutosave(id: string, store: EditorStore, isNew: boolean) {
       cancelled.current = true;
       clearTimeout(timer.current);
       pending.current = null;
+    },
+    resume: () => {
+      cancelled.current = false;
     },
   };
 }

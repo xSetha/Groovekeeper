@@ -11,6 +11,7 @@ import {
 } from '../library/setlists';
 import { isNewFrom } from '../navigation';
 import { useIsPhone } from '../phone';
+import { toast } from '../toasts';
 
 // The name is saved this long after the last key, so typing doesn't write on every key.
 const SAVE_DELAY_MS = 400;
@@ -83,13 +84,11 @@ function SetlistToPlay({ setlist, songs }: Loaded) {
 function SetlistEditor({ setlist, songs }: Loaded) {
   const navigate = useNavigate();
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const [error, setError] = useState(false);
   const [drop, setDrop] = useState<number | null>(null);
   const rows = useRef<HTMLOListElement>(null);
 
   const change = (update: (setlist: LibrarySetlist) => LibrarySetlist) => {
-    setError(false);
-    updateSetlist(setlist.id, update).catch(() => setError(true));
+    updateSetlist(setlist.id, update).catch(saveFailed);
   };
 
   /** Moves a song past its neighbour on the list as shown, so the arrows always move it one visible place. */
@@ -131,7 +130,7 @@ function SetlistEditor({ setlist, songs }: Loaded) {
           ← Setlists
         </Link>
         <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2">
-          <NameField setlist={setlist} onError={() => setError(true)} />
+          <NameField setlist={setlist} />
           <Link
             to={`/pdf?setlist=${setlist.id}`}
             className="ml-auto rounded px-2 py-1.5 text-sm hover:bg-hover pointer-coarse:min-h-11"
@@ -149,11 +148,6 @@ function SetlistEditor({ setlist, songs }: Loaded) {
         <p className="mt-1 text-sm text-muted">
           {songs.length === 1 ? '1 song' : `${songs.length} songs`}. Changes are saved right away.
         </p>
-        {error ? (
-          <p role="alert" className="mt-2 text-sm text-chord">
-            Couldn't save the setlist. Reload the page and try again.
-          </p>
-        ) : null}
 
         {songs.length === 0 ? <p className="mt-6 text-muted">No songs yet. Add songs from the library.</p> : null}
         <ol ref={rows} className="mt-4" aria-label="Songs in playing order">
@@ -198,10 +192,13 @@ function SetlistEditor({ setlist, songs }: Loaded) {
           onCancel={() => setConfirmDelete(false)}
           onConfirm={() => {
             deleteSetlist(setlist.id)
-              .then(() => navigate('/setlists'))
+              .then(() => {
+                toast('success', `Deleted “${setlist.name}”`);
+                navigate('/setlists');
+              })
               .catch(() => {
                 setConfirmDelete(false);
-                setError(true);
+                toast('error', `Couldn't delete “${setlist.name}”`, 'Reload the page and try again.');
               });
           }}
         />
@@ -211,7 +208,7 @@ function SetlistEditor({ setlist, songs }: Loaded) {
 }
 
 /** The setlist's name, saved shortly after typing stops. A blank name isn't saved. */
-function NameField({ setlist, onError }: { setlist: LibrarySetlist; onError: () => void }) {
+function NameField({ setlist }: { setlist: LibrarySetlist }) {
   // Typed into local state: the stored name comes back from the database a moment later, which would move the caret.
   const [name, setName] = useState(setlist.name);
   const isNew = isNewFrom(useLocation().state);
@@ -230,7 +227,7 @@ function NameField({ setlist, onError }: { setlist: LibrarySetlist; onError: () 
   const save = (value: string) => {
     clearTimeout(timer.current);
     pending.current = null;
-    saveName(setlist.id, value, onError);
+    saveName(setlist.id, value);
   };
 
   // Leaving the page saves what's typed; the setlist's id is all this needs, and it never changes here.
@@ -238,7 +235,7 @@ function NameField({ setlist, onError }: { setlist: LibrarySetlist; onError: () 
   useEffect(() => {
     const flush = () => {
       clearTimeout(timer.current);
-      if (pending.current !== null) saveName(id, pending.current, onError);
+      if (pending.current !== null) saveName(id, pending.current);
       pending.current = null;
     };
     window.addEventListener('pagehide', flush);
@@ -246,7 +243,6 @@ function NameField({ setlist, onError }: { setlist: LibrarySetlist; onError: () 
       window.removeEventListener('pagehide', flush);
       flush();
     };
-    // onError only sets an error flag; the first one does that as well as any later one.
   }, [id]);
 
   return (
@@ -269,11 +265,13 @@ function NameField({ setlist, onError }: { setlist: LibrarySetlist; onError: () 
 }
 
 /** Saves a setlist's name; a blank name is left unsaved. */
-function saveName(id: string, value: string, onError: () => void): void {
+function saveName(id: string, value: string): void {
   const name = value.trim();
   if (name.length === 0) return;
-  updateSetlist(id, (s) => (s.name === name ? s : { ...s, name })).catch(onError);
+  updateSetlist(id, (s) => (s.name === name ? s : { ...s, name })).catch(saveFailed);
 }
+
+const saveFailed = () => toast('error', "Couldn't save the setlist", 'Reload the page and try again.');
 
 /** The library beside the setlist, each song with a button to add it at the end. */
 function AddSongs({ onAdd }: { onAdd: (songId: string) => void }) {

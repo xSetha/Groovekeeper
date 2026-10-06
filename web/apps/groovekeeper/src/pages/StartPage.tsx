@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { ImportSongs } from '../components/ImportSongs';
 import { LibraryPanel } from '../components/LibraryPanel';
@@ -10,12 +10,12 @@ import { sampleSongs } from '../library/samples';
 import { useNewSong } from '../navigation';
 import { useIsPhone } from '../phone';
 import { useAccount } from '../sync/account';
+import { toast } from '../toasts';
 
 export function StartPage() {
   const navigate = useNavigate();
   const newSong = useNewSong();
   const songCount = useLiveQuery(() => db.songs.count());
-  const [sampleError, setSampleError] = useState(false);
   const phone = useIsPhone();
   const signedIn = useAccount((s) => s.status === 'signedIn');
   const openFirst = (ids: string[]) => ids.length === 1 && navigate(`/songs/${ids[0]}`);
@@ -32,17 +32,14 @@ export function StartPage() {
           type="button"
           className="rounded px-5 py-2.5 font-semibold hover:bg-hover pointer-coarse:min-h-11"
           onClick={() => {
-            setSampleError(false);
-            addSongs(sampleSongs()).catch(() => setSampleError(true));
+            addSongs(sampleSongs()).then(
+              (ids) => toast('success', `Added ${ids.length} sample songs`),
+              () => toast('error', "Couldn't add the sample songs", 'Reload the page and try again.'),
+            );
           }}
         >
           Try the sample songs
         </button>
-      ) : null}
-      {sampleError ? (
-        <p role="alert" className="text-sm text-chord">
-          Couldn't add the sample songs. Reload the page and try again.
-        </p>
       ) : null}
     </>
   );

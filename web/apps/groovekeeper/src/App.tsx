@@ -1,5 +1,7 @@
 import { lazy, Suspense } from 'react';
-import { Navigate, Route, Routes, useMatch } from 'react-router';
+import { Navigate, Route, Routes, useLocation, useMatch } from 'react-router';
+import { ErrorBoundary } from './components/ErrorBoundary';
+import { Toasts } from './components/Toasts';
 import { TopBar } from './components/TopBar';
 import { SetlistPage } from './pages/SetlistPage';
 import { SetlistSongPage } from './pages/SetlistSongPage';
@@ -22,20 +24,24 @@ export function App() {
   const setlistSongMatch = useMatch('/setlists/:id/:position');
   const reading = songMatch !== null || setlistSongMatch !== null;
   const readingOnPhone = phone && reading;
+  const { pathname } = useLocation();
   return (
     <div className="flex h-dvh flex-col">
       {readingOnPhone ? null : <TopBar />}
-      <Routes>
-        <Route path="/" element={<StartPage />} />
-        <Route path="/songs/:id" element={<SongPage />} />
-        <Route path="/setlists" element={<SetlistsPage />} />
-        <Route path="/setlists/:id" element={<SetlistPage />} />
-        <Route path="/setlists/:id/:position" element={<SetlistSongPage />} />
-        <Route path="/pdf" element={<Suspense><PdfPage /></Suspense>} />
-        <Route path="/account" element={<Suspense><AccountPage /></Suspense>} />
-        <Route path="/conflicts" element={<Suspense><ConflictsPage /></Suspense>} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+      <ErrorBoundary resetKey={pathname}>
+        <Routes>
+          <Route path="/" element={<StartPage />} />
+          <Route path="/songs/:id" element={<SongPage />} />
+          <Route path="/setlists" element={<SetlistsPage />} />
+          <Route path="/setlists/:id" element={<SetlistPage />} />
+          <Route path="/setlists/:id/:position" element={<SetlistSongPage />} />
+          <Route path="/pdf" element={<Suspense><PdfPage /></Suspense>} />
+          <Route path="/account" element={<Suspense><AccountPage /></Suspense>} />
+          <Route path="/conflicts" element={<Suspense><ConflictsPage /></Suspense>} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </ErrorBoundary>
+      <Toasts />
     </div>
   );
 }

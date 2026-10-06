@@ -5,6 +5,7 @@ import { Link } from 'react-router';
 import { db, type Conflict, type LibrarySetlist, type LibrarySong, type RemoteSetlist, type RemoteSong } from '../library/db';
 import { runSync } from '../sync/account';
 import { keepAccount, keepThisDevice } from '../sync/sync';
+import { toast } from '../toasts';
 
 /** Songs and setlists changed both here and on another device: both copies side by side, and which to keep. */
 export default function ConflictsPage() {
@@ -46,13 +47,10 @@ function ConflictRow({ conflict }: { conflict: Conflict }) {
       conflict.table === 'songs' ? db.songs.get(conflict.id) : db.setlists.get(conflict.id),
     [conflict.id, conflict.table],
   );
-  const [error, setError] = useState(false);
-
   const keep = (choice: typeof keepThisDevice) => {
-    setError(false);
     choice(conflict)
       .then(() => runSync())
-      .catch(() => setError(true));
+      .catch(() => toast('error', 'Couldn’t keep that copy', 'Reload the page and try again.'));
   };
 
   const what = conflict.table === 'songs' ? 'Song' : 'Setlist';
@@ -70,11 +68,6 @@ function ConflictRow({ conflict }: { conflict: Conflict }) {
           )}
         </Copy>
       </div>
-      {error ? (
-        <p role="alert" className="mt-3 text-sm text-chord">
-          Couldn’t keep that copy. Reload the page and try again.
-        </p>
-      ) : null}
     </section>
   );
 }

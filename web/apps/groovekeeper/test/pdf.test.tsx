@@ -76,7 +76,8 @@ describe('exporting a PDF', () => {
     vi.mocked(exportPdf).mockRejectedValueOnce(new Error('offline'));
     renderAt('/pdf?song=grace');
     await user.click(await screen.findByRole('button', { name: 'Export PDF' }));
-    expect(await screen.findByRole('alert')).toHaveTextContent("Couldn't make the PDF.");
+    expect(await screen.findByRole('alert')).toHaveTextContent("Couldn't make the PDFCheck your connection and try again.");
+    expect(screen.getByRole('button', { name: 'Export PDF' })).toBeEnabled();
   });
 
   it('exports a setlist with each song as it is written', async () => {

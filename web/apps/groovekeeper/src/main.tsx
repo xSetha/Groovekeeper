@@ -5,7 +5,9 @@ import { App } from './App';
 import './index.css';
 import { startAccount } from './sync/account';
 import './themes';
+import { reportUncaughtErrors } from './toasts';
 
+reportUncaughtErrors();
 startAccount();
 
 createRoot(document.getElementById('root')!).render(

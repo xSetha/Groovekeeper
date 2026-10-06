@@ -1,25 +1,24 @@
 import { useLiveQuery } from 'dexie-react-hooks';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { createSetlist, listSetlists } from '../library/setlists';
 import { useIsPhone } from '../phone';
+import { toast } from '../toasts';
 
 /** Every setlist, by name. Setlists are made on a computer or tablet; a phone opens them to play. */
 export function SetlistsPage() {
   const setlists = useLiveQuery(listSetlists, []);
   const phone = useIsPhone();
   const navigate = useNavigate();
-  const [error, setError] = useState(false);
 
   useEffect(() => {
     document.title = 'Setlists – Groovekeeper';
   }, []);
 
   const create = () => {
-    setError(false);
     createSetlist()
       .then((id) => navigate(`/setlists/${id}`, { state: { isNew: true } }))
-      .catch(() => setError(true));
+      .catch(() => toast('error', "Couldn't make the setlist", 'Reload the page and try again.'));
   };
 
   return (
@@ -37,16 +36,11 @@ export function SetlistsPage() {
             </button>
           )}
         </div>
-        {error ? (
-          <p role="alert" className="mt-3 text-sm text-chord">
-            Couldn't make the setlist. Reload the page and try again.
-          </p>
-        ) : null}
         {setlists?.length === 0 ? (
           <p className="mt-6 text-muted">
             {phone
               ? 'No setlists yet. Setlists are made on a computer or tablet.'
-              : 'No setlists yet. Make one for your next gig: the songs in playing order, each in the key you play it in.'}
+              : 'No setlists yet. Make one for your next gig: the songs in playing order.'}
           </p>
         ) : null}
         <ul className="mt-6">

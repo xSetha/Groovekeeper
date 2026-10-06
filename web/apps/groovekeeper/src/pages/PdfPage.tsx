@@ -6,6 +6,7 @@ import { db, type LibrarySong } from '../library/db';
 import { listSongs } from '../library/library';
 import { setlistSongs } from '../library/setlists';
 import { lineSegments, printedSections, type ExportOptions, type ExportSong, type Ink } from '../pdf/layout';
+import { toast } from '../toasts';
 
 /** A song in the PDF, with an id for its place in the preview. */
 interface PdfSong extends ExportSong {
@@ -160,7 +161,7 @@ interface LayoutProps {
 /** The choices on the side, with Export PDF, and a preview of the songs as they'll be in the PDF. */
 function PdfLayout({ title, back, songs, empty, intro, options, children }: LayoutProps) {
   const paper = useRef<HTMLDivElement>(null);
-  const [state, setState] = useState<'idle' | 'exporting' | 'failed'>('idle');
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     document.title = title;
@@ -175,14 +176,17 @@ function PdfLayout({ title, back, songs, empty, intro, options, children }: Layo
     const style = getComputedStyle(paper.current);
     const ink = (name: string) => style.getPropertyValue(`--gk-${name}`).trim();
     const inks: Record<Ink, string> = { fg: ink('fg'), muted: ink('muted'), chord: ink('chord'), line: ink('line') };
-    setState('exporting');
+    setExporting(true);
+    const fileName = pdfFileName(title);
     try {
       // Loaded when it's used: the PDF library and its fonts are big, and most visits never export.
       const { exportPdf } = await import('../pdf/exportPdf');
-      await exportPdf(pdfFileName(title), title, songs, options, inks);
-      setState('idle');
+      await exportPdf(fileName, title, songs, options, inks);
+      toast('success', `Exported ${fileName}`);
     } catch {
-      setState('failed');
+      toast('error', "Couldn't make the PDF", 'Check your connection and try again.');
+    } finally {
+      setExporting(false);
     }
   };
 
@@ -197,17 +201,12 @@ function PdfLayout({ title, back, songs, empty, intro, options, children }: Layo
         {children}
         <button
           type="button"
-          disabled={songs.length === 0 || state === 'exporting'}
+          disabled={songs.length === 0 || exporting}
           className="mt-6 self-start rounded bg-accent-fill px-5 py-2.5 font-semibold text-on-accent hover:brightness-125 disabled:opacity-40 disabled:hover:brightness-100 pointer-coarse:min-h-11"
           onClick={() => void exportFile()}
         >
-          {state === 'exporting' ? 'Exporting…' : 'Export PDF'}
+          {exporting ? 'Exporting…' : 'Export PDF'}
         </button>
-        {state === 'failed' ? (
-          <p role="alert" className="mt-2 text-sm text-chord">
-            Couldn't make the PDF. Check your connection and try again.
-          </p>
-        ) : null}
       </aside>
 
       <main aria-label="PDF preview" className="min-h-0 flex-1 overflow-y-auto bg-window p-4 sm:p-8">

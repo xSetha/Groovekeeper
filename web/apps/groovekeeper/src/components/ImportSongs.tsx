@@ -1,6 +1,7 @@
-import { useRef, useState, type ReactNode } from 'react';
+import { useRef, type ReactNode } from 'react';
 import { addSongs } from '../library/library';
 import { readSongFile, SONG_FILE_TYPES } from '../library/files';
+import { toast } from '../toasts';
 
 interface Props {
   className?: string;
@@ -12,20 +13,19 @@ interface Props {
 /** A button that adds .txt and ChordPro files to the library. The files themselves aren't changed. */
 export function ImportSongs({ className, children, onImported }: Props) {
   const input = useRef<HTMLInputElement>(null);
-  const [error, setError] = useState<string | null>(null);
-
   async function importFiles(files: File[]) {
-    setError(null);
     const read = await Promise.allSettled(files.map(async (file) => readSongFile(file.name, await file.text())));
     const failed = files.filter((_, i) => read[i]?.status === 'rejected');
     if (failed.length > 0) {
-      setError(`Couldn't read ${failed.map((f) => f.name).join(', ')}. Check that the file is still there, then import it again.`);
+      toast('error', `Couldn't read ${failed.map((f) => f.name).join(', ')}`, 'Check that the file is still there, then import it again.');
       return;
     }
     try {
-      onImported?.(await addSongs(read.flatMap((r) => (r.status === 'fulfilled' ? [r.value] : []))));
+      const ids = await addSongs(read.flatMap((r) => (r.status === 'fulfilled' ? [r.value] : [])));
+      toast('success', ids.length === 1 ? 'Imported 1 song' : `Imported ${ids.length} songs`);
+      onImported?.(ids);
     } catch {
-      setError("Couldn't add the songs to the library. Reload the page and import them again.");
+      toast('error', "Couldn't add the songs to the library", 'Reload the page and import them again.');
     }
   }
 
@@ -48,11 +48,6 @@ export function ImportSongs({ className, children, onImported }: Props) {
           if (files.length > 0) void importFiles(files);
         }}
       />
-      {error ? (
-        <p role="alert" className="text-sm text-chord">
-          {error}
-        </p>
-      ) : null}
     </>
   );
 }
