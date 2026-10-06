@@ -24,3 +24,4 @@ dist/
 
 # The web plan is kept locally, not in the repo
 docs/WEB-PLAN.md
+graphify-out
