@@ -97,7 +97,7 @@
                     </StackPanel>
                     <TextBlock FontSize="19" Foreground="{DynamicResource MutedForeground}" TextWrapping="Wrap"
                                Margin="0,12,0,32" LineHeight="28" MaxWidth="420" HorizontalAlignment="Left"
-                               Text="Write your lyrics, then drop each chord exactly on the syllable where it changes." />
+                               Text="Write your lyrics, then put each chord exactly on the syllable where it changes." />
 
                     <StackPanel Orientation="Horizontal">
                         <Button Style="{StaticResource PrimaryButton}" Command="{Binding NewSongCommand}" FontSize="15">
@@ -135,9 +135,9 @@
                     <Border Style="{StaticResource Card}" Padding="20" Margin="8">
                         <StackPanel>
                             <TextBlock Style="{StaticResource TipNumber}" Text="02" />
-                            <TextBlock Style="{StaticResource TipTitle}" Text="Drag in the chords" />
+                            <TextBlock Style="{StaticResource TipTitle}" Text="Type in the chords" />
                             <TextBlock Style="{StaticResource TipText}"
-                                       Text="Drag a chord from the panel on the right onto a word. It stays anchored to that letter while you keep editing the lyrics." />
+                                       Text="Click above a letter, type the chord and press Enter. It stays anchored to that letter while you keep editing the lyrics." />
                         </StackPanel>
                     </Border>
                     <Border Style="{StaticResource Card}" Padding="20" Margin="8">
@@ -145,7 +145,7 @@
                             <TextBlock Style="{StaticResource TipNumber}" Text="03" />
                             <TextBlock Style="{StaticResource TipTitle}" Text="Refine and transpose" />
                             <TextBlock Style="{StaticResource TipText}"
-                                       Text="Drag chords sideways to move them, right-click to remove. Transposing updates every chord and the key." />
+                                       Text="Drag chords sideways to move them, double-click to change one, right-click to remove. Transposing moves every chord; the key stays as you set it." />
                         </StackPanel>
                     </Border>
                 </UniformGrid>

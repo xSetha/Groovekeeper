@@ -69,7 +69,7 @@ export function StartPage() {
             <h1 className="text-4xl font-bold sm:text-5xl">Groovekeeper</h1>
           </div>
           <p className="mt-4 max-w-md text-lg text-muted sm:text-xl">
-            Write your lyrics, then drop each chord exactly on the syllable where it changes.
+            Write your lyrics, then put each chord exactly on the syllable where it changes.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <button

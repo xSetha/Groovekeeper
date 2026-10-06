@@ -11,6 +11,10 @@ version's section here becomes the text of its GitHub release.
   and the caret goes to the line before. The section stays empty when the song is saved and opened
   again; + Line adds a line back.
 
+### Fixed
+- The start page's tips describe chords as they work since 1.2.0: typed above a letter rather than
+  dragged from a panel, and transposing moves the chords but leaves the key as you set it.
+
 ## [1.2.0] - 2026-10-06
 
 ### Added
