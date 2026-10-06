@@ -1,6 +1,8 @@
 import { memo, type PointerEvent, type ReactNode } from 'react';
 import { trackDrag } from '../components/drag';
-import { addLine, deleteSection, duplicateSection, moveSection, moveSectionTo, renameSection, repeatSection } from './edit';
+import {
+  addLine, deleteSection, duplicateSection, moveSection, moveSectionTo, renameSection, repeatSection, sectionsInRange,
+} from './edit';
 import { EditorLine } from './EditorLine';
 import { useEditor, useEditorStore } from './store';
 
@@ -24,6 +26,8 @@ export const SectionBlock = memo(function SectionBlock({ index, lineIds, first, 
   const id = useEditor((s) => s.song.sections[index]?.id);
   const name = useEditor((s) => s.song.sections[index]?.name ?? '');
   const repeat = useEditor((s) => s.song.sections[index]?.repeat ?? false);
+  // Whether deleting the selection across lines would remove this heading.
+  const inSelection = useEditor((s) => (s.selection && id ? sectionsInRange(s.song, s.selection).includes(id) : false));
   const { edit, editAndFocus, setCaretSection, setSectionDrop } = store.getState();
   const lines = lineIds ? lineIds.split(',') : [];
 
@@ -76,7 +80,7 @@ export const SectionBlock = memo(function SectionBlock({ index, lineIds, first, 
   return (
     <section className="group/section mt-7" aria-label={`${repeat ? 'Repeat of ' : ''}${name || 'Section'}`}>
       <div className="flex flex-wrap items-center gap-x-3">
-        <h2 className="flex items-center font-semibold">
+        <h2 className={`flex items-center font-semibold ${inSelection ? 'bg-accent/25' : ''}`}>
           <button
             type="button"
             aria-label="Drag section to another place"

@@ -1,8 +1,9 @@
 import { createTemplate, parseSongText } from '@groovekeeper/core';
 import { describe, expect, it } from 'vitest';
 import {
-  addLine, addSection, chordsInSong, deleteSection, duplicateSection, editText, findLine, joinWithPrevious, lineAt,
-  moveChord, moveSection, moveSectionTo, neighbourLine, pasteLines, placeChord, removeChord, renameSection, repeatSection, setChord, splitLine,
+  addLine, addSection, chordsInSong, deleteRange, deleteSection, duplicateSection, editText, findLine, joinWithPrevious, lineAt,
+  moveChord, moveSection, moveSectionTo, neighbourLine, partInRange, pasteLines, placeChord, rangeBetween, removeChord, renameSection,
+  repeatSection, sectionsInRange, setChord, splitLine,
   withIds, type KeyedLine, type KeyedSong,
 } from '../src/editor/edit';
 
@@ -145,6 +146,65 @@ describe('sections', () => {
     expect(copy.sections[1]!.lines[0]!.id).not.toBe(copy.sections[0]!.lines[0]!.id);
     expect(names(repeatSection(SONG, 1))).toEqual(['Verse 1', 'Chorus', 'Chorus (repeat)']);
     expect(names(deleteSection(SONG, 0))).toEqual(['Chorus']);
+  });
+});
+
+describe('selecting across lines', () => {
+  const id = (song: KeyedSong, section: number, line: number) => lineAt(song, { section, line })!.id;
+  const at = (section: number, line: number, index: number) => ({ lineId: id(SONG, section, line), index });
+
+  it('orders the two ends, whichever way the mouse went', () => {
+    expect(rangeBetween(SONG, at(1, 0, 4), at(0, 0, 8))).toEqual({ start: at(0, 0, 8), end: at(1, 0, 4) });
+    expect(rangeBetween(SONG, at(0, 1, 2), at(0, 1, 0))).toEqual({ start: at(0, 1, 0), end: at(0, 1, 2) });
+  });
+
+  it('knows the part of each line in the selection, and the headings it would delete', () => {
+    const range = rangeBetween(SONG, at(0, 0, 8), at(1, 0, 4))!;
+    expect(partInRange(SONG, range, id(SONG, 0, 0))).toEqual({ from: 8, to: null });
+    expect(partInRange(SONG, range, id(SONG, 0, 1))).toEqual({ from: 0, to: null });
+    expect(partInRange(SONG, range, id(SONG, 1, 0))).toEqual({ from: 0, to: 4 });
+    expect(sectionsInRange(SONG, range)).toEqual([SONG.sections[1]!.id]);
+    expect(sectionsInRange(SONG, rangeBetween(SONG, at(0, 0, 0), at(0, 1, 3))!)).toEqual([]);
+  });
+
+  it('deletes the selection and its chords, and joins what is left of its first and last lines', () => {
+    const { song, focus } = deleteRange(SONG, rangeBetween(SONG, at(0, 0, 8), at(0, 1, 4))!)!;
+    expect(text(song)).toEqual([['Amazing sweet'], ['the sound']]);
+    expect(chords(lineAt(song, verse(0)))).toEqual([{ position: 0, name: 'G' }]);
+    expect(focus).toEqual({ lineId: id(SONG, 0, 0), caret: 8 });
+  });
+
+  it('deletes the headings inside the selection; what is left of the last section joins the first', () => {
+    const song = withIds(parseSongText('[Verse]\none\ntwo\n\n[Bridge]\nthree\n\n[Chorus]\nD\nthe sound\nend\n'));
+    const pick = (section: number, line: number, index: number) => ({ lineId: id(song, section, line), index });
+    const result = deleteRange(song, rangeBetween(song, pick(0, 0, 2), pick(2, 0, 4))!)!.song;
+    expect(result.sections.map((s) => s.name)).toEqual(['Verse']);
+    expect(text(result)).toEqual([['onsound', 'end']]);
+    expect(chords(lineAt(result, verse(0)))).toEqual([]);
+  });
+
+  it('deletes a selection within one line', () => {
+    const { song, focus } = deleteRange(SONG, rangeBetween(SONG, at(0, 0, 13), at(0, 0, 7))!)!;
+    expect(text(song)[0]).toEqual(['Amazing', 'how sweet']);
+    expect(chords(lineAt(song, verse(0)))).toEqual([{ position: 0, name: 'G' }]);
+    expect(focus).toEqual({ lineId: id(SONG, 0, 0), caret: 7 });
+  });
+
+  it('deletes whole lines selected from the start of one to the end of another, leaving one empty line', () => {
+    const song = deleteRange(SONG, rangeBetween(SONG, at(0, 0, 0), at(0, 1, 'how sweet'.length))!)!.song;
+    expect(text(song)).toEqual([[''], ['the sound']]);
+    expect(lineAt(song, verse(0))?.chords).toEqual([]);
+  });
+
+  it('deletes the lines between the end of one line and the start of another', () => {
+    const song = withIds(parseSongText('[Verse]\none\ntwo\nthree\n'));
+    const pick = (line: number, index: number) => ({ lineId: id(song, 0, line), index });
+    expect(text(deleteRange(song, rangeBetween(song, pick(0, 3), pick(2, 0))!)!.song)).toEqual([['onethree']]);
+  });
+
+  it('does nothing when a line of the selection is gone', () => {
+    const range = rangeBetween(SONG, at(0, 0, 0), at(1, 0, 2))!;
+    expect(deleteRange(deleteSection(SONG, 1), range)).toBeNull();
   });
 });
 

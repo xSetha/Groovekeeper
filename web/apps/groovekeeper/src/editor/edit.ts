@@ -142,6 +142,73 @@ export function joinWithPrevious(song: KeyedSong, at: LineAt): { song: KeyedSong
   return { song: withLines(song, at.section, (all) => all.slice(1)), focus: caretAfter() };
 }
 
+/** A place in the lyrics: a line, by id, and the letter it's before. */
+export interface TextPosition {
+  lineId: string;
+  index: number;
+}
+
+/** Lyrics selected across lines: from `start` to `end`, in the song's order. */
+export interface TextRange {
+  start: TextPosition;
+  end: TextPosition;
+}
+
+/** The range between two places given in either order; null if a line is gone. */
+export function rangeBetween(song: KeyedSong, anchor: TextPosition, active: TextPosition): TextRange | null {
+  const order = song.sections.flatMap((s) => s.lines.map((l) => l.id));
+  const [a, b] = [order.indexOf(anchor.lineId), order.indexOf(active.lineId)];
+  if (a < 0 || b < 0) return null;
+  const backwards = b < a || (a === b && active.index < anchor.index);
+  return backwards ? { start: active, end: anchor } : { start: anchor, end: active };
+}
+
+/**
+ * The part of a line in the range: from a letter to another, or to the end of the line (`to` null); null when
+ * the line isn't in it.
+ */
+export function partInRange(song: KeyedSong, range: TextRange, lineId: string): { from: number; to: number | null } | null {
+  const order = song.sections.flatMap((s) => s.lines.map((l) => l.id));
+  const [line, first, last] = [order.indexOf(lineId), order.indexOf(range.start.lineId), order.indexOf(range.end.lineId)];
+  if (line < 0 || first < 0 || line < first || line > last) return null;
+  return { from: line === first ? range.start.index : 0, to: line === last ? range.end.index : null };
+}
+
+/** The ids of the sections whose headings deleting the range removes: after the one it starts in, up to the one it ends in. */
+export function sectionsInRange(song: KeyedSong, range: TextRange): string[] {
+  const start = findLine(song, range.start.lineId);
+  const end = findLine(song, range.end.lineId);
+  if (!start || !end) return [];
+  return song.sections.slice(start.section + 1, end.section + 1).map((s) => s.id);
+}
+
+/**
+ * Deletes the range and the chords above it, as a text editor deletes a selection: the rest of its last line
+ * joins its first line, and the lines and section headings in between go (what's left of the last section joins
+ * the first one). Null if a line of the range is gone (an undo since it was selected).
+ */
+export function deleteRange(song: KeyedSong, range: TextRange): { song: KeyedSong; focus: Focus } | null {
+  const startAt = findLine(song, range.start.lineId);
+  const endAt = findLine(song, range.end.lineId);
+  const first = startAt && lineAt(song, startAt);
+  const last = endAt && lineAt(song, endAt);
+  if (!startAt || !endAt || !first || !last) return null;
+  const [head] = splitAt(first, range.start.index);
+  const [, tail] = splitAt(last, range.end.index);
+  const joined = { ...joinLines(head, tail), id: first.id };
+  const firstSection = song.sections[startAt.section];
+  const lastSection = song.sections[endAt.section];
+  if (!firstSection || !lastSection) return null;
+  const merged = {
+    ...firstSection,
+    lines: [...firstSection.lines.slice(0, startAt.line), joined, ...lastSection.lines.slice(endAt.line + 1)],
+  };
+  return {
+    song: { ...song, sections: [...song.sections.slice(0, startAt.section), merged, ...song.sections.slice(endAt.section + 1)] },
+    focus: { lineId: first.id, caret: head.text.length },
+  };
+}
+
 /** The id of the line above (-1) or below (+1), across sections; null at the start or end of the song. */
 export function neighbourLine(song: KeyedSong, lineId: string, direction: -1 | 1): string | null {
   const all = song.sections.flatMap((section) => section.lines.map((line) => line.id));

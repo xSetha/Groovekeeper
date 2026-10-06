@@ -14,6 +14,7 @@ import { holdOpenSong } from '../sync/account';
 import { dismissToast, toast } from '../toasts';
 import { addNote, addSection, setArtist, setKey, setTitle, withIds, type KeyedSong } from './edit';
 import { NoteLayer } from './Notes';
+import { selectAcrossLines, useSelectionKeys } from './select-lines';
 import { SectionBlock } from './SectionBlock';
 import { createEditorStore, EditorContext, useEditor, useEditorStore, type EditorStore } from './store';
 
@@ -40,6 +41,7 @@ export function SongEditor({ id, initial, notes = [], isNew = false }: Props) {
   // Syncing doesn't replace the song while it's open here.
   useEffect(() => holdOpenSong(id), [id]);
   useShortcuts(store);
+  useSelectionKeys(store);
 
   return (
     <EditorContext value={store}>
@@ -92,8 +94,9 @@ function EditorBody() {
     openAddMenu(event.clientX, event.clientY);
   }
 
-  /** On a touch screen there's no right-click: a long press on the song opens the same menu. */
+  /** A mouse drag in the lyrics may select across lines; on a touch screen a long press opens the song's menu. */
   function onPointerDown(event: PointerEvent<HTMLDivElement>) {
+    selectAcrossLines(event, store, charWidth);
     if (event.pointerType === 'mouse' || onTextOrNote(event.target) || (event.target as Element).closest('button')) return;
     const { pointerId, clientX: x, clientY: y } = event;
     const timer = setTimeout(() => {

@@ -3,7 +3,7 @@
 import { createContext, useContext } from 'react';
 import { useStore } from 'zustand';
 import { createStore, type StoreApi } from 'zustand/vanilla';
-import { withPrintRows, type Focus, type KeyedSong } from './edit';
+import { withPrintRows, type Focus, type KeyedSong, type TextRange } from './edit';
 
 // Undo goes back this many steps.
 const HISTORY_LIMIT = 200;
@@ -24,6 +24,8 @@ export interface EditorState {
   sectionDrop: number | null;
   /** The note to put the caret in (one just added); `request` changes each time. */
   focusNote: { id: string; request: number } | null;
+  /** Lyrics selected across lines with the mouse, or null. (A selection within one line is that line's own.) */
+  selection: TextRange | null;
 
   /**
    * Changes the song as one undo step. Edits with the same `merge` key in a row make one step (typing in
@@ -39,6 +41,7 @@ export interface EditorState {
   setCaretSection: (caretSection: string | null) => void;
   setSectionDrop: (sectionDrop: number | null) => void;
   setFocusNote: (id: string) => void;
+  setSelection: (selection: TextRange | null) => void;
   /**
    * The rows the notes are over after the editor laid the song out, by note id. They follow the notes and the
    * lines, so they aren't an edit of their own: no undo step (the song is still saved with them).
@@ -60,6 +63,7 @@ export function createEditorStore(song: KeyedSong): EditorStore {
     caretSection: null,
     sectionDrop: null,
     focusNote: null,
+    selection: null,
 
     edit: (change, options = {}) => {
       const { song: current, past, mergeKey } = get();
@@ -104,6 +108,7 @@ export function createEditorStore(song: KeyedSong): EditorStore {
     setCaretSection: (caretSection) => set({ caretSection }),
     setSectionDrop: (sectionDrop) => set({ sectionDrop }),
     setFocusNote: (id) => set({ focusNote: { id, request: ++requests } }),
+    setSelection: (selection) => set({ selection }),
     relayNotes: (rows) => {
       const { song } = get();
       const next = withPrintRows(song, rows);

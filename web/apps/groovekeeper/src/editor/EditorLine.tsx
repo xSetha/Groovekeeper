@@ -3,7 +3,9 @@ import {
 } from 'react';
 import { romanNumeral } from '@groovekeeper/core';
 import { trackDrag } from '../components/drag';
-import { editText, joinWithPrevious, moveChord, neighbourLine, pasteLines, removeChord, setChord, splitLine } from './edit';
+import {
+  editText, joinWithPrevious, moveChord, neighbourLine, partInRange, pasteLines, removeChord, setChord, splitLine,
+} from './edit';
 import { useEditor, useEditorStore } from './store';
 
 interface Props {
@@ -26,6 +28,11 @@ export const EditorLine = memo(function EditorLine({ section, line: lineIndex, l
   const focus = useEditor((s) => (s.focus?.lineId === lineId ? s.focus : null));
   // The key to show chords as Roman numerals in, or '' to show their names.
   const numeralKey = useEditor((s) => (s.numerals ? s.song.key : ''));
+  // This line's part of a selection across lines, as "from-to" ("from-" to the end of the line), or ''.
+  const selected = useEditor((s) => {
+    const part = s.selection && partInRange(s.song, s.selection, lineId);
+    return part ? `${part.from}-${part.to ?? ''}` : '';
+  });
   const input = useRef<HTMLInputElement>(null);
   // The chord tapped or clicked, which shows its Change and Remove buttons (the way to do those on a touch screen).
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -161,8 +168,21 @@ export const EditorLine = memo(function EditorLine({ section, line: lineIndex, l
     edit((s) => removeChord(s, at, chordId));
   };
 
+  const [selectedFrom = 0, selectedTo] = selected ? selected.split('-').map((n) => (n === '' ? undefined : Number(n))) : [];
+
   return (
-    <div className="mt-1" style={{ minWidth: `${width}ch` }}>
+    <div className="relative mt-1" style={{ minWidth: `${width}ch` }}>
+      {selected ? (
+        // The chords above the selected lyrics go with them.
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-y-0 bg-accent/25"
+          style={{
+            left: `${selectedFrom}ch`,
+            ...(selectedTo === undefined ? { right: 0 } : { width: `${Math.max(selectedTo - selectedFrom, 0)}ch` }),
+          }}
+        />
+      ) : null}
       {/* The chord row: a click types a chord above the letter under it. */}
       <div
         data-testid="chord-row"
@@ -265,10 +285,13 @@ export const EditorLine = memo(function EditorLine({ section, line: lineIndex, l
         ref={input}
         value={line.text}
         aria-label="Lyrics"
+        // Where a selection across lines starts (select-lines.ts).
+        data-lyrics
         spellCheck={false}
         autoComplete="off"
         autoCapitalize="off"
-        className="block border-0 bg-transparent p-0 outline-none"
+        // Positioned, so it's drawn over the selection's highlight.
+        className="relative block border-0 bg-transparent p-0 outline-none"
         style={{ width: `${width}ch` }}
         onFocus={() => {
           setSelectedId(null);
