@@ -107,6 +107,38 @@ describe('syncing', () => {
     expect((await db.songs.get(grace!))?.notes?.[0]?.text).toBe('Capo 3');
   });
 
+  it("doesn't add a guest's song again when the account already has the same song", async () => {
+    // Another device added the sample songs as a guest and joined the account with them.
+    const [first] = await addSongs([song('Amazing Grace'), song('Oh! Susanna')]);
+    await syncNow();
+    const accountGrace = first!;
+    // This device, a guest too, has the same songs, a changed one and a setlist; now it joins the account.
+    await Promise.all([db.songs.clear(), db.setlists.clear(), db.meta.clear()]);
+    const [grace, , changed] = await addSongs([song('Amazing Grace'), song('Oh! Susanna'), song('Oh! Susanna (live)')]);
+    const gig = await createSetlist();
+    await updateSetlist(gig, (s) => addEntry(s, grace!));
+
+    await syncNow();
+
+    expect([...account.rows.songs.values()].map((r) => (r as RemoteSong).title).toSorted()).toEqual([
+      'Amazing Grace', 'Oh! Susanna', 'Oh! Susanna (live)',
+    ]);
+    expect((await db.songs.toArray()).map((s) => s.id)).not.toContain(grace);
+    expect(await db.songs.get(changed!)).toMatchObject({ dirty: 0 });
+    expect((await db.setlists.get(gig))?.songs.map((e) => e.songId)).toEqual([accountGrace]);
+    expect((account.rows.setlists.get(gig) as { songs: { songId: string }[] }).songs.map((e) => e.songId)).toEqual([accountGrace]);
+  });
+
+  it('keeps two identical guest songs when the account has only one of them', async () => {
+    await addSongs([song('Amazing Grace')]);
+    await syncNow();
+    await Promise.all([db.songs.clear(), db.meta.clear()]);
+    await addSongs([song('Amazing Grace'), song('Amazing Grace')]);
+    await syncNow();
+    expect(account.rows.songs.size).toBe(2);
+    expect(await db.songs.count()).toBe(2);
+  });
+
   it('brings in songs added on another device', async () => {
     account.rows.songs.set('new', {
       id: 'new', title: 'Oh! Susanna', artist: '', key: 'C', text: 'Oh! Susanna\n', notes: [], deleted: false, version: 1,

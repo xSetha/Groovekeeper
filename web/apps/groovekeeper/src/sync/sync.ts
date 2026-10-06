@@ -74,6 +74,8 @@ export async function sync(remote: Remote, userId: string, isOpen: (songId: stri
   const state: SyncState = (await db.meta.get('sync')) ?? { key: 'sync', userId, lastPulled: null, held: [] };
   if (state.userId !== userId) throw new Error('The library on this device belongs to another account');
 
+  // The first sync on this device: songs made here as a guest that the account already has aren't added again.
+  if (state.lastPulled === null) await dropCopiesOfAccountSongs(await remote.changedSince('songs', null));
   await pushDeletions(remote);
   for (const name of TABLES) await pushChanges(remote, name);
 
@@ -96,6 +98,39 @@ export async function sync(remote: Remote, userId: string, isOpen: (songId: stri
     held.delete(id);
   }
   await db.meta.put({ key: 'sync', userId, lastPulled, held: [...held] });
+}
+
+/**
+ * Removes the songs never synced from here that are exactly the same as a song in the account (title, artist,
+ * key, text and notes), such as the sample songs added as a guest on two devices; setlists that used one get the
+ * account's song instead. Each account song stands in for one copy, so two identical songs made here, with one
+ * in the account, leave one to upload.
+ */
+async function dropCopiesOfAccountSongs(account: RemoteRow[]): Promise<void> {
+  const same = (song: Pick<RemoteSong, 'title' | 'artist' | 'key' | 'text' | 'notes'>) =>
+    JSON.stringify([song.title, song.artist, song.key, song.text, song.notes]);
+  const waiting = new Map<string, string[]>();
+  // The rows of the songs table.
+  for (const row of account as RemoteSong[]) {
+    if (row.deleted) continue;
+    waiting.set(same(row), [...(waiting.get(same(row)) ?? []), row.id]);
+  }
+  await db.transaction('rw', db.songs, db.setlists, async () => {
+    const replaced = new Map<string, string>();
+    for (const song of await db.songs.filter((stored) => stored.version === 0).toArray()) {
+      const ids = waiting.get(same({ ...song, notes: song.notes ?? [] }));
+      const accountId = ids?.shift();
+      if (accountId !== undefined && accountId !== song.id) replaced.set(song.id, accountId);
+    }
+    if (replaced.size === 0) return;
+    await db.songs.bulkDelete([...replaced.keys()]);
+    await db.setlists
+      .filter((setlist) => setlist.songs.some((entry) => replaced.has(entry.songId)))
+      .modify((setlist) => {
+        setlist.songs = setlist.songs.map((entry) => ({ ...entry, songId: replaced.get(entry.songId) ?? entry.songId }));
+        setlist.dirty = 1;
+      });
+  });
 }
 
 async function pushDeletions(remote: Remote): Promise<void> {
