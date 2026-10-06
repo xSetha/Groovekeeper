@@ -6,6 +6,11 @@ version's section here becomes the text of its GitHub release.
 
 ## [Unreleased]
 
+### Changed
+- A section can be empty, just its heading: Backspace on a section's only empty line removes the line,
+  and the caret goes to the line before. The section stays empty when the song is saved and opened
+  again; + Line adds a line back.
+
 ## [1.2.0] - 2026-10-06
 
 ### Added

@@ -396,6 +396,8 @@ namespace SongCreator.ViewModels
 
         /// <summary>
         /// Backspace at the start of a line: joins it onto the previous line, or removes it if it's an empty first line.
+        /// A section's only line goes too, which leaves the section empty (its heading alone); the caret goes to the end
+        /// of the line before it in the song, or to the start of the one after.
         /// </summary>
         public void MergeWithPrevious(SongLine line) => Edit(() => Merge(line));
 
@@ -412,10 +414,17 @@ namespace SongCreator.ViewModels
                 section.Lines.Remove(line);
                 Focus(previous, caret);
             }
-            else if (line.Text.Length == 0 && line.Chords.Count == 0 && section.Lines.Count > 1)
+            else if (line.Text.Length == 0 && line.Chords.Count == 0)
             {
+                var all = Song.Sections.SelectMany(s => s.Lines).ToList();
+                int at = all.IndexOf(line);
                 section.Lines.Remove(line);
-                Focus(section.Lines[0], 0);
+                if (section.Lines.Count > 0)
+                    Focus(section.Lines[0], 0);
+                else if (at > 0)
+                    Focus(all[at - 1], all[at - 1].Text.Length);
+                else if (at + 1 < all.Count)
+                    Focus(all[at + 1], 0);
             }
         }
 

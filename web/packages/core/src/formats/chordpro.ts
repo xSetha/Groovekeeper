@@ -114,10 +114,6 @@ export function parseChordPro(text: string): Song {
     heading.repeat = song.sections.slice(0, index).some((s) => !s.repeat && s.name === heading.name);
   }
 
-  // Every section needs a line to type into.
-  for (const s of song.sections) {
-    if (s.lines.length === 0 && !s.repeat) s.lines.push({ text: '', chords: [] });
-  }
   return song;
 }
 

@@ -137,10 +137,6 @@ namespace SongCreator.IO
                 heading.IsRepeat = song.Sections.Take(index).Any(s => !s.IsRepeat && s.Name == heading.Name);
             }
 
-            // Every section needs a line to type into.
-            foreach (var empty in song.Sections.Where(s => s.Lines.Count == 0 && !s.IsRepeat))
-                empty.Lines.Add(new SongLine());
-
             return song;
         }
 

@@ -111,9 +111,11 @@ export function splitLine(song: KeyedSong, at: LineAt, caret: number): { song: K
 
 /**
  * Backspace at the start of a line: joins it onto the line above in its section, or removes it if it's
- * an empty first line. Null when there's nothing to do.
+ * an empty first line. A section's only line goes too, which leaves the section empty (its heading alone);
+ * the caret goes to the end of the line before it in the song, or the start of the one after (none when the
+ * song has no other line). Null when there's nothing to do.
  */
-export function joinWithPrevious(song: KeyedSong, at: LineAt): { song: KeyedSong; focus: Focus } | null {
+export function joinWithPrevious(song: KeyedSong, at: LineAt): { song: KeyedSong; focus: Focus | null } | null {
   const lines = song.sections[at.section]?.lines;
   const line = lines?.[at.line];
   if (!lines || !line) return null;
@@ -127,14 +129,17 @@ export function joinWithPrevious(song: KeyedSong, at: LineAt): { song: KeyedSong
       focus: { lineId: previous.id, caret: previous.text.length },
     };
   }
-  const next = lines[1];
-  if (line.text.length === 0 && line.chords.length === 0 && next) {
-    return {
-      song: withLines(song, at.section, (all) => all.slice(1)),
-      focus: { lineId: next.id, caret: 0 },
-    };
-  }
-  return null;
+  if (line.text.length > 0 || line.chords.length > 0) return null;
+  const caretAfter = (): Focus | null => {
+    const next = lines[1];
+    if (next) return { lineId: next.id, caret: 0 };
+    const before = neighbourLine(song, line.id, -1);
+    const beforeAt = before === null ? null : findLine(song, before);
+    if (before !== null && beforeAt) return { lineId: before, caret: lineAt(song, beforeAt)?.text.length ?? 0 };
+    const after = neighbourLine(song, line.id, 1);
+    return after === null ? null : { lineId: after, caret: 0 };
+  };
+  return { song: withLines(song, at.section, (all) => all.slice(1)), focus: caretAfter() };
 }
 
 /** The id of the line above (-1) or below (+1), across sections; null at the start or end of the song. */

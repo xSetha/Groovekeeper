@@ -53,6 +53,39 @@ namespace SongCreator.Tests
         }
 
         [Fact]
+        public void MergeRemovesASectionsOnlyEmptyLineAndGoesToTheLineBefore()
+        {
+            var intro = AddSection("Intro", "la la");
+            var verse = AddSection("Verse", "");
+            _document.MergeWithPrevious(verse.Lines[0]);
+
+            Assert.Empty(verse.Lines);
+            Assert.Equal(new FocusRequest(intro.Lines[0], 5), _focus);
+        }
+
+        [Fact]
+        public void MergeOfTheSongsFirstLineGoesToTheLineAfter()
+        {
+            var intro = AddSection("Intro", "");
+            var verse = AddSection("Verse", "la");
+            _document.MergeWithPrevious(intro.Lines[0]);
+
+            Assert.Empty(intro.Lines);
+            Assert.Equal(new FocusRequest(verse.Lines[0], 0), _focus);
+        }
+
+        [Fact]
+        public void MergeKeepsAFirstLineWithLyrics()
+        {
+            var intro = AddSection("Intro", "a");
+            var verse = AddSection("Verse", "b");
+            _document.MergeWithPrevious(verse.Lines[0]);
+
+            Assert.Equal(["a"], intro.Lines.Select(l => l.Text));
+            Assert.Equal(["b"], verse.Lines.Select(l => l.Text));
+        }
+
+        [Fact]
         public void MoveFocusCrossesSections()
         {
             var intro = AddSection("Intro", "a");

@@ -72,10 +72,6 @@ export function parseSongText(text: string): Song {
   song.title = headerLines[0] ?? '';
   song.artist = headerLines[1] ?? '';
 
-  // Every section needs a line to type into.
-  for (const s of song.sections) {
-    if (s.lines.length === 0 && !s.repeat) s.lines.push({ text: '', chords: [] });
-  }
   return song;
 }
 

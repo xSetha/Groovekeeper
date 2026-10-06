@@ -20,7 +20,8 @@ Each case is a song as JSON plus one or more song files with the same base name:
 
 Every section and line is written, empty ones too, so a song reads back as it was: in `.txt` one blank
 line separates sections and the other blank lines are blank lines of the song; in ChordPro a blank line
-inside an environment is one (see `empty-sections` and `blank-lines`).
+inside an environment is one (see `empty-sections` and `blank-lines`). A section without any lines is
+kept as one, its heading alone (see `no-lines`); a section with one empty line still has that line.
 
 `.txt` is the app's text format, `.cho` is ChordPro. Files use `\n` line endings; compare after
 turning `\r\n` into `\n`. A chord's `position` is the index of the letter it sits above, and may

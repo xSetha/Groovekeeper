@@ -53,6 +53,20 @@ describe('editing a song', () => {
     expect(joinWithPrevious(SONG, verse(0))).toBeNull();
   });
 
+  it('removes a section\'s only empty line, leaving the section empty, with the caret on the line before', () => {
+    const song = withIds(parseSongText('[Verse]\nla la\n\n[Chorus]\n\n'));
+    expect(song.sections[1]!.lines).toHaveLength(1);
+    const result = joinWithPrevious(song, { section: 1, line: 0 })!;
+    expect(result.song.sections[1]!.lines).toEqual([]);
+    expect(result.focus).toEqual({ lineId: lineAt(song, verse(0))!.id, caret: 5 });
+
+    // The song's first line: the caret goes to the line after; a song's only line leaves no line to go to.
+    const first = withIds(parseSongText('[Intro]\n\n\n[Verse]\nla\n'));
+    expect(joinWithPrevious(first, verse(0))!.focus).toEqual({ lineId: lineAt(first, { section: 1, line: 0 })!.id, caret: 0 });
+    const only = withIds(parseSongText('[Intro]\n\n'));
+    expect(joinWithPrevious(only, verse(0))).toMatchObject({ focus: null });
+  });
+
   it('moves between lines across sections', () => {
     const id = (section: number, line: number) => lineAt(SONG, { section, line })!.id;
     expect(neighbourLine(SONG, id(0, 1), 1)).toBe(id(1, 0));

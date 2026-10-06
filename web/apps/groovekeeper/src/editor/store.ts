@@ -31,7 +31,7 @@ export interface EditorState {
    */
   edit: (change: (song: KeyedSong) => KeyedSong, options?: { merge?: string; endStep?: boolean }) => void;
   /** An edit that also moves the caret, such as Enter splitting a line. Null from `change` means nothing to do. */
-  editAndFocus: (change: (song: KeyedSong) => { song: KeyedSong; focus: Focus } | null) => void;
+  editAndFocus: (change: (song: KeyedSong) => { song: KeyedSong; focus: Focus | null } | null) => void;
   undo: () => void;
   redo: () => void;
   setFocus: (focus: Focus) => void;

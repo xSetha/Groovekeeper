@@ -104,10 +104,6 @@ namespace SongCreator.IO
             if (headerLines.Count > 1)
                 song.Artist = headerLines[1];
 
-            // Every section needs a line to type into.
-            foreach (var empty in song.Sections.Where(s => s.Lines.Count == 0 && !s.IsRepeat))
-                empty.Lines.Add(new SongLine());
-
             return song;
         }
 

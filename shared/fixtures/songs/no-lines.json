@@ -1,0 +1,9 @@
+{
+  "title": "Empty Sections", "artist": "", "key": "Am",
+  "sections": [
+    { "name": "Intro", "repeat": false, "lines": [] },
+    { "name": "Verse 1", "repeat": false, "lines": [{ "text": "Hello there", "chords": [{ "position": 6, "name": "Am" }] }] },
+    { "name": "Bridge", "repeat": false, "lines": [] },
+    { "name": "Outro", "repeat": false, "lines": [] }
+  ]
+}
