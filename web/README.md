@@ -39,3 +39,42 @@ To start a browser over as a guest, sign out, or clear the site's data in the br
 The core is checked against the cases in [`../shared/fixtures`](../shared/fixtures), which the desktop
 app's tests run too, and against the sample songs in `../samples/songs`. When a rule changes in one
 app, change the fixture and both test suites show what to update.
+
+## Running your own copy
+
+The app is a static site: there's no server of its own. Accounts and sync need a Supabase project.
+
+1. **Create a Supabase project** at [supabase.com](https://supabase.com) (the free plan is enough to
+   start). Then, here in `web/`, give the database its tables and access rules:
+
+   ```powershell
+   npx supabase login
+   npx supabase link --project-ref <your project's ref>   # the ref is in the project's address
+   npx supabase db push                                   # applies supabase/migrations
+   ```
+
+2. **Set up sign-in** in the project's dashboard, under Authentication:
+   - URL Configuration: the Site URL is your copy's address, and `https://<your address>/account` is
+     a Redirect URL. The confirmation and password reset emails link there.
+   - Email: keep "Confirm email" on, and set the minimum password length to 8, which the app asks for.
+   - SMTP: Supabase's own sender is only for trying things out (a few emails an hour). Before others
+     sign up, add an email service's SMTP settings.
+   - In the Data API settings, keep the maximum rows at 1000: sync reads the account in pages of that size.
+
+3. **Build the app** with the project's address and publishable key (Settings → API Keys). Set them as
+   environment variables, which take the place of the local Supabase's in `apps/groovekeeper/.env`:
+
+   ```powershell
+   $env:VITE_SUPABASE_URL = 'https://<your project ref>.supabase.co'
+   $env:VITE_SUPABASE_PUBLISHABLE_KEY = '<your publishable key>'
+   npm run build
+   Remove-Item Env:VITE_SUPABASE_*   # so `npm run dev` in this window uses the local Supabase again
+   ```
+
+   The publishable key is meant to be in the browser; access rules in the database decide what each
+   account may read and change. Never put the secret (service role) key in the app.
+
+4. **Put `apps/groovekeeper/dist` on a static host** (Cloudflare Pages, Netlify, …), on HTTPS.
+   Addresses like `/songs/…` belong to the app, so the host must answer them with
+   `index.html`. Cloudflare Pages does that when the site has no `404.html`; other hosts need a
+   rewrite rule.

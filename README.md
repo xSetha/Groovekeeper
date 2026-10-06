@@ -234,3 +234,9 @@ keep that name.
 | `SongCreator.Tests` | xUnit tests |
 | `shared/fixtures` | Test cases for the song formats and music rules, shared with the web app (see its README) |
 | `web` | The web version, in progress (see its README) |
+
+## License
+
+Groovekeeper is open source under the [MIT License](LICENSE). The start page photos and the fonts
+the web version puts in its PDFs keep their own licenses (public domain, CC0 and the SIL Open Font
+License); [CREDITS.md](CREDITS.md) lists them, with the libraries the apps use.
