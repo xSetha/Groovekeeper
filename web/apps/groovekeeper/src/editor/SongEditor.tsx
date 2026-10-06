@@ -1,7 +1,7 @@
 import {
-  ALL_KEYS, createTemplate, detectKey, displayTitle, hasContent, transposeKey, transposeSong, UNTITLED_TITLE, type Song,
+  ALL_KEYS, createTemplate, displayTitle, hasContent, transposeSong, UNTITLED_TITLE, type Song,
 } from '@groovekeeper/core';
-import { useEffect, useMemo, useRef, useState, type PointerEvent, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { useCharWidth } from '../components/useCharWidth';
@@ -9,9 +9,7 @@ import { download, songFile, type SongFormat } from '../library/files';
 import { deleteSong, saveSong } from '../library/library';
 import { useNewSong } from '../navigation';
 import { holdOpenSong } from '../sync/account';
-import { ChordPalette } from './ChordPalette';
-import { trackDrag } from '../components/drag';
-import { addSection, allChords, findLine, placeChord, setArtist, setKey, setTitle, withIds } from './edit';
+import { addSection, setArtist, setKey, setTitle, withIds } from './edit';
 import { SectionBlock } from './SectionBlock';
 import { createEditorStore, EditorContext, useEditor, useEditorStore, type EditorStore } from './store';
 
@@ -25,10 +23,9 @@ interface Props {
   isNew?: boolean;
 }
 
-/** The song editor: lyrics with their chord rows, a chord palette, and the song's toolbar. Saves as you go. */
+/** The song editor: lyrics with their chord rows, and the song's toolbar. Saves as you go. */
 export function SongEditor({ id, initial, isNew = false }: Props) {
-  // A song without sections (a new one: the saved text leaves out sections with nothing in them) starts
-  // with the usual blank ones, so there are lines to type into.
+  // A song without sections starts with the usual blank ones, so there are lines to type into.
   const [store] = useState(() =>
     createEditorStore(withIds(initial.sections.length > 0 ? initial : { ...initial, sections: createTemplate().sections })));
   const save = useAutosave(id, store, isNew);
@@ -54,99 +51,54 @@ function EditorBody() {
   const shape = useEditor((s) =>
     s.song.sections.map((section) => `${section.id}:${section.lines.map((l) => l.id).join(',')}`).join('|'));
   const sections = shape ? shape.split('|').map((part) => part.split(':') as [string, string]) : [];
-  const [ghost, setGhost] = useState<{ name: string; x: number; y: number } | null>(null);
-  const { edit, editAndFocus, setDrop } = store.getState();
+  const { edit, editAndFocus } = store.getState();
 
   useEffect(() => {
     document.title = `${title || UNTITLED_TITLE} – Groovekeeper`;
   }, [title]);
 
-  /** The line under the pointer, and the column the pointer is over. */
-  function dropTarget(x: number, y: number) {
-    const row = document.elementFromPoint(x, y)?.closest<HTMLElement>('[data-line-id]');
-    if (!row?.dataset.lineId || charWidth <= 0) return null;
-    return { lineId: row.dataset.lineId, column: Math.max(0, Math.floor((x - row.getBoundingClientRect().left) / charWidth)) };
-  }
-
-  function startPaletteDrag(name: string, event: PointerEvent<HTMLButtonElement>) {
-    // A mouse press would otherwise start selecting text.
-    if (event.pointerType === 'mouse') event.preventDefault();
-    trackDrag(event, {
-      onMove: (e) => {
-        setGhost({ name, x: e.clientX, y: e.clientY });
-        setDrop(dropTarget(e.clientX, e.clientY));
-      },
-      onEnd: (e) => {
-        const target = e && dropTarget(e.clientX, e.clientY);
-        if (target) {
-          edit((s) => {
-            const at = findLine(s, target.lineId);
-            return at ? placeChord(s, at, target.column, name) : s;
-          });
-          store.setState({ lastPlaced: name });
-        }
-        setDrop(null);
-        setGhost(null);
-      },
-    });
-  }
-
   return (
-    <div className="flex min-h-0 flex-1 flex-col md:flex-row">
-      <article aria-label="Song" className="min-h-0 min-w-0 flex-1 overflow-auto px-4 py-8 sm:px-10">
-        <input
-          value={title}
-          aria-label="Title"
-          placeholder={UNTITLED_TITLE}
-          className="w-full border-0 bg-transparent p-0 text-3xl font-semibold outline-none placeholder:text-hint"
-          onChange={(event) => {
-            const value = event.target.value;
-            edit((s) => setTitle(s, value), { merge: 'title' });
-          }}
-        />
-        <input
-          value={artist}
-          aria-label="Artist"
-          placeholder="Artist"
-          className="mt-1 w-full border-0 bg-transparent p-0 text-lg text-muted outline-none placeholder:text-hint"
-          onChange={(event) => {
-            const value = event.target.value;
-            edit((s) => setArtist(s, value), { merge: 'artist' });
-          }}
-        />
-        <div className="font-mono text-lg">
-          {sections.map(([sectionId, lineIds], index) => (
-            <SectionBlock
-              key={sectionId}
-              index={index}
-              lineIds={lineIds}
-              first={index === 0}
-              last={index === sections.length - 1}
-              charWidth={charWidth}
-            />
-          ))}
-        </div>
-        <button
-          type="button"
-          className="mt-6 rounded px-2 py-1 text-sm text-muted hover:bg-hover hover:text-fg pointer-coarse:min-h-11"
-          onClick={() => editAndFocus(addSection)}
-        >
-          + Section
-        </button>
-      </article>
-      <ChordPalette
-        onStartDrag={startPaletteDrag}
-        className="order-first max-h-40 shrink-0 overflow-y-auto border-b border-line p-4 md:order-last md:max-h-none md:w-64 md:border-b-0 md:border-l"
+    <article aria-label="Song" className="min-h-0 min-w-0 flex-1 overflow-auto px-4 py-8 sm:px-10">
+      <input
+        value={title}
+        aria-label="Title"
+        placeholder={UNTITLED_TITLE}
+        className="w-full border-0 bg-transparent p-0 text-3xl font-semibold outline-none placeholder:text-hint"
+        onChange={(event) => {
+          const value = event.target.value;
+          edit((s) => setTitle(s, value), { merge: 'title' });
+        }}
       />
-      {ghost ? (
-        <span
-          className="pointer-events-none fixed z-20 -translate-x-1/2 -translate-y-full rounded bg-accent-fill px-2 py-1 font-mono text-sm font-semibold text-on-accent shadow-lg"
-          style={{ left: ghost.x, top: ghost.y - 18 }}
-        >
-          {ghost.name}
-        </span>
-      ) : null}
-    </div>
+      <input
+        value={artist}
+        aria-label="Artist"
+        placeholder="Artist"
+        className="mt-1 w-full border-0 bg-transparent p-0 text-lg text-muted outline-none placeholder:text-hint"
+        onChange={(event) => {
+          const value = event.target.value;
+          edit((s) => setArtist(s, value), { merge: 'artist' });
+        }}
+      />
+      <div className="font-mono text-lg">
+        {sections.map(([sectionId, lineIds], index) => (
+          <SectionBlock
+            key={sectionId}
+            index={index}
+            lineIds={lineIds}
+            first={index === 0}
+            last={index === sections.length - 1}
+            charWidth={charWidth}
+          />
+        ))}
+      </div>
+      <button
+        type="button"
+        className="mt-6 rounded px-2 py-1 text-sm text-muted hover:bg-hover hover:text-fg pointer-coarse:min-h-11"
+        onClick={() => editAndFocus(addSection)}
+      >
+        + Section
+      </button>
+    </article>
   );
 }
 
@@ -158,13 +110,8 @@ function Toolbar({ id, onDelete }: { id: string; onDelete: () => void }) {
   const canUndo = useEditor((s) => s.past.length > 0);
   const canRedo = useEditor((s) => s.future.length > 0);
   const key = useEditor((s) => s.song.key);
-  // The chords as a string change only when chords do, so the key isn't worked out again on every key.
-  const chords = useEditor((s) => allChords(s.song).join(' '));
-  const detected = useMemo(() => detectKey(chords ? chords.split(' ') : []), [chords]);
   const numerals = useEditor((s) => s.numerals);
   const { edit, undo, redo, setNumerals } = store.getState();
-  // Suggested only when it sounds different: C# and Db are the same key.
-  const suggestion = detected !== null && transposeKey(detected, 0) !== transposeKey(key, 0) ? detected : null;
 
   const saveFile = (format: SongFormat) => {
     const file = songFile(store.getState().song, format);
@@ -218,12 +165,6 @@ function Toolbar({ id, onDelete }: { id: string; onDelete: () => void }) {
         >
           I IV V
         </button>
-      ) : null}
-      {suggestion ? (
-        <ToolButton onClick={() => edit((s) => setKey(s, suggestion))}>
-          <span className="text-muted">The chords suggest </span>
-          <span className="font-semibold text-accent">{suggestion}</span>
-        </ToolButton>
       ) : null}
       <span className="ml-auto flex items-center gap-1">
         <ToolButton onClick={() => saveFile('text')}>Save as .txt</ToolButton>

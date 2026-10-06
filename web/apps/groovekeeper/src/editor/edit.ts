@@ -1,6 +1,6 @@
 // Edits to a song in the editor. Each returns a new song and leaves the old one as it was.
 import {
-  applyTextChange, isChordLine, joinLines, splitAt, textChange, type ChordPlacement, type Song,
+  applyTextChange, isChord, isChordLine, joinLines, splitAt, textChange, type ChordPlacement, type Song,
 } from '@groovekeeper/core';
 
 // The editor's copy of a song gives every section, line and chord an id, so React keeps each text box and
@@ -139,7 +139,7 @@ export function neighbourLine(song: KeyedSong, lineId: string, direction: -1 | 1
   return index < 0 ? null : (all[index + direction] ?? null);
 }
 
-/** A chord dropped at a column: it replaces a chord already there, or is added. */
+/** A chord placed at a column: it replaces a chord already there, or is added. */
 export function placeChord(song: KeyedSong, at: LineAt, column: number, name: string): KeyedSong {
   const position = Math.max(0, column);
   return withLine(song, at, (line) => ({
@@ -148,6 +148,19 @@ export function placeChord(song: KeyedSong, at: LineAt, column: number, name: st
       ? line.chords.map((c) => (c.position === position ? { ...c, name } : c))
       : [...line.chords, { position, name, id: newId() }],
   }));
+}
+
+/**
+ * A chord typed above the letter at `position`: it renames the chord already there, or is added; an empty name
+ * removes that chord. Null if the name isn't a chord, since a chord row with a non-chord in it reads back as lyrics.
+ */
+export function setChord(song: KeyedSong, at: LineAt, position: number, name: string): KeyedSong | null {
+  const trimmed = name.trim();
+  const existing = lineAt(song, at)?.chords.find((c) => c.position === position);
+  if (trimmed.length === 0) return existing ? removeChord(song, at, existing.id) : song;
+  if (!isChord(trimmed)) return null;
+  // Unchanged, so it's no undo step and nothing to save.
+  return existing?.name === trimmed ? song : placeChord(song, at, position, trimmed);
 }
 
 export function moveChord(song: KeyedSong, at: LineAt, chordId: string, position: number): KeyedSong {

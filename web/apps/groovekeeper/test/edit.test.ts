@@ -2,7 +2,7 @@ import { createTemplate, parseSongText } from '@groovekeeper/core';
 import { describe, expect, it } from 'vitest';
 import {
   addLine, addSection, chordsInSong, deleteSection, duplicateSection, editText, findLine, joinWithPrevious, lineAt,
-  moveChord, moveSection, neighbourLine, pasteLines, placeChord, removeChord, renameSection, repeatSection, splitLine,
+  moveChord, moveSection, neighbourLine, pasteLines, placeChord, removeChord, renameSection, repeatSection, setChord, splitLine,
   withIds, type KeyedLine, type KeyedSong,
 } from '../src/editor/edit';
 
@@ -68,6 +68,21 @@ describe('editing a song', () => {
     const replaced = placeChord(SONG, verse(0), 11, 'Cmaj7');
     expect(lineAt(replaced, verse(0))?.chords.map((c) => c.name)).toEqual(['G', 'Cmaj7']);
     expect(chordId(replaced, verse(0), 1)).toBe(chordId(SONG, verse(0), 1));
+  });
+
+  it('types a chord: adds it, renames the one in that column, or removes it with an empty name', () => {
+    expect(chords(lineAt(setChord(SONG, verse(1), 4, ' Em7 ')!, verse(1)))).toEqual([{ position: 4, name: 'Em7' }]);
+    const renamed = setChord(SONG, verse(0), 11, 'C/G')!;
+    expect(chords(lineAt(renamed, verse(0)))).toEqual([{ position: 0, name: 'G' }, { position: 11, name: 'C/G' }]);
+    expect(chordId(renamed, verse(0), 1)).toBe(chordId(SONG, verse(0), 1));
+    expect(chords(lineAt(setChord(SONG, verse(0), 0, '')!, verse(0)))).toEqual([{ position: 11, name: 'C' }]);
+    expect(setChord(SONG, verse(1), 3, '  ')).toBe(SONG);
+    expect(setChord(SONG, verse(0), 11, 'C')).toBe(SONG);
+  });
+
+  it("refuses a name that isn't a chord", () => {
+    expect(setChord(SONG, verse(1), 0, 'hello')).toBeNull();
+    expect(setChord(SONG, verse(0), 0, 'G hello')).toBeNull();
   });
 
   it('moves and removes chords', () => {

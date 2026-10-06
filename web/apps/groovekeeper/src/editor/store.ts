@@ -16,10 +16,6 @@ export interface EditorState {
   mergeKey: string | null;
   /** The line to put the caret in; `request` changes each time, so the same place can be asked for again. */
   focus: (Focus & { request: number }) | null;
-  /** Where a chord dragged from the palette would land. */
-  drop: { lineId: string; column: number } | null;
-  /** The chord last placed from the palette: the palette suggests what usually comes after it. */
-  lastPlaced: string | null;
   /** Show the chords as Roman numerals in the song's key (only how they're shown; the song keeps chord names). */
   numerals: boolean;
 
@@ -33,7 +29,6 @@ export interface EditorState {
   undo: () => void;
   redo: () => void;
   setFocus: (focus: Focus) => void;
-  setDrop: (drop: EditorState['drop']) => void;
   setNumerals: (numerals: boolean) => void;
 }
 
@@ -47,8 +42,6 @@ export function createEditorStore(song: KeyedSong): EditorStore {
     future: [],
     mergeKey: null,
     focus: null,
-    drop: null,
-    lastPlaced: null,
     numerals: false,
 
     edit: (change, options = {}) => {
@@ -90,7 +83,6 @@ export function createEditorStore(song: KeyedSong): EditorStore {
     },
 
     setFocus: (focus) => set({ focus: { ...focus, request: ++requests } }),
-    setDrop: (drop) => set({ drop }),
     setNumerals: (numerals) => set({ numerals }),
   }));
 }

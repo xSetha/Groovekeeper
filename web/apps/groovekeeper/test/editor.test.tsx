@@ -164,31 +164,76 @@ describe('the editor', () => {
   });
 });
 
-describe('the chord palette', () => {
-  const palette = () => within(screen.getByRole('complementary', { name: 'Chords' }));
-  const chipNames = (title: string) =>
-    within(palette().getByRole('heading', { name: title }).parentElement!)
-      .getAllByRole('button')
-      .map((chip) => chip.firstElementChild?.textContent);
+describe('typing chords', () => {
+  // In the test DOM nothing has a size, so a click on a chord row is over its first letter.
+  const chordRow = (line: number) => screen.getAllByTestId('chord-row')[line]!;
+  const chordBox = () => screen.getByRole('textbox', { name: 'Chord' });
 
-  it('suggests what usually follows the last chord, with Roman numerals in the key', async () => {
-    await openSong();
-    expect(chipNames('After C')).toEqual(['D', 'G', 'Am', 'D7']);
-    expect(chipNames('In G')).toEqual(['G', 'Am', 'Bm', 'C', 'D', 'Em', 'F#dim', 'D7']);
-    expect(chipNames('In this song')).toEqual(['G', 'C']);
-    expect(palette().getAllByText('vii°')).toHaveLength(1);
+  it('types a chord above a letter with a click on the chord row and Enter', async () => {
+    const user = userEvent.setup();
+    const lines = await openSong();
+    await user.click(chordRow(1));
+    await user.keyboard('Em7{Enter}');
+
+    expect(sheet().getByRole('button', { name: 'Em7' })).toBeInTheDocument();
+    expect(screen.queryByRole('textbox', { name: 'Chord' })).not.toBeInTheDocument();
+    expect(lines[1]).toHaveFocus();
+    await waitFor(async () => expect(await stored()).toContain('Amazing grace\nEm7\nhow sweet\n'));
   });
 
-  it('offers every chord type on a root, over a bass note', async () => {
+  it("refuses what isn't a chord, and Esc cancels", async () => {
     const user = userEvent.setup();
     await openSong();
-    await user.click(within(palette().getByRole('group', { name: 'Root' })).getByRole('button', { name: 'D' }));
-    await user.click(within(palette().getByRole('group', { name: 'Bass note' })).getByRole('button', { name: 'F#' }));
+    await user.click(chordRow(1));
+    await user.keyboard('hello{Enter}');
 
-    const all = chipNames('All chords');
-    expect(all).toContain('D/F#');
-    expect(all).toContain('Dsus4/F#');
-    expect(palette().getByText('V/7')).toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveTextContent('Not a chord');
+    expect(chordBox()).toHaveValue('hello');
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('textbox', { name: 'Chord' })).not.toBeInTheDocument();
+    expect(await stored()).toBe(TEXT);
+  });
+
+  it('changes a chord with a double-click, and an empty name removes it', async () => {
+    const user = userEvent.setup();
+    await openSong();
+    await user.dblClick(sheet().getByRole('button', { name: 'C' }));
+    expect(chordBox()).toHaveValue('C');
+    await user.clear(chordBox());
+    await user.keyboard('Cmaj7{Enter}');
+    expect(sheet().getByRole('button', { name: 'Cmaj7' })).toBeInTheDocument();
+
+    await user.dblClick(sheet().getByRole('button', { name: 'G' }));
+    await user.clear(chordBox());
+    await user.keyboard('{Enter}');
+    expect(sheet().queryByRole('button', { name: 'G' })).not.toBeInTheDocument();
+    await waitFor(async () => expect(await stored()).toContain('           Cmaj7\nAmazing grace\n'));
+  });
+
+  it('keeps a typed chord when clicking away, and drops anything else', async () => {
+    const user = userEvent.setup();
+    await openSong();
+    await user.click(chordRow(1));
+    await user.keyboard('D');
+    await user.click(screen.getByRole('textbox', { name: 'Title' }));
+    expect(sheet().getByRole('button', { name: 'D' })).toBeInTheDocument();
+
+    await user.click(chordRow(1));
+    await user.clear(chordBox());
+    await user.keyboard('xyz');
+    await user.click(screen.getByRole('textbox', { name: 'Title' }));
+    expect(screen.queryByRole('textbox', { name: 'Chord' })).not.toBeInTheDocument();
+    expect(sheet().getByRole('button', { name: 'D' })).toBeInTheDocument();
+  });
+
+  it('is one undo step per chord', async () => {
+    const user = userEvent.setup();
+    await openSong();
+    await user.click(chordRow(1));
+    await user.keyboard('Am{Enter}');
+    await user.click(screen.getByRole('button', { name: 'Undo' }));
+    expect(sheet().queryByRole('button', { name: 'Am' })).not.toBeInTheDocument();
+    expect(sheet().getByRole('button', { name: 'C' })).toBeInTheDocument();
   });
 
   it('shows the song\'s chords as Roman numerals with I IV V, without changing them', async () => {
@@ -200,28 +245,11 @@ describe('the chord palette', () => {
     expect(sheet().getByRole('button', { name: 'IV' })).toBeInTheDocument();
     expect(await stored()).toBe(TEXT);
   });
-});
 
-describe('the key suggestion', () => {
-  const open = async (key: string) => {
-    const text = `Song\n\nKey: ${key}\n\n[Verse]\nC#      F#      G#     C#\nla la la la la la la la la la la\n`;
-    await db.songs.add({ id: 'k', title: 'Song', artist: '', key, text, updatedAt: 0, version: 0, dirty: 1 });
-    render(
-      <MemoryRouter initialEntries={['/songs/k']}>
-        <App />
-      </MemoryRouter>,
-    );
-    await screen.findAllByRole('textbox', { name: 'Lyrics' });
-  };
-
-  it('is offered when the chords point to another key', async () => {
-    await open('A');
-    expect(screen.getByText('The chords suggest')).toBeInTheDocument();
-  });
-
-  it("isn't offered for the same key spelled differently (C# and Db)", async () => {
-    await open('C#');
-    expect(screen.queryByText('The chords suggest')).not.toBeInTheDocument();
+  it('no longer offers a key from the chords', async () => {
+    await openSong();
+    expect(screen.queryByText(/The chords suggest/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('complementary', { name: 'Chords' })).not.toBeInTheDocument();
   });
 });
 
