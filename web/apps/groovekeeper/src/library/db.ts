@@ -11,7 +11,29 @@ export interface LibrarySong extends Synced {
   artist: string;
   key: string;
   text: string;
+  /** Notes floating over the song; they aren't part of its text. Songs saved before notes have none. */
+  notes?: SongNote[];
   updatedAt: number;
+}
+
+/**
+ * A note floating over the song in the editor, at a spot of its own rather than on a line, so it stays put
+ * while the lyrics under it change. Notes aren't in the song's text (.txt or ChordPro files); the library
+ * keeps them beside it, and the PDF prints them where they float.
+ */
+export interface SongNote {
+  id: string;
+  /** The note's text; it may have several lines. */
+  text: string;
+  /** Where it starts across the song, in lyric letters from the start of the lines. */
+  column: number;
+  /** Where its top is in the editor, in pixels from the top of the song's sections. */
+  top: number;
+  /**
+   * What its top was over the last time the editor laid the song out, for the PDF and the phone: the index
+   * of a line among the song's lines plus how far down towards the next (3.5 is halfway between lines 3 and 4).
+   */
+  printRow: number;
 }
 
 /**
@@ -70,6 +92,7 @@ export interface RemoteSong {
   artist: string;
   key: string;
   text: string;
+  notes: SongNote[];
   deleted: boolean;
   version: number;
   updated_at: string;

@@ -3,7 +3,7 @@
 import { createContext, useContext } from 'react';
 import { useStore } from 'zustand';
 import { createStore, type StoreApi } from 'zustand/vanilla';
-import type { Focus, KeyedSong } from './edit';
+import { withPrintRows, type Focus, type KeyedSong } from './edit';
 
 // Undo goes back this many steps.
 const HISTORY_LIMIT = 200;
@@ -22,6 +22,8 @@ export interface EditorState {
   caretSection: string | null;
   /** While a section is dragged by its grip: the place it would land, as an index before the move. */
   sectionDrop: number | null;
+  /** The note to put the caret in (one just added); `request` changes each time. */
+  focusNote: { id: string; request: number } | null;
 
   /**
    * Changes the song as one undo step. Edits with the same `merge` key in a row make one step (typing in
@@ -36,6 +38,12 @@ export interface EditorState {
   setNumerals: (numerals: boolean) => void;
   setCaretSection: (caretSection: string | null) => void;
   setSectionDrop: (sectionDrop: number | null) => void;
+  setFocusNote: (id: string) => void;
+  /**
+   * The rows the notes are over after the editor laid the song out, by note id. They follow the notes and the
+   * lines, so they aren't an edit of their own: no undo step (the song is still saved with them).
+   */
+  relayNotes: (rows: ReadonlyMap<string, number>) => void;
 }
 
 export type EditorStore = StoreApi<EditorState>;
@@ -51,6 +59,7 @@ export function createEditorStore(song: KeyedSong): EditorStore {
     numerals: false,
     caretSection: null,
     sectionDrop: null,
+    focusNote: null,
 
     edit: (change, options = {}) => {
       const { song: current, past, mergeKey } = get();
@@ -94,6 +103,12 @@ export function createEditorStore(song: KeyedSong): EditorStore {
     setNumerals: (numerals) => set({ numerals }),
     setCaretSection: (caretSection) => set({ caretSection }),
     setSectionDrop: (sectionDrop) => set({ sectionDrop }),
+    setFocusNote: (id) => set({ focusNote: { id, request: ++requests } }),
+    relayNotes: (rows) => {
+      const { song } = get();
+      const next = withPrintRows(song, rows);
+      if (next !== song) set({ song: next });
+    },
   }));
 }
 

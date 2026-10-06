@@ -1,9 +1,8 @@
-import type { Song } from '@groovekeeper/core';
 import { useEffect, useState } from 'react';
 import { Link, useLocation, useParams } from 'react-router';
 import { LibraryPanel } from '../components/LibraryPanel';
 import { SongEditor } from '../editor/SongEditor';
-import { getSong } from '../library/library';
+import { openSong } from '../library/library';
 import { isNewFrom } from '../navigation';
 import { useIsPhone } from '../phone';
 import { SongReader } from './SongReader';
@@ -14,11 +13,11 @@ export function SongPage() {
   // Set by New song: a new song left empty is removed again when it's closed.
   const isNew = isNewFrom(useLocation().state);
   // The song is read once when it's opened; from then on the editor holds it and saves it.
-  const [loaded, setLoaded] = useState<{ id: string; song: Song | undefined } | null>(null);
+  const [loaded, setLoaded] = useState<{ id: string; song: Awaited<ReturnType<typeof openSong>> } | null>(null);
 
   useEffect(() => {
     let current = true;
-    void getSong(id).then((song) => current && setLoaded({ id, song }));
+    void openSong(id).then((song) => current && setLoaded({ id, song }));
     return () => {
       current = false;
     };
@@ -27,14 +26,14 @@ export function SongPage() {
   const ready = loaded?.id === id ? loaded : null;
   if (phone) {
     // On a phone, songs are read, not edited.
-    return ready?.song ? <SongReader song={ready.song} /> : ready ? <NotFound /> : null;
+    return ready?.song ? <SongReader song={ready.song.song} notes={ready.song.notes} /> : ready ? <NotFound /> : null;
   }
   return (
     <div className="flex min-h-0 flex-1">
       <LibraryPanel activeId={id} className="hidden w-72 shrink-0 border-r border-line p-4 lg:flex" />
       <main className="flex min-w-0 flex-1 flex-col">
         {ready && !ready.song && <NotFound />}
-        {ready?.song && <SongEditor key={id} id={id} initial={ready.song} isNew={isNew} />}
+        {ready?.song && <SongEditor key={id} id={id} initial={ready.song.song} notes={ready.song.notes} isNew={isNew} />}
       </main>
     </div>
   );

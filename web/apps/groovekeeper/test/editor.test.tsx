@@ -299,6 +299,80 @@ describe('typing chords', () => {
   });
 });
 
+describe('notes', () => {
+  const storedNotes = async () => (await db.songs.get('grace'))?.notes ?? [];
+
+  it('adds a note where the song is right-clicked, typed into and finished with Enter', async () => {
+    const user = userEvent.setup();
+    await openSong();
+    fireEvent.contextMenu(screen.getAllByTestId('chord-row')[1]!, { clientX: 0, clientY: 0 });
+    await user.click(screen.getByRole('menuitem', { name: 'Add note here' }));
+
+    const note = screen.getByRole('textbox', { name: 'Note' });
+    expect(note).toHaveFocus();
+    await user.keyboard('Capo 2{Shift>}{Enter}{/Shift}build up{Enter}');
+    expect(note).not.toHaveFocus();
+    await waitFor(async () => expect((await storedNotes()).map((n) => n.text)).toEqual(['Capo 2\nbuild up']));
+    // The note isn't part of the song's text.
+    expect(await stored()).toBe(TEXT);
+  });
+
+  it('keeps the browser’s own menu on the lyrics', async () => {
+    const [first] = await openSong();
+    fireEvent.contextMenu(first!);
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+  });
+
+  it('removes a note left empty, deletes one with its button, and undoes that', async () => {
+    const user = userEvent.setup();
+    await openSong();
+    fireEvent.contextMenu(screen.getAllByTestId('chord-row')[0]!);
+    await user.click(screen.getByRole('menuitem', { name: 'Add note here' }));
+    await user.keyboard('{Enter}');
+    expect(screen.queryByRole('textbox', { name: 'Note' })).not.toBeInTheDocument();
+
+    fireEvent.contextMenu(screen.getAllByTestId('chord-row')[0]!);
+    await user.click(screen.getByRole('menuitem', { name: 'Add note here' }));
+    await user.keyboard('Slow{Enter}');
+    await user.click(screen.getByRole('button', { name: 'Delete note' }));
+    expect(screen.queryByRole('textbox', { name: 'Note' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Undo' }));
+    expect(screen.getByRole('textbox', { name: 'Note' })).toHaveValue('Slow');
+  });
+
+  it('opens with the song’s notes, and deletes one from its own menu', async () => {
+    await db.songs.add({
+      id: 'grace', title: 'Amazing Grace', artist: '', key: 'G', text: TEXT, updatedAt: 0, version: 0, dirty: 1,
+      notes: [{ id: 'n1', text: 'Capo 2', column: 3, top: 10, printRow: 0.2 }],
+    });
+    render(
+      <MemoryRouter initialEntries={['/songs/grace']}>
+        <App />
+      </MemoryRouter>,
+    );
+    const note = await screen.findByRole('textbox', { name: 'Note' });
+    expect(note).toHaveValue('Capo 2');
+    expect(note.parentElement?.style.left).toBe('calc(3ch + 0px)');
+
+    const user = userEvent.setup();
+    fireEvent.contextMenu(note.parentElement!);
+    await user.click(screen.getByRole('menuitem', { name: 'Delete note' }));
+    await waitFor(async () => expect(await storedNotes()).toEqual([]));
+  });
+
+  it('says a saved song file leaves the notes out', async () => {
+    const user = userEvent.setup();
+    await openSong();
+    fireEvent.contextMenu(screen.getAllByTestId('chord-row')[0]!);
+    await user.click(screen.getByRole('menuitem', { name: 'Add note here' }));
+    await user.keyboard('Capo 2{Enter}');
+    URL.createObjectURL = () => 'blob:song';
+    URL.revokeObjectURL = () => {};
+    await user.click(screen.getByRole('button', { name: 'Save as .txt' }));
+    expect(screen.getByRole('status')).toHaveTextContent('Its notes stay in the library');
+  });
+});
+
 describe('new songs', () => {
   const renderStart = () =>
     render(

@@ -1,34 +1,41 @@
 import {
   ALL_KEYS, createTemplate, displayTitle, hasContent, transposeSong, UNTITLED_TITLE, type Song,
 } from '@groovekeeper/core';
-import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react';
+import { Fragment, useCallback, useEffect, useRef, useState, type MouseEvent, type PointerEvent, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { useCharWidth } from '../components/useCharWidth';
+import type { SongNote } from '../library/db';
 import { download, songFile, type SongFormat } from '../library/files';
 import { deleteSong, saveSong } from '../library/library';
 import { useNewSong } from '../navigation';
 import { holdOpenSong } from '../sync/account';
 import { dismissToast, toast } from '../toasts';
-import { addSection, setArtist, setKey, setTitle, withIds } from './edit';
+import { addNote, addSection, setArtist, setKey, setTitle, withIds, type KeyedSong } from './edit';
+import { ContextMenu, NoteLayer, type MenuAt } from './Notes';
 import { SectionBlock } from './SectionBlock';
 import { createEditorStore, EditorContext, useEditor, useEditorStore, type EditorStore } from './store';
 
 // Changes are saved to the library this long after the last one, so typing doesn't write on every key.
 const SAVE_DELAY_MS = 400;
+// A finger held this long on the song (not on its text) opens the menu that adds a note.
+const LONG_PRESS_MS = 500;
+const LONG_PRESS_SLOP_PX = 8;
 
 interface Props {
   id: string;
   initial: Song;
+  /** The notes floating over it. */
+  notes?: SongNote[];
   /** A song just made with New song: if it's left without anything in it, it's removed again. */
   isNew?: boolean;
 }
 
 /** The song editor: lyrics with their chord rows, and the song's toolbar. Saves as you go. */
-export function SongEditor({ id, initial, isNew = false }: Props) {
+export function SongEditor({ id, initial, notes = [], isNew = false }: Props) {
   // A song without sections starts with the usual blank ones, so there are lines to type into.
   const [store] = useState(() =>
-    createEditorStore(withIds(initial.sections.length > 0 ? initial : { ...initial, sections: createTemplate().sections })));
+    createEditorStore(withIds(initial.sections.length > 0 ? initial : { ...initial, sections: createTemplate().sections }, notes)));
   const save = useAutosave(id, store, isNew);
   // Syncing doesn't replace the song while it's open here.
   useEffect(() => holdOpenSong(id), [id]);
@@ -54,6 +61,65 @@ function EditorBody() {
   const sections = shape ? shape.split('|').map((part) => part.split(':') as [string, string]) : [];
   const sectionDrop = useEditor((s) => s.sectionDrop);
   const { edit, editAndFocus, setCaretSection } = store.getState();
+  const sectionsBox = useRef<HTMLDivElement>(null);
+  const [menu, setMenu] = useState<MenuAt | null>(null);
+  const closeMenu = useCallback(() => setMenu(null), []);
+
+  /** The menu of the song at a spot: Add note here, which puts a note there with the caret in it. */
+  function openAddMenu(x: number, y: number) {
+    const box = sectionsBox.current?.getBoundingClientRect();
+    if (!box) return;
+    const column = charWidth > 0 ? (x - box.left) / charWidth : 0;
+    const top = y - box.top;
+    const add = () => {
+      let added = '';
+      edit((s) => {
+        const result = addNote(s, Math.round(column * 10) / 10, Math.round(top));
+        added = result.id;
+        return result.song;
+      });
+      store.getState().setFocusNote(added);
+    };
+    setMenu({ x, y, items: [{ label: 'Add note here', onSelect: add }] });
+  }
+
+  // Text boxes keep the browser's own menu (copy, paste); a chord's right-click removes it, and notes have their own.
+  const onTextOrNote = (target: EventTarget) => target instanceof Element && target.closest('input, textarea, [data-note]') !== null;
+
+  function onContextMenu(event: MouseEvent<HTMLDivElement>) {
+    if (event.defaultPrevented || onTextOrNote(event.target)) return;
+    event.preventDefault();
+    openAddMenu(event.clientX, event.clientY);
+  }
+
+  /** On a touch screen there's no right-click: a long press on the song opens the same menu. */
+  function onPointerDown(event: PointerEvent<HTMLDivElement>) {
+    if (event.pointerType === 'mouse' || onTextOrNote(event.target) || (event.target as Element).closest('button')) return;
+    const { pointerId, clientX: x, clientY: y } = event;
+    const timer = setTimeout(() => {
+      stop();
+      openAddMenu(x, y);
+      // Lifting the finger may still click what's under it (a chord row would open its chord box): not this time.
+      const swallow = (click: Event) => {
+        click.stopPropagation();
+        click.preventDefault();
+      };
+      window.addEventListener('click', swallow, { capture: true, once: true });
+      setTimeout(() => window.removeEventListener('click', swallow, true), LONG_PRESS_MS);
+    }, LONG_PRESS_MS);
+    const move = (e: globalThis.PointerEvent) =>
+      e.pointerId === pointerId && Math.hypot(e.clientX - x, e.clientY - y) > LONG_PRESS_SLOP_PX && stop();
+    const end = (e: globalThis.PointerEvent) => e.pointerId === pointerId && stop();
+    function stop() {
+      clearTimeout(timer);
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', end);
+      window.removeEventListener('pointercancel', end);
+    }
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', end);
+    window.addEventListener('pointercancel', end);
+  }
 
   useEffect(() => {
     document.title = `${title || UNTITLED_TITLE} – Groovekeeper`;
@@ -84,7 +150,13 @@ function EditorBody() {
           edit((s) => setArtist(s, value), { merge: 'artist' });
         }}
       />
-      <div className="font-mono text-lg" data-sections>
+      <div
+        ref={sectionsBox}
+        className="relative font-mono text-lg"
+        data-sections
+        onContextMenu={onContextMenu}
+        onPointerDown={onPointerDown}
+      >
         {sections.map(([sectionId, lineIds], index) => (
           <Fragment key={sectionId}>
             {sectionDrop === index ? <DropLine /> : null}
@@ -98,7 +170,9 @@ function EditorBody() {
           </Fragment>
         ))}
         {sectionDrop === sections.length ? <DropLine /> : null}
+        <NoteLayer charWidth={charWidth} onMenu={setMenu} />
       </div>
+      {menu ? <ContextMenu menu={menu} onClose={closeMenu} /> : null}
       <button
         type="button"
         className="mt-6 rounded px-2 py-1 text-sm text-muted hover:bg-hover hover:text-fg pointer-coarse:min-h-11"
@@ -134,7 +208,8 @@ function Toolbar(props: { id: string; onDelete: () => void; onDeleteFailed: () =
   const saveFile = (format: SongFormat) => {
     const file = songFile(store.getState().song, format);
     download(file.name, file.text);
-    toast('success', `Saved ${file.name}`);
+    const hasNotes = store.getState().song.notes.length > 0;
+    toast('success', `Saved ${file.name}`, hasNotes ? 'Its notes stay in the library: song files don’t have them.' : '');
   };
 
   return (
@@ -258,7 +333,7 @@ function useShortcuts(store: EditorStore) {
  * `resume` saves again (the delete failed).
  */
 function useAutosave(id: string, store: EditorStore, isNew: boolean) {
-  const pending = useRef<Song | null>(null);
+  const pending = useRef<KeyedSong | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const cancelled = useRef(false);
 
@@ -269,7 +344,7 @@ function useAutosave(id: string, store: EditorStore, isNew: boolean) {
       pending.current = null;
       if (!song) return;
       // A song that couldn't be saved mustn't go unnoticed: the toast stays until a save works again.
-      saveSong(id, song).then(
+      saveSong(id, song, song.notes).then(
         () => dismissToast(`save:${id}`),
         () => {
           toast(

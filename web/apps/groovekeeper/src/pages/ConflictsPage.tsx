@@ -96,6 +96,19 @@ function Content({ table, row }: { table: Conflict['table']; row: LibrarySong | 
       <>
         <p className="font-semibold">{song.title || UNTITLED_TITLE}</p>
         <pre className="mt-2 max-h-96 overflow-auto font-mono text-sm whitespace-pre">{song.text}</pre>
+        {/* Notes aren't in the text, so a copy that differs only in its notes shows it here. */}
+        {song.notes?.length ? (
+          <div className="mt-3 text-sm">
+            <p className="font-semibold text-muted">Notes</p>
+            <ul className="mt-1 list-disc pl-5 italic">
+              {song.notes.map((note) => (
+                <li key={note.id} className="whitespace-pre-wrap">
+                  {note.text}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
       </>
     );
   }

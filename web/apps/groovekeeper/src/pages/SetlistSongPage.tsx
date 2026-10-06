@@ -37,6 +37,7 @@ export function SetlistSongPage() {
       // A new song starts as it's written, not with the transposing done on the one before.
       key={place}
       song={song.song}
+      notes={song.notes}
       back={{ to: `/setlists/${id}`, label: songs.name }}
       steps={{ previous: at(place - 1), next: at(place + 1), position: `${place} of ${songs.songs.length}` }}
     />

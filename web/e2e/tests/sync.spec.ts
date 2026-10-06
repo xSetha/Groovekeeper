@@ -1,5 +1,5 @@
 // Two devices on one account, as two separate browsers: the guest library joins the account, changes go
-// both ways, an offline edit syncs once back online, a song changed on both becomes a change to settle,
+// both ways (notes too), an offline edit syncs once back online, a song changed on both becomes a change to settle,
 // and signing out empties the device. Needs the local Supabase (`npm run db:start` in web/).
 import { expect, test, type Browser, type Page } from '@playwright/test';
 import { supabaseRunning } from './supabase';
@@ -67,6 +67,21 @@ test('two devices on one account', async ({ browser }) => {
     await syncNow(b);
     await b.goto('/');
     await expect(library(b).getByText('Oh! Susanna (live)')).toBeVisible();
+  });
+
+  await test.step('a note added on one device reaches the other', async () => {
+    await a.goto('/');
+    await library(a).getByRole('link', { name: /Scarborough Fair/ }).click();
+    await a.getByRole('button', { name: '+ Line' }).first().click({ button: 'right' });
+    await a.getByRole('menuitem', { name: 'Add note here' }).click();
+    await a.keyboard.type('Capo 2');
+    await a.keyboard.press('Enter');
+    await a.getByRole('link', { name: 'Songs' }).click();
+    await syncNow(a);
+    await syncNow(b);
+    await b.goto('/');
+    await library(b).getByRole('link', { name: /Scarborough Fair/ }).click();
+    await expect(b.getByRole('textbox', { name: 'Note' })).toHaveValue('Capo 2');
   });
 
   await test.step('a change made offline syncs once back online', async () => {

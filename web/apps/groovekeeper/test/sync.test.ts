@@ -95,9 +95,21 @@ describe('syncing', () => {
     expect(await db.songs.get(grace!)).toMatchObject({ title: 'Amazing Grace (acoustic)', version: 3, dirty: 0 });
   });
 
+  it('syncs a song\'s notes both ways', async () => {
+    const [grace] = await addSongs([song('Amazing Grace')]);
+    const note = { id: 'n1', text: 'Capo 2', column: 4, top: 30, printRow: 0.5 };
+    await saveSong(grace!, song('Amazing Grace'), [note]);
+    await syncNow();
+    expect(account.song(grace!)).toMatchObject({ notes: [note] });
+
+    account.changeSong(grace!, { notes: [{ ...note, text: 'Capo 3' }] });
+    await syncNow();
+    expect((await db.songs.get(grace!))?.notes?.[0]?.text).toBe('Capo 3');
+  });
+
   it('brings in songs added on another device', async () => {
     account.rows.songs.set('new', {
-      id: 'new', title: 'Oh! Susanna', artist: '', key: 'C', text: 'Oh! Susanna\n', deleted: false, version: 1,
+      id: 'new', title: 'Oh! Susanna', artist: '', key: 'C', text: 'Oh! Susanna\n', notes: [], deleted: false, version: 1,
       updated_at: '2026-10-03T13:00:00.000Z',
     });
     await syncNow();
@@ -194,7 +206,7 @@ describe('syncing', () => {
   it('recognizes songs already in the account when an earlier push lost its answer', async () => {
     const [grace] = await addSongs([parseSongText('Amazing Grace\n')]);
     const stored = await db.songs.get(grace!);
-    await account.insert('songs', [{ id: grace!, title: stored!.title, artist: '', key: '', text: stored!.text, deleted: false }]);
+    await account.insert('songs', [{ id: grace!, title: stored!.title, artist: '', key: '', text: stored!.text, notes: [], deleted: false }]);
 
     await syncNow();
     expect(await db.songs.get(grace!)).toMatchObject({ version: 1, dirty: 0 });

@@ -2,7 +2,9 @@ import { parseSongText, transposeSong } from '@groovekeeper/core';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { db } from '../src/library/db';
 import { newId } from '../src/library/ids';
-import { addSongs, deleteSong, getSong, listSongs, matchesSearch, saveSong } from '../src/library/library';
+import { addSongs, deleteSong, listSongs, matchesSearch, openSong, saveSong } from '../src/library/library';
+
+const getSong = async (id: string) => (await openSong(id))?.song;
 
 const song = (title: string, artist = '', key = '') =>
   parseSongText(`${title}\n${artist}\n\nKey: ${key}\n\n[Verse 1]\nG     C\nla la la\n`);
@@ -29,6 +31,17 @@ describe('library', () => {
     expect(saved?.key).toBe('G');   // transposing moves only the chords
     expect(saved?.sections[0]?.lines[0]?.chords.map((c) => c.name)).toEqual(['A', 'D']);
     expect((await listSongs())[0]?.key).toBe('G');
+  });
+
+  it('keeps a song\'s notes beside its text, and keeps them when a save leaves them out', async () => {
+    const [id] = await addSongs([song('Amazing Grace', 'John Newton', 'G')]);
+    const note = { id: 'n1', text: 'Capo 2', column: 4, top: 30, printRow: 0.5 };
+    await saveSong(id!, song('Amazing Grace', 'John Newton', 'G'), [note]);
+    expect((await openSong(id!))?.notes).toEqual([note]);
+    expect((await db.songs.get(id!))?.text).not.toContain('Capo 2');
+
+    await saveSong(id!, song('Amazing Grace (live)', 'John Newton', 'G'));
+    expect((await openSong(id!))?.notes).toEqual([note]);
   });
 
   it('deletes a song', async () => {

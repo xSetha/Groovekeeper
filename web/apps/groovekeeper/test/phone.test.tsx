@@ -30,6 +30,18 @@ beforeEach(async () => {
 afterEach(() => vi.unstubAllGlobals());
 
 describe('on a phone', () => {
+  it('a song shows its notes, read only', async () => {
+    await db.songs.add({
+      id: 'grace', title: 'Amazing Grace', artist: 'John Newton', key: 'G', text: TEXT, updatedAt: 0, version: 0, dirty: 1,
+      notes: [{ id: 'n1', text: 'Capo 2', column: 4, top: 0, printRow: 0 }],
+    });
+    renderApp('/songs/grace');
+
+    const note = await screen.findByText('Capo 2');
+    expect(note.parentElement?.style.left).toBe('4ch');
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+  });
+
   it('the start page is the library, without importing', async () => {
     const user = userEvent.setup();
     renderApp('/');

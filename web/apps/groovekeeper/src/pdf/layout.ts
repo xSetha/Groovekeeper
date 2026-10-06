@@ -106,6 +106,10 @@ export type Measure = (text: string, face: Face, size: number) => number;
 export const PAGE = { width: 595.28, height: 841.89, margin: 56.69 }; // A4 in points, 2 cm margins
 
 const SONG_SIZE = 10.5;
+// A letter of Cascadia Mono, the songs' font, is 1200 of its 2048 units wide.
+const MONO_ADVANCE_EM = 1200 / 2048;
+/** How many letters of a song's lines fit across the page; longer lines wrap. The editor marks this edge. */
+export const PRINTED_COLUMNS = Math.floor((PAGE.width - 2 * PAGE.margin) / (SONG_SIZE * MONO_ADVANCE_EM));
 const SONG_ROW = 13; // a row of lyrics or chords
 const TITLE_SIZE = 18;
 const SUBTITLE_SIZE = 11;

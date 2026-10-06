@@ -1,6 +1,6 @@
 // Setlists in the library. Every change is saved right away, as in the desktop app.
 import { parseSongText, UNTITLED_TITLE, type Song } from '@groovekeeper/core';
-import { db, type LibrarySetlist, type LibrarySong, type SetlistEntry } from './db';
+import { db, type LibrarySetlist, type LibrarySong, type SetlistEntry, type SongNote } from './db';
 import { newId } from './ids';
 
 /** What a new setlist is called until it's renamed. */
@@ -66,6 +66,7 @@ export const removeEntry = (setlist: LibrarySetlist, entryId: string): LibrarySe
 export interface SetlistSong {
   entry: SetlistEntry;
   song: Song;
+  notes: SongNote[];
   title: string;
   artist: string;
 }
@@ -73,6 +74,7 @@ export interface SetlistSong {
 export const setlistSong = (entry: SetlistEntry, stored: LibrarySong): SetlistSong => ({
   entry,
   song: parseSongText(stored.text),
+  notes: stored.notes ?? [],
   title: stored.title || UNTITLED_TITLE,
   artist: stored.artist,
 });

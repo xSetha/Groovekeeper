@@ -1,8 +1,9 @@
 import { displayTitle, songKey, transposeKey, transposeSong, type Song } from '@groovekeeper/core';
 import { useEffect, useLayoutEffect, useState, type ReactNode } from 'react';
 import { Link } from 'react-router';
-import { SongSheet, songColumns } from '../components/SongSheet';
+import { noteColumns, SongSheet, songColumns } from '../components/SongSheet';
 import { useCharWidth } from '../components/useCharWidth';
+import type { SongNote } from '../library/db';
 
 // Lyrics are shown as large as fits the screen, between these sizes; below the smallest, a long line
 // scrolls sideways rather than wrapping, which would separate chords from their letters.
@@ -13,6 +14,8 @@ const PROBE_PX = 100;
 
 interface Props {
   song: Song;
+  /** The notes floating over the song, shown where they float (they can't be changed here). */
+  notes?: SongNote[];
   /** Where "‹ back" goes: the library, or the setlist the song is played from. */
   back?: { to: string; label: string };
   /** In a setlist: the songs before and after, and which one this is ("2 of 5"). */
@@ -24,12 +27,12 @@ interface Props {
  * and next song) at the bottom within thumb reach. Transposing here only changes what's shown, never the
  * saved song.
  */
-export function SongReader({ song, back = { to: '/', label: 'Library' }, steps }: Props) {
+export function SongReader({ song, notes, back = { to: '/', label: 'Library' }, steps }: Props) {
   const [semitones, setSemitones] = useState(0);
   const shown = semitones === 0 ? song : transposeSong(song, semitones);
   // The song's key, or the one its chords point to, moved with the song.
   const original = songKey(song).key;
-  const fontSize = useFittedFontSize(song);
+  const fontSize = useFittedFontSize(song, notes);
 
   useEffect(() => {
     document.title = `${displayTitle(song)} – Groovekeeper`;
@@ -45,7 +48,7 @@ export function SongReader({ song, back = { to: '/', label: 'Library' }, steps }
         <h1 className="mt-1 text-2xl font-semibold">{displayTitle(song)}</h1>
         {song.artist ? <p className="text-muted">{song.artist}</p> : null}
         <div className="mt-5" data-testid="sheet-fit" ref={fontSize.measure}>
-          <SongSheet song={shown} fontSize={fontSize.px} />
+          <SongSheet song={shown} fontSize={fontSize.px} notes={notes} />
         </div>
       </div>
 
@@ -95,10 +98,10 @@ function BarButton({ label, onClick, children }: { label: string; onClick: () =>
 }
 
 /**
- * The largest lyric size at which the song's widest line fits the sheet's width. `measure` goes on the
+ * The largest lyric size at which the song's widest line, and its notes, fit the sheet's width. `measure` goes on the
  * element whose width counts; the size follows it when the phone is turned.
  */
-function useFittedFontSize(song: Song): { px: number; measure: (element: HTMLDivElement | null) => void } {
+function useFittedFontSize(song: Song, notes: SongNote[] = []): { px: number; measure: (element: HTMLDivElement | null) => void } {
   // The probe size is a measurement, not a style: an arbitrary value is needed here.
   const letterAtProbe = useCharWidth('text-[100px]');
   const [width, setWidth] = useState(0);
@@ -113,7 +116,7 @@ function useFittedFontSize(song: Song): { px: number; measure: (element: HTMLDiv
     return () => observer.disconnect();
   }, [element]);
 
-  const columns = songColumns(song);
+  const columns = Math.max(songColumns(song), ...notes.map(noteColumns));
   const ratio = letterAtProbe / PROBE_PX;
   const fitting = ratio > 0 && width > 0 ? Math.floor(width / (columns * ratio)) : LARGEST_PX;
   return { px: Math.max(SMALLEST_PX, Math.min(LARGEST_PX, fitting)), measure: setElement };

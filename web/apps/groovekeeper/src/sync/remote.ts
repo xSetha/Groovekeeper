@@ -4,7 +4,7 @@ import type { RemoteRow, SyncedTable } from '../library/db';
 import { DuplicateError, type Remote } from './sync';
 
 const COLUMNS: Record<SyncedTable, string> = {
-  songs: 'id, title, artist, key, text, deleted, version, updated_at',
+  songs: 'id, title, artist, key, text, notes, deleted, version, updated_at',
   setlists: 'id, name, songs, deleted, version, updated_at',
 };
 

@@ -7,7 +7,7 @@ import {
 
 /** The fields of a row the app writes; the database sets owner, version and time itself. */
 export type RemoteFields =
-  | Pick<RemoteSong, 'title' | 'artist' | 'key' | 'text' | 'deleted'>
+  | Pick<RemoteSong, 'title' | 'artist' | 'key' | 'text' | 'notes' | 'deleted'>
   | Pick<RemoteSetlist, 'name' | 'songs' | 'deleted'>;
 
 /** The account's songs and setlists (sync/remote.ts talks to Supabase; tests use a stand-in). */
@@ -40,7 +40,7 @@ const table = (name: SyncedTable) => (name === 'songs' ? db.songs : db.setlists)
 function fields(name: SyncedTable, row: LocalRow): RemoteFields {
   if (name === 'songs') {
     const song = row as LibrarySong;
-    return { title: song.title, artist: song.artist, key: song.key, text: song.text, deleted: false };
+    return { title: song.title, artist: song.artist, key: song.key, text: song.text, notes: song.notes ?? [], deleted: false };
   }
   const setlist = row as LibrarySetlist;
   return { name: setlist.name, songs: setlist.songs, deleted: false };
@@ -51,7 +51,7 @@ function fromRemote(name: SyncedTable, row: RemoteRow): LocalRow {
   const synced = { id: row.id, version: row.version, dirty: 0 as const, updatedAt: Date.now() };
   if (name === 'songs') {
     const song = row as RemoteSong;
-    return { ...synced, title: song.title, artist: song.artist, key: song.key, text: song.text };
+    return { ...synced, title: song.title, artist: song.artist, key: song.key, text: song.text, notes: song.notes ?? [] };
   }
   const setlist = row as RemoteSetlist;
   return { ...synced, name: setlist.name, songs: setlist.songs };
@@ -102,7 +102,7 @@ async function pushDeletions(remote: Remote): Promise<void> {
   for (const deletion of await db.deletions.toArray()) {
     const name = deletion.table;
     const gone: RemoteFields = name === 'songs'
-      ? { title: '', artist: '', key: '', text: '', deleted: true }
+      ? { title: '', artist: '', key: '', text: '', notes: [], deleted: true }
       : { name: '', songs: [], deleted: true };
     const done = await remote.update(name, deletion.id, gone, deletion.version);
     if (!done) {

@@ -1,5 +1,5 @@
 import { parseSongText, songToText, type Song } from '@groovekeeper/core';
-import { db, type LibrarySong } from './db';
+import { db, type LibrarySong, type SongNote } from './db';
 import { newId } from './ids';
 
 const byTitle = (a: LibrarySong, b: LibrarySong): number =>
@@ -18,12 +18,13 @@ export function matchesSearch(song: LibrarySong, search: string): boolean {
 }
 
 /** The song as stored, changed here: `version` is the account's version it was made from (0 for a new song). */
-const record = (id: string, song: Song, version: number): LibrarySong => ({
+const record = (id: string, song: Song, notes: SongNote[], version: number): LibrarySong => ({
   id,
   title: song.title,
   artist: song.artist,
   key: song.key,
   text: songToText(song),
+  notes,
   updatedAt: Date.now(),
   version,
   dirty: 1,
@@ -44,22 +45,23 @@ function keepLibrary(): void {
 
 /** Adds the songs to the library and returns their ids, in the same order. */
 export async function addSongs(songs: Song[]): Promise<string[]> {
-  const records = songs.map((song) => record(newId(), song, 0));
+  const records = songs.map((song) => record(newId(), song, [], 0));
   await db.songs.bulkAdd(records);
   keepLibrary();
   return records.map((r) => r.id);
 }
 
-/** The library song with this id, read into a song; undefined if there is none. */
-export async function getSong(id: string): Promise<Song | undefined> {
+/** The library song with this id, read into a song with its notes, to edit or read; undefined if there is none. */
+export async function openSong(id: string): Promise<{ song: Song; notes: SongNote[] } | undefined> {
   const stored = await db.songs.get(id);
-  return stored && parseSongText(stored.text);
+  return stored && { song: parseSongText(stored.text), notes: stored.notes ?? [] };
 }
 
-export async function saveSong(id: string, song: Song): Promise<void> {
+/** Saves the song, with its notes when they're given (otherwise it keeps those it has). */
+export async function saveSong(id: string, song: Song, notes?: SongNote[]): Promise<void> {
   await db.transaction('rw', db.songs, async () => {
     const stored = await db.songs.get(id);
-    await db.songs.put(record(id, song, stored?.version ?? 0));
+    await db.songs.put(record(id, song, notes ?? stored?.notes ?? [], stored?.version ?? 0));
   });
   keepLibrary();
 }

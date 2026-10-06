@@ -107,7 +107,7 @@ describe('the account', () => {
     await db.songs.add({ id: 'grace', title: 'Amazing Grace', artist: '', key: '', text: 'Changed here\n', updatedAt: 0, version: 1, dirty: 1 });
     await db.conflicts.add({
       id: 'grace', table: 'songs',
-      remote: { id: 'grace', title: 'Amazing Grace', artist: '', key: '', text: 'Changed there\n', deleted: false, version: 2, updated_at: '' },
+      remote: { id: 'grace', title: 'Amazing Grace', artist: '', key: '', text: 'Changed there\n', notes: [], deleted: false, version: 2, updated_at: '' },
     });
     renderAt('/');
 

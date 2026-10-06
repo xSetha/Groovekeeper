@@ -2,6 +2,8 @@
 import {
   applyTextChange, isChord, isChordLine, joinLines, splitAt, textChange, type ChordPlacement, type Song,
 } from '@groovekeeper/core';
+import type { SongNote } from '../library/db';
+import { newId as newNoteId } from '../library/ids';
 
 // The editor's copy of a song gives every section, line and chord an id, so React keeps each text box and
 // chord with its own content when lines are split, joined or moved. The ids are never saved.
@@ -24,14 +26,17 @@ export interface KeyedSection {
 
 export interface KeyedSong extends Song {
   sections: KeyedSection[];
+  /** The notes floating over the song, kept here so undo covers them; they aren't part of the song's text. */
+  notes: SongNote[];
 }
 
 let lastId = 0;
 const newId = (): string => String(++lastId);
 
-/** The song with an id on every section, line and chord. */
-export const withIds = (song: Song): KeyedSong => ({
+/** The song with an id on every section, line and chord, and its notes. */
+export const withIds = (song: Song, notes: SongNote[] = []): KeyedSong => ({
   ...song,
+  notes,
   sections: song.sections.map((section) => ({
     ...section,
     id: newId(),
@@ -250,6 +255,46 @@ export function repeatSection(song: KeyedSong, section: number): KeyedSong {
   const original = song.sections[section];
   if (!original) return song;
   return { ...song, sections: [...song.sections, { id: newId(), name: original.name, repeat: true, lines: [] }] };
+}
+
+// ---- Notes ----
+
+/** An empty note at a spot (see SongNote), and its id, to put the caret in it. */
+export function addNote(song: KeyedSong, column: number, top: number): { song: KeyedSong; id: string } {
+  const note: SongNote = { id: newNoteId(), text: '', column: Math.max(0, column), top: Math.max(0, top), printRow: 0 };
+  return { song: { ...song, notes: [...song.notes, note] }, id: note.id };
+}
+
+const withNote = (song: KeyedSong, id: string, change: (note: SongNote) => SongNote): KeyedSong => ({
+  ...song,
+  notes: song.notes.map((note) => (note.id === id ? change(note) : note)),
+});
+
+export const setNoteText = (song: KeyedSong, id: string, text: string): KeyedSong => withNote(song, id, (note) => ({ ...note, text }));
+
+export const moveNote = (song: KeyedSong, id: string, column: number, top: number): KeyedSong =>
+  withNote(song, id, (note) => ({ ...note, column: Math.max(0, column), top: Math.max(0, top) }));
+
+export const deleteNote = (song: KeyedSong, id: string): KeyedSong =>
+  song.notes.some((note) => note.id === id) ? { ...song, notes: song.notes.filter((note) => note.id !== id) } : song;
+
+/** The caret left a note: a note left empty is removed. */
+export function finishNote(song: KeyedSong, id: string): KeyedSong {
+  const note = song.notes.find((n) => n.id === id);
+  return note && note.text.trim().length === 0 ? deleteNote(song, id) : song;
+}
+
+/**
+ * The notes with the rows they're over now (by id); the song itself when none of them changed. Rows are kept to
+ * a hundredth of a line, so the same song laid out a pixel differently on another device isn't a change to save.
+ */
+export function withPrintRows(song: KeyedSong, rows: ReadonlyMap<string, number>): KeyedSong {
+  const rowOf = (note: SongNote) => {
+    const row = rows.get(note.id);
+    return row === undefined ? note.printRow : Math.round(row * 100) / 100;
+  };
+  if (song.notes.every((note) => rowOf(note) === note.printRow)) return song;
+  return { ...song, notes: song.notes.map((note) => ({ ...note, printRow: rowOf(note) })) };
 }
 
 // ---- Pasting ----
