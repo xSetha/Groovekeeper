@@ -5,12 +5,22 @@ import { useAccount } from '../sync/account';
 import { ThemePicker } from './ThemePicker';
 
 /** The app's logo: a record with a red label, as on the desktop start page. */
-export function Logo({ className }: { className?: string }) {
+/**
+ * The logo, as on the desktop: a record with grooves, whose label is a keyhole. `rim` rings its edge, so the
+ * record stays visible small on a dark bar.
+ */
+export function Logo({ className, rim = false }: { className?: string; rim?: boolean }) {
   return (
     <svg viewBox="0 0 32 32" className={className} aria-hidden="true">
-      <circle cx="16" cy="16" r="13" strokeWidth="2" className="fill-logo-record stroke-logo-ring" />
-      <circle cx="16" cy="16" r="5.5" className="fill-logo-label" />
-      <circle cx="16" cy="16" r="1.5" className="fill-logo-record" />
+      <circle cx="16" cy="16" r={rim ? 13 : 14} strokeWidth={rim ? 2 : 0} className="fill-logo-record stroke-logo-ring" />
+      <g fill="none" strokeWidth="0.5" className="stroke-logo-ring">
+        <circle cx="16" cy="16" r="11.94" opacity="0.5" />
+        <circle cx="16" cy="16" r="9.88" opacity="0.4" />
+        <circle cx="16" cy="16" r="7.82" opacity="0.3" />
+      </g>
+      <circle cx="16" cy="16" r="5.35" className="fill-logo-label" />
+      <circle cx="16" cy="14.76" r="1.48" className="fill-logo-record" />
+      <path d="M15.18 15.59h1.64l.62 3.29h-2.88z" className="fill-logo-record" />
     </svg>
   );
 }
@@ -20,7 +30,7 @@ export function TopBar() {
   return (
     <header className="flex h-11 shrink-0 items-center justify-between border-b border-line bg-toolbar px-4">
       <Link to="/" className="flex items-center gap-2 text-sm font-semibold">
-        <Logo className="size-5" />
+        <Logo className="size-5" rim />
         {/* On a phone only the logo shows, to leave room for the rest of the bar; the name is still read out. */}
         <span className="max-sm:sr-only">Groovekeeper</span>
       </Link>
