@@ -6,6 +6,8 @@ version's section here becomes the text of its GitHub release.
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-10-06
+
 ### Added
 - Type chords straight onto a song: click the chord lane above a letter, type the chord and press
   Enter (Esc cancels). Only real chords are accepted; anything else shows "Not a chord". Double-click
