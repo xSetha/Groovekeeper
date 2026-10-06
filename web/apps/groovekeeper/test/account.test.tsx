@@ -56,10 +56,25 @@ describe('the account', () => {
     await user.click(await screen.findByRole('button', { name: 'Create an account' }));
     await user.type(screen.getByRole('textbox', { name: 'Email' }), 'new@example.com');
     await user.type(screen.getByLabelText('Password'), 'long enough');
+    await user.type(screen.getByLabelText('Confirm password'), 'long enough');
     await user.click(screen.getByRole('button', { name: 'Create account' }));
 
     expect(await screen.findByRole('heading', { name: 'Check your email' })).toBeInTheDocument();
     expect(screen.getByText('new@example.com')).toBeInTheDocument();
+  });
+
+  it('doesn’t create an account when the two passwords differ', async () => {
+    const user = userEvent.setup();
+    renderAt('/account');
+
+    await user.click(await screen.findByRole('button', { name: 'Create an account' }));
+    await user.type(screen.getByRole('textbox', { name: 'Email' }), 'new@example.com');
+    await user.type(screen.getByLabelText('Password'), 'long enough');
+    await user.type(screen.getByLabelText('Confirm password'), 'long enuogh');
+    await user.click(screen.getByRole('button', { name: 'Create account' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('The passwords don’t match.');
+    expect(account.signUp).not.toHaveBeenCalled();
   });
 
   it('asks whether to add what was made as a guest, naming only what is there', async () => {

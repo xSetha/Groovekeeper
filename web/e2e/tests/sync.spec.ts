@@ -45,7 +45,8 @@ test('two devices on one account', async ({ browser }) => {
     await a.getByRole('banner').getByRole('link', { name: 'Sign in' }).click();
     await a.getByRole('button', { name: 'Create an account' }).click();
     await a.getByRole('textbox', { name: 'Email' }).fill(email);
-    await a.getByLabel('Password').fill(PASSWORD);
+    await a.getByLabel('Password', { exact: true }).fill(PASSWORD);
+    await a.getByLabel('Confirm password').fill(PASSWORD);
     await a.getByRole('button', { name: 'Create account' }).click();
     await a.getByRole('button', { name: 'Add 6 songs to my account' }).click();
     await expect(a.getByText(/^Synced at/)).toBeVisible();

@@ -39,11 +39,16 @@ function SignInForms() {
   const [mode, setMode] = useState<Mode>('signIn');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmation, setConfirmation] = useState('');
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<AuthResult | 'resetSent'>(null);
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
+    if (mode === 'create' && confirmation !== password) {
+      setResult({ error: 'The passwords don’t match. Type the same password in both boxes.' });
+      return;
+    }
     setBusy(true);
     setResult(null);
     if (mode === 'reset') {
@@ -57,6 +62,7 @@ function SignInForms() {
 
   const switchTo = (next: Mode) => {
     setMode(next);
+    setConfirmation('');
     setResult(null);
   };
 
@@ -97,6 +103,18 @@ function SignInForms() {
             />
           </Field>
         )}
+        {mode === 'create' ? (
+          <Field label="Confirm password">
+            <input
+              type="password"
+              required
+              autoComplete="new-password"
+              value={confirmation}
+              onChange={(e) => setConfirmation(e.target.value)}
+              className={INPUT}
+            />
+          </Field>
+        ) : null}
         {result === 'resetSent' ? (
           <p role="status">If there’s an account for {email}, a link to choose a new password is on its way.</p>
         ) : result && 'error' in result ? (
