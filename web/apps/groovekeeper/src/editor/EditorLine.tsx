@@ -55,6 +55,12 @@ export const EditorLine = memo(function EditorLine({ section, line: lineIndex, l
     typing ? typing.column + typing.name.length + 14 : 0, // room for the box and "Not a chord"
   );
 
+  /** The caret is in this line's section now, so + Section adds the new one after it. */
+  const caretHere = () => {
+    const state = store.getState();
+    state.setCaretSection(state.song.sections[section]?.id ?? null);
+  };
+
   function onText(text: string, caret: number) {
     // Typing in one line is one undo step per word: a space ends the step.
     const typedSpace = text.length > (line?.text.length ?? 0) && /\s$/.test(text.slice(0, caret));
@@ -92,6 +98,7 @@ export const EditorLine = memo(function EditorLine({ section, line: lineIndex, l
 
   function onChordPointerDown(event: PointerEvent<HTMLButtonElement>, chordId: string, startPosition: number) {
     lastPointer.current = event.pointerType;
+    caretHere();
     const startX = event.clientX;
     // One drag is one undo step, however many columns it moves.
     const step = `drag:${chordId}:${event.timeStamp}`;
@@ -196,6 +203,7 @@ export const EditorLine = memo(function EditorLine({ section, line: lineIndex, l
                 '-ml-0.5 rounded bg-chip px-0.5 text-sm font-semibold text-chord outline-none ring-1 ring-accent ' +
                 'aria-invalid:ring-2 aria-invalid:ring-chord pointer-coarse:text-base'
               }
+              onFocus={caretHere}
               onChange={(event) => setTyping({ ...typing, name: event.target.value, refused: false })}
               onKeyDown={onBoxKeyDown}
               // Clicking away keeps a chord, and drops anything else.
@@ -262,7 +270,10 @@ export const EditorLine = memo(function EditorLine({ section, line: lineIndex, l
         autoCapitalize="off"
         className="block border-0 bg-transparent p-0 outline-none"
         style={{ width: `${width}ch` }}
-        onFocus={() => setSelectedId(null)}
+        onFocus={() => {
+          setSelectedId(null);
+          caretHere();
+        }}
         onChange={(event) => onText(event.target.value, event.target.selectionStart ?? event.target.value.length)}
         onKeyDown={onKeyDown}
         onPaste={onPaste}

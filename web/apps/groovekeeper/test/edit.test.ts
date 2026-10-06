@@ -2,7 +2,7 @@ import { createTemplate, parseSongText } from '@groovekeeper/core';
 import { describe, expect, it } from 'vitest';
 import {
   addLine, addSection, chordsInSong, deleteSection, duplicateSection, editText, findLine, joinWithPrevious, lineAt,
-  moveChord, moveSection, neighbourLine, pasteLines, placeChord, removeChord, renameSection, repeatSection, setChord, splitLine,
+  moveChord, moveSection, moveSectionTo, neighbourLine, pasteLines, placeChord, removeChord, renameSection, repeatSection, setChord, splitLine,
   withIds, type KeyedLine, type KeyedSong,
 } from '../src/editor/edit';
 
@@ -103,6 +103,23 @@ describe('sections', () => {
     expect(names(added.song)).toEqual(['Verse 1', 'Chorus', 'New section']);
     expect(added.focus.lineId).toBe(added.song.sections[2]!.lines[0]!.id);
     expect(text(addLine(SONG, 1).song)[1]).toEqual(['the sound', '']);
+  });
+
+  it('adds a section right after the one with the caret, or at the end when that one is gone', () => {
+    const after = addSection(SONG, SONG.sections[0]!.id);
+    expect(names(after.song)).toEqual(['Verse 1', 'New section', 'Chorus']);
+    expect(after.focus.lineId).toBe(after.song.sections[1]!.lines[0]!.id);
+    expect(names(addSection(SONG, 'gone').song)).toEqual(['Verse 1', 'Chorus', 'New section']);
+  });
+
+  it('moves a section to a place counted before the move', () => {
+    const three = repeatSection(SONG, 0); // Verse 1, Chorus, Verse 1 (repeat)
+    expect(names(moveSectionTo(three, 0, 3))).toEqual(['Chorus', 'Verse 1 (repeat)', 'Verse 1']);
+    expect(names(moveSectionTo(three, 2, 0))).toEqual(['Verse 1 (repeat)', 'Verse 1', 'Chorus']);
+    expect(names(moveSectionTo(three, 0, 2))).toEqual(['Chorus', 'Verse 1', 'Verse 1 (repeat)']);
+    expect(moveSectionTo(three, 1, 1)).toBe(three);
+    expect(moveSectionTo(three, 1, 2)).toBe(three);
+    expect(moveSectionTo(three, 5, 0)).toBe(three);
   });
 
   it('renames, moves, duplicates, repeats and deletes', () => {

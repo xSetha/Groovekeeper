@@ -185,11 +185,14 @@ export const setKey = (song: KeyedSong, key: string): KeyedSong => ({ ...song, k
 /** The name a new section gets; the user renames it. */
 export const NEW_SECTION_NAME = 'New section';
 
-/** A new section with one empty line at the end of the song, focused. */
-export function addSection(song: KeyedSong): { song: KeyedSong; focus: Focus } {
+/** A new section with one empty line, focused: right after the section with the id `after`, or at the end of the song. */
+export function addSection(song: KeyedSong, after: string | null = null): { song: KeyedSong; focus: Focus } {
   const line = emptyLine();
+  // The section may be gone (an undo removed it); then the new one goes at the end.
+  const index = song.sections.findIndex((s) => s.id === after);
+  const at = index >= 0 ? index + 1 : song.sections.length;
   return {
-    song: { ...song, sections: [...song.sections, { id: newId(), name: NEW_SECTION_NAME, repeat: false, lines: [line] }] },
+    song: { ...song, sections: song.sections.toSpliced(at, 0, { id: newId(), name: NEW_SECTION_NAME, repeat: false, lines: [line] }) },
     focus: { lineId: line.id, caret: 0 },
   };
 }
@@ -212,6 +215,17 @@ export function moveSection(song: KeyedSong, section: number, direction: -1 | 1)
   const other = song.sections[target];
   if (!moving || !other) return song;
   return { ...song, sections: song.sections.with(section, other).with(target, moving) };
+}
+
+/**
+ * The section moved so it comes before the section at `insertAt` (counted before the move), or to the end when
+ * `insertAt` is the number of sections; unchanged when that's where it already is.
+ */
+export function moveSectionTo(song: KeyedSong, section: number, insertAt: number): KeyedSong {
+  const moving = song.sections[section];
+  const to = Math.min(Math.max(insertAt > section ? insertAt - 1 : insertAt, 0), song.sections.length - 1);
+  if (!moving || to === section) return song;
+  return { ...song, sections: song.sections.toSpliced(section, 1).toSpliced(to, 0, moving) };
 }
 
 /** A copy of the section right after it, with new ids. */

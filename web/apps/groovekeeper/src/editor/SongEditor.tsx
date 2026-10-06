@@ -1,7 +1,7 @@
 import {
   ALL_KEYS, createTemplate, displayTitle, hasContent, transposeSong, UNTITLED_TITLE, type Song,
 } from '@groovekeeper/core';
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { useCharWidth } from '../components/useCharWidth';
@@ -51,19 +51,22 @@ function EditorBody() {
   const shape = useEditor((s) =>
     s.song.sections.map((section) => `${section.id}:${section.lines.map((l) => l.id).join(',')}`).join('|'));
   const sections = shape ? shape.split('|').map((part) => part.split(':') as [string, string]) : [];
-  const { edit, editAndFocus } = store.getState();
+  const sectionDrop = useEditor((s) => s.sectionDrop);
+  const { edit, editAndFocus, setCaretSection } = store.getState();
 
   useEffect(() => {
     document.title = `${title || UNTITLED_TITLE} – Groovekeeper`;
   }, [title]);
 
+  // The left padding leaves room for the sections' grips, out in the margin.
   return (
-    <article aria-label="Song" className="min-h-0 min-w-0 flex-1 overflow-auto px-4 py-8 sm:px-10">
+    <article aria-label="Song" className="min-h-0 min-w-0 flex-1 overflow-auto py-8 pr-4 pl-10 sm:px-10">
       <input
         value={title}
         aria-label="Title"
         placeholder={UNTITLED_TITLE}
         className="w-full border-0 bg-transparent p-0 text-3xl font-semibold outline-none placeholder:text-hint"
+        onFocus={() => setCaretSection(null)}
         onChange={(event) => {
           const value = event.target.value;
           edit((s) => setTitle(s, value), { merge: 'title' });
@@ -74,31 +77,44 @@ function EditorBody() {
         aria-label="Artist"
         placeholder="Artist"
         className="mt-1 w-full border-0 bg-transparent p-0 text-lg text-muted outline-none placeholder:text-hint"
+        onFocus={() => setCaretSection(null)}
         onChange={(event) => {
           const value = event.target.value;
           edit((s) => setArtist(s, value), { merge: 'artist' });
         }}
       />
-      <div className="font-mono text-lg">
+      <div className="font-mono text-lg" data-sections>
         {sections.map(([sectionId, lineIds], index) => (
-          <SectionBlock
-            key={sectionId}
-            index={index}
-            lineIds={lineIds}
-            first={index === 0}
-            last={index === sections.length - 1}
-            charWidth={charWidth}
-          />
+          <Fragment key={sectionId}>
+            {sectionDrop === index ? <DropLine /> : null}
+            <SectionBlock
+              index={index}
+              lineIds={lineIds}
+              first={index === 0}
+              last={index === sections.length - 1}
+              charWidth={charWidth}
+            />
+          </Fragment>
         ))}
+        {sectionDrop === sections.length ? <DropLine /> : null}
       </div>
       <button
         type="button"
         className="mt-6 rounded px-2 py-1 text-sm text-muted hover:bg-hover hover:text-fg pointer-coarse:min-h-11"
-        onClick={() => editAndFocus(addSection)}
+        onClick={() => editAndFocus((s) => addSection(s, store.getState().caretSection))}
       >
         + Section
       </button>
     </article>
+  );
+}
+
+/** Where a section dragged by its grip will land: a line in the gap between sections, taking no room of its own. */
+function DropLine() {
+  return (
+    <div aria-hidden="true" className="relative">
+      <div className="absolute inset-x-0 top-3 h-0.5 rounded bg-accent" />
+    </div>
   );
 }
 

@@ -18,6 +18,10 @@ export interface EditorState {
   focus: (Focus & { request: number }) | null;
   /** Show the chords as Roman numerals in the song's key (only how they're shown; the song keeps chord names). */
   numerals: boolean;
+  /** The section the caret was last in (its lyrics, a chord or its name), by id; null after the title or artist. */
+  caretSection: string | null;
+  /** While a section is dragged by its grip: the place it would land, as an index before the move. */
+  sectionDrop: number | null;
 
   /**
    * Changes the song as one undo step. Edits with the same `merge` key in a row make one step (typing in
@@ -30,6 +34,8 @@ export interface EditorState {
   redo: () => void;
   setFocus: (focus: Focus) => void;
   setNumerals: (numerals: boolean) => void;
+  setCaretSection: (caretSection: string | null) => void;
+  setSectionDrop: (sectionDrop: number | null) => void;
 }
 
 export type EditorStore = StoreApi<EditorState>;
@@ -43,6 +49,8 @@ export function createEditorStore(song: KeyedSong): EditorStore {
     mergeKey: null,
     focus: null,
     numerals: false,
+    caretSection: null,
+    sectionDrop: null,
 
     edit: (change, options = {}) => {
       const { song: current, past, mergeKey } = get();
@@ -84,6 +92,8 @@ export function createEditorStore(song: KeyedSong): EditorStore {
 
     setFocus: (focus) => set({ focus: { ...focus, request: ++requests } }),
     setNumerals: (numerals) => set({ numerals }),
+    setCaretSection: (caretSection) => set({ caretSection }),
+    setSectionDrop: (sectionDrop) => set({ sectionDrop }),
   }));
 }
 

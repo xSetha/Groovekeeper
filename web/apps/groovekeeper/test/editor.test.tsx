@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { beforeEach, describe, expect, it } from 'vitest';
@@ -134,6 +134,52 @@ describe('the editor', () => {
     expect(sectionNames()).toEqual(['Verse 1']);
     await user.click(screen.getByRole('button', { name: 'Undo' }));
     expect(sectionNames()).toEqual(['Chorus', 'Verse 1']);
+  });
+
+  it('moves a section dragged by its grip to where it is dropped, as one undo step', async () => {
+    const user = userEvent.setup();
+    await openSong();
+    const sectionNames = () => screen.getAllByRole('textbox', { name: 'Section name' }).map((box) => (box as HTMLInputElement).value);
+    await user.click(screen.getByRole('button', { name: 'Duplicate section' }));
+    await user.click(screen.getAllByRole('button', { name: 'Duplicate section' })[1]!);
+    const names = screen.getAllByRole('textbox', { name: 'Section name' });
+    for (const [i, name] of ['Intro', 'Verse', 'Chorus'].entries()) {
+      await user.clear(names[i]!);
+      await user.type(names[i]!, name);
+    }
+    // The test DOM has no layout: the sections stand 100px apart, each 80px tall.
+    document.querySelectorAll('[data-sections] > section').forEach((section, i) => {
+      section.getBoundingClientRect = () => DOMRect.fromRect({ x: 0, y: i * 100, width: 500, height: 80 });
+    });
+
+    const grip = screen.getAllByRole('button', { name: 'Drag section to another place' })[0]!;
+    fireEvent.pointerDown(grip, { pointerId: 1, pointerType: 'mouse', button: 0, clientX: 0, clientY: 10 });
+    fireEvent.pointerMove(window, { pointerId: 1, clientX: 0, clientY: 160 });
+    fireEvent.pointerMove(window, { pointerId: 1, clientX: 0, clientY: 250 });
+    fireEvent.pointerUp(window, { pointerId: 1, clientX: 0, clientY: 250 });
+    expect(sectionNames()).toEqual(['Verse', 'Chorus', 'Intro']);
+
+    await user.click(screen.getByRole('button', { name: 'Undo' }));
+    expect(sectionNames()).toEqual(['Intro', 'Verse', 'Chorus']);
+  });
+
+  it('adds a section after the one with the caret, or at the end from the title', async () => {
+    const user = userEvent.setup();
+    await openSong();
+    const sectionNames = () => screen.getAllByRole('textbox', { name: 'Section name' }).map((box) => (box as HTMLInputElement).value);
+    await user.click(screen.getByRole('button', { name: 'Duplicate section' }));
+    await user.clear(screen.getAllByRole('textbox', { name: 'Section name' })[1]!);
+    await user.type(screen.getAllByRole('textbox', { name: 'Section name' })[1]!, 'Chorus');
+
+    await user.click(screen.getAllByRole('textbox', { name: 'Lyrics' })[0]!);
+    await user.click(screen.getByRole('button', { name: '+ Section' }));
+    expect(sectionNames()).toEqual(['Verse 1', 'New section', 'Chorus']);
+    // The caret goes into the new section's line.
+    expect(screen.getAllByRole('textbox', { name: 'Lyrics' })[2]).toHaveFocus();
+
+    await user.click(screen.getByRole('textbox', { name: 'Title' }));
+    await user.click(screen.getByRole('button', { name: '+ Section' }));
+    expect(sectionNames()).toEqual(['Verse 1', 'New section', 'Chorus', 'New section']);
   });
 
   it('pastes a whole song: chord rows go above their lyrics and [Name] rows start sections', async () => {
