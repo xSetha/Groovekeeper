@@ -1,5 +1,5 @@
 import {
-  ALL_KEYS, createTemplate, displayTitle, hasContent, transposeSong, UNTITLED_TITLE, type Song,
+  ALL_KEYS, displayTitle, hasContent, transposeSong, UNTITLED_TITLE, type Song,
 } from '@groovekeeper/core';
 import { Fragment, useCallback, useEffect, useRef, useState, type MouseEvent, type PointerEvent, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router';
@@ -34,9 +34,8 @@ interface Props {
 
 /** The song editor: lyrics with their chord rows, and the song's toolbar. Saves as you go. */
 export function SongEditor({ id, initial, notes = [], isNew = false }: Props) {
-  // A song without sections starts with the usual blank ones, so there are lines to type into.
-  const [store] = useState(() =>
-    createEditorStore(withIds(initial.sections.length > 0 ? initial : { ...initial, sections: createTemplate().sections }, notes)));
+  // The song as stored, so the editor shows what the PDF and the other devices get (New song stores the template).
+  const [store] = useState(() => createEditorStore(withIds(initial, notes)));
   const save = useAutosave(id, store, isNew);
   // Syncing doesn't replace the song while it's open here.
   useEffect(() => holdOpenSong(id), [id]);

@@ -24,6 +24,17 @@ const stored = async () => (await db.songs.get('grace'))?.text;
 beforeEach(() => db.songs.clear());
 
 describe('the editor', () => {
+  it('shows a song as stored, without sections when it has none', async () => {
+    await db.songs.add({ id: 'bare', title: 'Bare', artist: '', key: '', text: 'Bare\n', updatedAt: 0, version: 0, dirty: 1 });
+    render(
+      <MemoryRouter initialEntries={['/songs/bare']}>
+        <App />
+      </MemoryRouter>,
+    );
+    expect(await screen.findByRole('button', { name: '+ Section' })).toBeInTheDocument();
+    expect(screen.queryAllByRole('textbox', { name: 'Section name' })).toEqual([]);
+  });
+
   it('keeps chords on their letters while typing, and saves', async () => {
     const user = userEvent.setup();
     const [first] = await openSong();
