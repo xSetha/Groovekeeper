@@ -35,6 +35,8 @@ export default function AccountPage() {
 
 type Mode = 'signIn' | 'create' | 'reset';
 
+const PASSWORDS_DIFFER = 'The passwords don’t match. Type the same password in both boxes.';
+
 function SignInForms() {
   const [mode, setMode] = useState<Mode>('signIn');
   const [email, setEmail] = useState('');
@@ -46,7 +48,7 @@ function SignInForms() {
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     if (mode === 'create' && confirmation !== password) {
-      setResult({ error: 'The passwords don’t match. Type the same password in both boxes.' });
+      setResult({ error: PASSWORDS_DIFFER });
       return;
     }
     setBusy(true);
@@ -141,11 +143,16 @@ function SignInForms() {
 /** Opened from a reset link: the new password. */
 function NewPassword() {
   const [password, setPassword] = useState('');
+  const [confirmation, setConfirmation] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
+    if (confirmation !== password) {
+      setError(PASSWORDS_DIFFER);
+      return;
+    }
     setBusy(true);
     const result = await setNewPassword(password);
     setError(result && 'error' in result ? result.error : null);
@@ -158,6 +165,9 @@ function NewPassword() {
       <form className="mt-6 flex flex-col gap-4" onSubmit={(event) => void submit(event)}>
         <Field label="New password" hint="At least 8 characters.">
           <input type="password" required minLength={8} autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} className={INPUT} />
+        </Field>
+        <Field label="Confirm new password">
+          <input type="password" required autoComplete="new-password" value={confirmation} onChange={(e) => setConfirmation(e.target.value)} className={INPUT} />
         </Field>
         {error ? <p role="alert" className="text-chord">{error}</p> : null}
         <button type="submit" disabled={busy} className={PRIMARY}>

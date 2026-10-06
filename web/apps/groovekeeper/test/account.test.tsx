@@ -11,6 +11,7 @@ vi.mock('../src/sync/account', async (importOriginal) => ({
   ...(await importOriginal<typeof account>()),
   signIn: vi.fn(),
   signUp: vi.fn(),
+  setNewPassword: vi.fn(() => Promise.resolve(null)),
   settleGuestLibrary: vi.fn(() => Promise.resolve()),
   hasUnsyncedChanges: vi.fn(),
   signOut: vi.fn(() => Promise.resolve()),
@@ -75,6 +76,24 @@ describe('the account', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('The passwords don’t match.');
     expect(account.signUp).not.toHaveBeenCalled();
+  });
+
+  it('saves a new password from a reset link only when both boxes match', async () => {
+    const user = userEvent.setup();
+    account.accountStore.setState({ resettingPassword: true });
+    renderAt('/account');
+
+    await user.type(await screen.findByLabelText('New password'), 'long enough');
+    await user.type(screen.getByLabelText('Confirm new password'), 'long enuogh');
+    await user.click(screen.getByRole('button', { name: 'Save password' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('The passwords don’t match.');
+    expect(account.setNewPassword).not.toHaveBeenCalled();
+
+    await user.clear(screen.getByLabelText('Confirm new password'));
+    await user.type(screen.getByLabelText('Confirm new password'), 'long enough');
+    await user.click(screen.getByRole('button', { name: 'Save password' }));
+    expect(account.setNewPassword).toHaveBeenCalledWith('long enough');
+    await waitFor(() => expect(screen.queryByRole('alert')).not.toBeInTheDocument());
   });
 
   it('asks whether to add what was made as a guest, naming only what is there', async () => {
