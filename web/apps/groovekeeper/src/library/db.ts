@@ -44,6 +44,17 @@ export interface SongNote {
 export interface Synced {
   version: number;
   dirty: 0 | 1;
+  /** Set when the account refused this copy; it's tried again once it changes, or once there may be room. */
+  refused?: Refusal;
+}
+
+/**
+ * Why the account refused a song or setlist: it holds no more (`limit`, 200 songs or 20 setlists), or this one
+ * is too big (`size`). `at` is the copy's `updatedAt` when it was refused.
+ */
+export interface Refusal {
+  reason: 'limit' | 'size';
+  at: number;
 }
 
 /**
@@ -120,6 +131,8 @@ export interface RemoteSetlist {
 export interface SyncState {
   key: 'sync';
   userId: string;
+  /** The account's email, to ask for it again when the session ends. */
+  email?: string;
   lastPulled: string | null;
   held: string[];
 }

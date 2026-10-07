@@ -2,6 +2,7 @@
 import { parseSongText, UNTITLED_TITLE, type Song } from '@groovekeeper/core';
 import { changedAt, db, type LibrarySetlist, type LibrarySong, type SetlistEntry, type SongNote } from './db';
 import { newId } from './ids';
+import { checkRoom } from './limits';
 
 /** What a new setlist is called until it's renamed. */
 export const NEW_SETLIST_NAME = 'New setlist';
@@ -11,7 +12,9 @@ export async function listSetlists(): Promise<LibrarySetlist[]> {
   return (await db.setlists.toArray()).toSorted((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
 }
 
+/** Adds an empty setlist and returns its id; throws a LimitError when a signed-in account has no room. */
 export async function createSetlist(): Promise<string> {
+  await checkRoom('setlists', 1);
   const id = newId();
   await db.setlists.add({ id, name: NEW_SETLIST_NAME, songs: [], updatedAt: Date.now(), version: 0, dirty: 1 });
   return id;

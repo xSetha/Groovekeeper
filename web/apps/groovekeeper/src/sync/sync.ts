@@ -1,8 +1,8 @@
 // Syncing the library in this browser with the account's songs and setlists. The library is always the one
 // the app reads and writes; syncing pushes what changed here, then pulls what changed elsewhere.
 import {
-  db, type Conflict, type LibrarySetlist, type LibrarySong, type RemoteRow, type RemoteSetlist, type RemoteSong,
-  type SyncedTable, type SyncState,
+  db, type Conflict, type LibrarySetlist, type LibrarySong, type Refusal, type RemoteRow, type RemoteSetlist,
+  type RemoteSong, type Synced, type SyncedTable, type SyncState,
 } from '../library/db';
 
 /** The fields of a row the app writes; the database sets owner, version and time itself. */
@@ -12,9 +12,15 @@ export type RemoteFields =
 
 /** The account's songs and setlists (sync/remote.ts talks to Supabase; tests use a stand-in). */
 export interface Remote {
-  /** Adds new rows and returns them as stored. Throws a DuplicateError when one of the ids is taken. */
+  /**
+   * Adds new rows and returns them as stored. Throws a DuplicateError when one of the ids is taken, and a
+   * RefusedError when the account refuses one (and so all of them).
+   */
   insert(table: SyncedTable, rows: (RemoteFields & { id: string })[]): Promise<RemoteRow[]>;
-  /** Changes a row if the account still has that version of it; null when it has another (or none). */
+  /**
+   * Changes a row if the account still has that version of it; null when it has another (or none). Throws a
+   * RefusedError when the account refuses the change.
+   */
   update(table: SyncedTable, id: string, fields: RemoteFields, version: number): Promise<RemoteRow | null>;
   get(table: SyncedTable, id: string): Promise<RemoteRow | null>;
   /** Every row changed after `since` (a server time), or every row when it's null. */
@@ -26,6 +32,16 @@ export class DuplicateError extends Error {
     super('A row with this id is already in the account');
   }
 }
+
+/** The account refused a row: it holds no more of them, or the row is too big (the database's limits). */
+export class RefusedError extends Error {
+  constructor(readonly reason: Refusal['reason']) {
+    super(reason === 'limit' ? 'The account holds no more of these' : 'This is too big for the account');
+  }
+}
+
+// New rows go up this many at a time, so one refused row holds back only its own batch.
+const INSERT_BATCH = 50;
 
 // Changes are asked for from a minute before the last one pulled: a change saved just before it may only
 // show up in the database a moment later. Rows already here are recognized by their version.
@@ -84,11 +100,13 @@ export async function sync(remote: Remote, userId: string, isOpen: (songId: stri
   let lastPulled = state.lastPulled;
   const held = new Set(state.held);
   for (const [i, name] of TABLES.entries()) {
+    let deleted = false;
     for (const row of changed[i] ?? []) {
       if (lastPulled === null || Date.parse(row.updated_at) > Date.parse(lastPulled)) lastPulled = row.updated_at;
       if (name === 'songs' && isOpen(row.id)) held.add(row.id);
-      else await pull(name, row);
+      else deleted = (await pull(name, row)) || deleted;
     }
+    if (deleted) await mayHaveRoom(name);
   }
   // Songs that were open at an earlier sync and are closed now get their change.
   for (const id of [...held]) {
@@ -97,7 +115,7 @@ export async function sync(remote: Remote, userId: string, isOpen: (songId: stri
     if (row) await pull('songs', row);
     held.delete(id);
   }
-  await db.meta.put({ key: 'sync', userId, lastPulled, held: [...held] });
+  await db.meta.put({ ...state, lastPulled, held: [...held] });
 }
 
 /**
@@ -140,7 +158,8 @@ async function pushDeletions(remote: Remote): Promise<void> {
       ? { title: '', artist: '', key: '', text: '', notes: [], deleted: true }
       : { name: '', songs: [], deleted: true };
     const done = await remote.update(name, deletion.id, gone, deletion.version);
-    if (!done) {
+    if (done) await mayHaveRoom(name);
+    else {
       // Changed in the account since it was deleted here: the changed copy comes back rather than being lost.
       const row = await remote.get(name, deletion.id);
       if (row && !row.deleted && !(await getLocal(name, row.id))) await putLocal(name, fromRemote(name, row));
@@ -149,30 +168,44 @@ async function pushDeletions(remote: Remote): Promise<void> {
   }
 }
 
+/** Rows refused by the account and not changed since: they wait until they change or there may be room. */
+const waiting = (row: LocalRow): boolean => row.refused !== undefined && row.refused.at === row.updatedAt;
+
 async function pushChanges(remote: Remote, name: SyncedTable): Promise<void> {
   const conflicted = new Set(await db.conflicts.toCollection().primaryKeys());
-  const dirty = (await table(name).where('dirty').equals(1).toArray()).filter((row) => !conflicted.has(row.id));
+  const dirty = (await table(name).where('dirty').equals(1).toArray()).filter((row) => !conflicted.has(row.id) && !waiting(row));
 
   const added = dirty.filter((row) => row.version === 0);
-  if (added.length > 0) {
+  for (let start = 0; start < added.length; start += INSERT_BATCH) {
+    const batch = added.slice(start, start + INSERT_BATCH);
     try {
-      const stored = await remote.insert(name, added.map((row) => ({ id: row.id, ...fields(name, row) })));
-      const pushed = new Map(added.map((row) => [row.id, row]));
+      const stored = await remote.insert(name, batch.map((row) => ({ id: row.id, ...fields(name, row) })));
+      const pushed = new Map(batch.map((row) => [row.id, row]));
       for (const row of stored) {
         const local = pushed.get(row.id);
         if (local) await adopt(name, row, local);
       }
     } catch (error) {
-      if (!(error instanceof DuplicateError)) throw error;
-      // Some are in the account already (an earlier push whose answer was lost): one at a time.
-      for (const row of added) await pushOne(remote, name, row);
+      if (!(error instanceof DuplicateError || error instanceof RefusedError)) throw error;
+      // Some are in the account already (an earlier push whose answer was lost), or one was refused: one at a
+      // time, so the others still go up.
+      for (const row of batch) await pushOne(remote, name, row);
     }
   }
   for (const row of dirty.filter((r) => r.version > 0)) await pushOne(remote, name, row);
 }
 
-/** Pushes one changed row; a row the account changed since becomes a conflict. */
+/** Pushes one changed row; a row the account changed since becomes a conflict, one it refused waits. */
 async function pushOne(remote: Remote, name: SyncedTable, local: LocalRow): Promise<void> {
+  try {
+    await pushOneRow(remote, name, local);
+  } catch (error) {
+    if (!(error instanceof RefusedError)) throw error;
+    await refuse(name, local, error.reason);
+  }
+}
+
+async function pushOneRow(remote: Remote, name: SyncedTable, local: LocalRow): Promise<void> {
   let stored: RemoteRow | null = null;
   if (local.version === 0) {
     try {
@@ -186,7 +219,17 @@ async function pushOne(remote: Remote, name: SyncedTable, local: LocalRow): Prom
   if (stored) return adopt(name, stored, local);
 
   const current = await remote.get(name, local.id);
-  if (!current) throw new Error(`Couldn't save ${local.id}: it's neither new nor in the account`);
+  if (!current) {
+    // Deleted in the account so long ago that it no longer remembers (90 days): changed here, it comes back.
+    try {
+      [stored = null] = await remote.insert(name, [{ id: local.id, ...fields(name, local) }]);
+    } catch (error) {
+      // The id is taken by a row this account can't see: it stays here, changed, and doesn't hold up the rest.
+      if (!(error instanceof DuplicateError)) throw error;
+    }
+    if (stored) await adopt(name, stored, local);
+    return;
+  }
   if (current.deleted) {
     // Deleted elsewhere, changed here: the change brings it back.
     const restored = await remote.update(name, local.id, fields(name, local), current.version);
@@ -198,6 +241,22 @@ async function pushOne(remote: Remote, name: SyncedTable, local: LocalRow): Prom
   }
 }
 
+/** Marks a row the account refused, unless it changed here meanwhile (then the change is tried next time). */
+async function refuse(name: SyncedTable, pushed: LocalRow, reason: Refusal['reason']): Promise<void> {
+  await db.transaction('rw', table(name), async () => {
+    const current = await getLocal(name, pushed.id);
+    if (current && current.updatedAt === pushed.updatedAt) await putLocal(name, { ...current, refused: { reason, at: current.updatedAt } });
+  });
+}
+
+/** A deletion went through, here or elsewhere: rows refused because the account was full are tried again. */
+async function mayHaveRoom(name: SyncedTable): Promise<void> {
+  const full = (row: Synced) => row.refused?.reason === 'limit';
+  const tryAgain = (row: Synced) => void delete row.refused;
+  if (name === 'songs') await db.songs.filter(full).modify(tryAgain);
+  else await db.setlists.filter(full).modify(tryAgain);
+}
+
 /**
  * Takes the account's version of a row just pushed. If it was changed here again while being pushed, it
  * stays changed, now based on that version.
@@ -206,7 +265,8 @@ async function adopt(name: SyncedTable, stored: RemoteRow, pushed: LocalRow): Pr
   await db.transaction('rw', table(name), db.deletions, async () => {
     const current = await getLocal(name, stored.id);
     if (current) {
-      await putLocal(name, { ...current, version: stored.version, dirty: current.updatedAt === pushed.updatedAt ? 0 : 1 });
+      const { refused: _, ...accepted } = current;
+      await putLocal(name, { ...accepted, version: stored.version, dirty: current.updatedAt === pushed.updatedAt ? 0 : 1 });
     } else {
       // Deleted here while it was pushed: delete the version just stored.
       const deletion = await db.deletions.get(stored.id);
@@ -215,23 +275,29 @@ async function adopt(name: SyncedTable, stored: RemoteRow, pushed: LocalRow): Pr
   });
 }
 
-/** Takes one of the account's changes into the library, unless the copy here is as new or newer. */
-async function pull(name: SyncedTable, row: RemoteRow): Promise<void> {
+/**
+ * Takes one of the account's changes into the library, unless the copy here is as new or newer. True when
+ * it deleted a row here (a deletion made elsewhere).
+ */
+async function pull(name: SyncedTable, row: RemoteRow): Promise<boolean> {
   const conflict = await db.conflicts.get(row.id);
   if (conflict) {
     // Still unsettled: the user chooses against the newest copy in the account.
     if (row.version > conflict.remote.version) await db.conflicts.put({ ...conflict, remote: row });
-    return;
+    return false;
   }
   const local = await getLocal(name, row.id);
   if (!local) {
     if (!row.deleted && !(await db.deletions.get(row.id))) await putLocal(name, fromRemote(name, row));
-    return;
+    return false;
   }
-  if (row.version <= local.version) return;
+  if (row.version <= local.version) return false;
   if (!local.dirty) {
-    if (row.deleted) await table(name).delete(row.id);
-    else await putLocal(name, fromRemote(name, row));
+    if (row.deleted) {
+      await table(name).delete(row.id);
+      return true;
+    }
+    await putLocal(name, fromRemote(name, row));
   } else if (row.deleted) {
     // Deleted elsewhere, changed here: the change is kept, and the next push brings it back.
     await putLocal(name, { ...local, version: row.version });
@@ -240,6 +306,7 @@ async function pull(name: SyncedTable, row: RemoteRow): Promise<void> {
   } else {
     await db.conflicts.put({ id: row.id, table: name, remote: row });
   }
+  return false;
 }
 
 /** Settles a conflict with the copy on this device: it's saved over the account's at the next sync. */

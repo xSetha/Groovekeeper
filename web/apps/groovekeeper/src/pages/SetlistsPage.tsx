@@ -1,9 +1,9 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useEffect } from 'react';
 import { Link, useNavigate } from 'react-router';
+import { toastFailure } from '../library/limits';
 import { createSetlist, listSetlists } from '../library/setlists';
 import { useIsPhone } from '../phone';
-import { toast } from '../toasts';
 
 /** Every setlist, by name. Setlists are made on a computer or tablet; a phone opens them to play. */
 export function SetlistsPage() {
@@ -18,7 +18,7 @@ export function SetlistsPage() {
   const create = () => {
     createSetlist()
       .then((id) => navigate(`/setlists/${id}`, { state: { isNew: true } }))
-      .catch(() => toast('error', "Couldn't make the setlist", 'Reload the page and try again.'));
+      .catch((error: unknown) => toastFailure(error, "Couldn't make the setlist", 'Reload the page and try again.'));
   };
 
   return (
@@ -50,7 +50,14 @@ export function SetlistsPage() {
                 to={`/setlists/${setlist.id}`}
                 className="flex items-center justify-between gap-4 rounded px-3 py-3 hover:bg-hover"
               >
-                <span className="font-semibold">{setlist.name}</span>
+                <span>
+                  <span className="block font-semibold">{setlist.name}</span>
+                  {setlist.refused ? (
+                    <span className="block text-xs text-chord" title="It's on this device only; the account page says why.">
+                      {setlist.refused.reason === 'size' ? 'Too long to sync' : 'Not in your account'}
+                    </span>
+                  ) : null}
+                </span>
                 <span className="text-sm text-muted">
                   {setlist.songs.length === 1 ? '1 song' : `${setlist.songs.length} songs`}
                 </span>

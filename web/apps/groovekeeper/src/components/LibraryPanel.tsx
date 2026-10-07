@@ -5,6 +5,7 @@ import { Link, useNavigate } from 'react-router';
 import { listSongs, matchesSearch } from '../library/library';
 import { useNewSong } from '../navigation';
 import { useAccount } from '../sync/account';
+import { ExportLibrary } from './ExportLibrary';
 import { GuestNote } from './GuestNote';
 import { ImportSongs } from './ImportSongs';
 
@@ -23,7 +24,8 @@ export function LibraryPanel({ className = '', activeId, canImport = true }: Pro
   const navigate = useNavigate();
   const newSong = useNewSong();
   const signedIn = useAccount((s) => s.status === 'signedIn');
-  const guest = useAccount((s) => s.status === 'guest');
+  // A guest's own songs, not those of an account whose session ended here (that asks to sign in again).
+  const guest = useAccount((s) => s.status === 'guest' && s.endedSession === null);
   const shown = songs?.filter((song) => matchesSearch(song, search));
 
   return (
@@ -55,6 +57,11 @@ export function LibraryPanel({ className = '', activeId, canImport = true }: Pro
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm font-semibold">{song.title || UNTITLED_TITLE}</span>
                 {song.artist ? <span className="block truncate text-xs text-muted">{song.artist}</span> : null}
+                {song.refused ? (
+                  <span className="block text-xs text-chord" title="It's on this device only; the account page says why.">
+                    {song.refused.reason === 'size' ? 'Too long to sync' : 'Not in your account'}
+                  </span>
+                ) : null}
               </span>
               {song.key ? (
                 <span className="shrink-0 rounded bg-chip px-1.5 py-0.5 font-mono text-xs text-muted" title={`Key of ${song.key}`}>
@@ -94,9 +101,12 @@ export function LibraryPanel({ className = '', activeId, canImport = true }: Pro
             + Import songs…
           </ImportSongs>
           {songs && songs.length > 0 ? (
-            <Link to="/pdf" className="rounded px-2.5 py-1.5 text-sm hover:bg-hover pointer-coarse:min-h-11">
-              Export PDF…
-            </Link>
+            <>
+              <Link to="/pdf" className="rounded px-2.5 py-1.5 text-sm hover:bg-hover pointer-coarse:min-h-11">
+                Export PDF…
+              </Link>
+              <ExportLibrary className="rounded px-2.5 py-1.5 text-sm hover:bg-hover pointer-coarse:min-h-11" />
+            </>
           ) : null}
         </div>
       ) : null}

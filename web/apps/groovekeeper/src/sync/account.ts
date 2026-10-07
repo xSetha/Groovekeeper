@@ -4,7 +4,8 @@ import type { AuthError, Session, SupabaseClient } from '@supabase/supabase-js';
 import { useStore } from 'zustand';
 import { createStore } from 'zustand/vanilla';
 import { db } from '../library/db';
-import { supabaseRemote } from './remote';
+import { toast } from '../toasts';
+import { READ_ONLY, RemoteError, supabaseRemote } from './remote';
 import { sync } from './sync';
 
 // Where the Supabase client keeps the session; its presence says a client is worth loading at start.
@@ -15,7 +16,18 @@ const SYNC_DELAY_MS = 3000;
 const RETRY_FIRST_MS = 30_000;
 const RETRY_LONGEST_MS = 5 * 60_000;
 
-export type SyncStatus = 'idle' | 'syncing' | 'offline' | 'failed';
+/** `unavailable`: the account's database takes no changes for now (its storage is full, or it's paused). */
+/**
+ * What's on this device when an account signs in: made as a guest, or synced with another account whose
+ * session ended here (`otherAccount`, with its email if known); those are only removed, never added.
+ */
+export interface GuestLibrary {
+  songs: number;
+  setlists: number;
+  otherAccount?: { email: string | null };
+}
+
+export type SyncStatus = 'idle' | 'syncing' | 'offline' | 'failed' | 'unavailable';
 
 export interface AccountState {
   /** 'starting' until it's known whether this browser is signed in. */
@@ -26,9 +38,14 @@ export interface AccountState {
   /** When the library last finished syncing (this browser's clock). */
   lastSynced: number | null;
   /** Set after signing in while the library holds what was made as a guest: how much, until the user decides. */
-  guestLibrary: { songs: number; setlists: number } | null;
+  guestLibrary: GuestLibrary | null;
   /** Opened from a password reset link: the user sets a new password. */
   resettingPassword: boolean;
+  /**
+   * Set when this device's session ended without signing out here (signed out everywhere, or the account
+   * deleted elsewhere): the library is still the account's, until the user signs in again or removes it.
+   */
+  endedSession: { email: string | null } | null;
 }
 
 function hasStoredSession(): boolean {
@@ -53,6 +70,7 @@ export const accountStore = createStore<AccountState>(() => ({
   lastSynced: null,
   guestLibrary: null,
   resettingPassword: false,
+  endedSession: null,
 }));
 
 export const useAccount = <T>(select: (state: AccountState) => T): T => useStore(accountStore, select);
@@ -119,6 +137,19 @@ export async function openSongIds(): Promise<Set<string>> {
 /** Called once when the app starts. */
 export function startAccount(): void {
   if (needsClient()) void getClient().then(listen);
+  else void noticeEndedSession();
+}
+
+/** This device synced with an account and has no session for it any more: it asks to sign in again. */
+async function noticeEndedSession(): Promise<void> {
+  const state = await db.meta.get('sync');
+  if (state) accountStore.setState({ endedSession: { email: state.email ?? null } });
+}
+
+/** After a session ended: removes the account's songs from this device instead of signing in again. */
+export async function forgetEndedSession(): Promise<void> {
+  await clearLibrary();
+  accountStore.setState({ endedSession: null });
 }
 
 let listening = false;
@@ -147,34 +178,39 @@ async function signedInAs(session: Session | null): Promise<void> {
   const current = accountStore.getState();
   if (!user) {
     accountStore.setState({ status: 'guest', email: null, userId: null, guestLibrary: null });
+    if (!leaving) await noticeEndedSession();
     return;
   }
   if (current.userId === user.id) return;
-  accountStore.setState({ status: 'signedIn', email: user.email ?? null, userId: user.id });
+  accountStore.setState({ status: 'signedIn', email: user.email ?? null, userId: user.id, endedSession: null });
 
   const state = await db.meta.get('sync');
   if (state && state.userId === user.id) {
+    if (user.email && state.email !== user.email) await db.meta.put({ ...state, email: user.email });
     scheduleSync(0);
     return;
   }
   // First sign-in on this device: what was made as a guest joins the account only if the user says so.
   const [songs, setlists] = await Promise.all([db.songs.count(), db.setlists.count()]);
-  if (songs + setlists > 0) accountStore.setState({ guestLibrary: { songs, setlists } });
+  // Songs of another account (its session ended here) belong to that account: they can be removed, not added.
+  const otherAccount = state ? { email: state.email ?? null } : undefined;
+  if (songs + setlists > 0) accountStore.setState({ guestLibrary: { songs, setlists, otherAccount } });
   else await adoptLibrary(user.id);
 }
 
 /** The library from here on syncs with the account; what's in it now is uploaded at the next sync. */
 async function adoptLibrary(userId: string): Promise<void> {
-  await db.meta.put({ key: 'sync', userId, lastPulled: null, held: [] });
+  const email = accountStore.getState().email ?? undefined;
+  await db.meta.put({ key: 'sync', userId, email, lastPulled: null, held: [] });
   accountStore.setState({ guestLibrary: null });
   scheduleSync(0);
 }
 
 /** After signing in: add what was made as a guest to the account, or remove it from this device. */
 export async function settleGuestLibrary(add: boolean): Promise<void> {
-  const { userId } = accountStore.getState();
+  const { userId, guestLibrary } = accountStore.getState();
   if (!userId) return;
-  if (!add) await clearLibrary();
+  if (!add || guestLibrary?.otherAccount) await clearLibrary();
   await adoptLibrary(userId);
 }
 
@@ -243,13 +279,96 @@ export async function hasUnsyncedChanges(): Promise<boolean> {
   return songs + setlists + deletions > 0;
 }
 
+// Set while this device signs out or deletes its account on purpose, so the session ending then isn't taken for
+// one that ended on its own.
+let leaving = false;
+
+/** Ends the session on this device and removes the account's songs from it. */
+async function leaveAccount(supabase: SupabaseClient, fromSync = false): Promise<void> {
+  leaving = true;
+  clearTimeout(timer);
+  try {
+    // Without Web Locks (plain http), at least this tab's sync finishes first, unless it's the one leaving.
+    if (!navigator.locks && !fromSync) await running?.catch(() => undefined);
+    // Under the sync lock, so no sync in any tab writes songs back while the library is emptied. The library
+    // goes first: other tabs, told the session ended, then find no account's songs to ask about.
+    const leave = async () => {
+      await clearLibrary();
+      // Signing out locally works offline too; the session simply ends here.
+      await supabase.auth.signOut({ scope: 'local' });
+    };
+    await (navigator.locks ? navigator.locks.request(SYNC_LOCK, leave) : leave());
+    accountStore.setState({
+      status: 'guest', email: null, userId: null, sync: 'idle', lastSynced: null, guestLibrary: null, endedSession: null,
+    });
+  } finally {
+    leaving = false;
+  }
+}
+
+/**
+ * Signed in while this device holds another account's songs: signs out again and keeps them, so the device
+ * asks to sign in to that account again (or to remove them) as before.
+ */
+export async function keepOtherAccountsSongs(): Promise<void> {
+  const supabase = await getClient();
+  leaving = true;
+  try {
+    await supabase.auth.signOut({ scope: 'local' });
+    accountStore.setState({ status: 'guest', email: null, userId: null, sync: 'idle', lastSynced: null, guestLibrary: null });
+    await noticeEndedSession();
+  } finally {
+    leaving = false;
+  }
+}
+
 /** Signs out and removes the account's songs from this device; they stay in the account. */
 export async function signOut(): Promise<void> {
-  const supabase = await getClient();
-  // Signing out locally works offline too; the session simply ends here.
-  await supabase.auth.signOut({ scope: 'local' });
-  await clearLibrary();
-  accountStore.setState({ status: 'guest', email: null, userId: null, sync: 'idle', lastSynced: null, guestLibrary: null });
+  await leaveAccount(await getClient());
+}
+
+/**
+ * Deletes the account, with all its songs and setlists, and removes them from this device. Other devices
+ * remove theirs when they next find the account gone (accountGone); one whose session can no longer be
+ * renewed (away over an hour) can't ask, so it asks to sign in again and offers to remove them. Needs a
+ * connection; nothing changes if it fails.
+ */
+export async function deleteAccount(): Promise<AuthResult> {
+  if (!navigator.onLine) return { error: 'You’re offline. Connect to the internet to delete your account.' };
+  let supabase: SupabaseClient;
+  try {
+    supabase = await getClient();
+    const { error } = await supabase.rpc('delete_account');
+    if (error) return { error: `Couldn’t delete your account: ${error.message}` };
+  } catch (error) {
+    return { error: explain(error instanceof Error ? error : new Error(String(error))) };
+  }
+  await leaveAccount(supabase);
+  return null;
+}
+
+// How often a signed-in device asks whether its account still exists (it may have been deleted elsewhere).
+const ACCOUNT_CHECK_MS = 10 * 60_000;
+let lastAccountCheck = 0;
+
+/**
+ * Whether the server says this session's account no longer exists. Only that answer counts: an expired
+ * session or an unreachable server is not a deleted account.
+ */
+async function accountGone(supabase: SupabaseClient): Promise<boolean> {
+  lastAccountCheck = Date.now();
+  try {
+    const { error } = await supabase.auth.getUser();
+    return error?.code === 'user_not_found';
+  } catch {
+    return false;
+  }
+}
+
+/** The account was deleted on another device: this one removes its songs too, as deleting promises. */
+async function accountDeletedElsewhere(supabase: SupabaseClient): Promise<void> {
+  await leaveAccount(supabase, true);
+  toast('info', 'Your account was deleted', 'It was deleted on another device, so its songs are removed from this one too.');
 }
 
 // ---- Syncing ----
@@ -292,9 +411,17 @@ async function syncOnce(): Promise<void> {
     return;
   }
   accountStore.setState({ sync: 'syncing' });
+  let supabase: SupabaseClient | null = null;
   try {
-    const remote = supabaseRemote(await getClient());
+    supabase = await getClient();
+    if (Date.now() - lastAccountCheck > ACCOUNT_CHECK_MS && (await accountGone(supabase))) {
+      await accountDeletedElsewhere(supabase);
+      return;
+    }
+    const remote = supabaseRemote(supabase);
     const work = async () => {
+      // The library may have been emptied (signed out, account deleted) while this sync waited its turn.
+      if ((await db.meta.get('sync'))?.userId !== userId) return;
       const open = await openSongIds();
       await sync(remote, userId, (id) => open.has(id) || openSongs.has(id));
     };
@@ -302,12 +429,18 @@ async function syncOnce(): Promise<void> {
     await (navigator.locks ? navigator.locks.request(SYNC_LOCK, work) : work());
     failures = 0;
     accountStore.setState({ sync: 'idle', lastSynced: Date.now() });
-  } catch {
+  } catch (error) {
     if (!navigator.onLine) {
       accountStore.setState({ sync: 'offline' }); // coming back online syncs again
       return;
     }
-    accountStore.setState({ sync: 'failed' });
+    // A sync that fails may be the first sign that the account is gone (its rows are, and new ones can't
+    // be added to it).
+    if (supabase && (await accountGone(supabase))) {
+      await accountDeletedElsewhere(supabase);
+      return;
+    }
+    accountStore.setState({ sync: error instanceof RemoteError && error.code === READ_ONLY ? 'unavailable' : 'failed' });
     scheduleSync(Math.min(RETRY_FIRST_MS * 2 ** failures, RETRY_LONGEST_MS));
     failures++;
   }

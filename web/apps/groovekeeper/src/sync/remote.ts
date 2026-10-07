@@ -1,7 +1,7 @@
 // The account's songs and setlists in Supabase (tables and rules in web/supabase/migrations).
 import type { PostgrestError, SupabaseClient } from '@supabase/supabase-js';
 import type { RemoteRow, SyncedTable } from '../library/db';
-import { DuplicateError, type Remote } from './sync';
+import { DuplicateError, RefusedError, type Remote } from './sync';
 
 const COLUMNS: Record<SyncedTable, string> = {
   songs: 'id, title, artist, key, text, notes, deleted, version, updated_at',
@@ -13,15 +13,24 @@ const PAGE = 1000;
 
 // Postgres's error for a key that's already taken.
 const UNIQUE_VIOLATION = '23505';
+// The account's limits (migration 20261007120000): no room for another row, or a row too big (a check).
+const LIMIT_REACHED = 'GK001';
+const CHECK_VIOLATION = '23514';
+// The database takes no changes: its storage is full, or the project is paused.
+export const READ_ONLY = '25006';
 
 /** Thrown when the database refuses or can't be reached; the next sync tries again. */
 export class RemoteError extends Error {
+  readonly code: string;
   constructor(error: PostgrestError) {
     super(`The account's database refused: ${error.message}`);
+    this.code = error.code;
   }
 }
 
 function rows(result: { data: unknown; error: PostgrestError | null }): RemoteRow[] {
+  if (result.error?.code === LIMIT_REACHED) throw new RefusedError('limit');
+  if (result.error?.code === CHECK_VIOLATION) throw new RefusedError('size');
   if (result.error) throw new RemoteError(result.error);
   // The columns asked for are the ones RemoteRow has (COLUMNS).
   return (result.data ?? []) as RemoteRow[];

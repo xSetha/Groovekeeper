@@ -1,6 +1,7 @@
 import { parseSongText, songToText, type Song } from '@groovekeeper/core';
 import { changedAt, db, type LibrarySong, type SongNote } from './db';
 import { newId } from './ids';
+import { checkRoom, sizeProblem } from './limits';
 
 const byTitle = (a: LibrarySong, b: LibrarySong): number =>
   a.title.localeCompare(b.title, undefined, { sensitivity: 'base' }) ||
@@ -46,9 +47,18 @@ function keepLibrary(): void {
   void navigator.storage?.persist?.().catch(() => false);
 }
 
-/** Adds the songs to the library and returns their ids, in the same order. */
+/**
+ * Adds the songs to the library and returns their ids, in the same order. Throws a LimitError, adding
+ * nothing, when a signed-in account has no room for them all.
+ */
 export async function addSongs(songs: Song[]): Promise<string[]> {
-  const records = songs.map((song) => record(newId(), song, [], 0));
+  return addSongsWithNotes(songs.map((song) => ({ song, notes: [] })));
+}
+
+/** Adds songs with their notes, as addSongs does. */
+export async function addSongsWithNotes(items: { song: Song; notes: SongNote[] }[]): Promise<string[]> {
+  await checkRoom('songs', items.length);
+  const records = items.map(({ song, notes }) => record(newId(), song, notes, 0));
   await db.songs.bulkAdd(records);
   keepLibrary();
   return records.map((r) => r.id);
@@ -60,13 +70,20 @@ export async function openSong(id: string): Promise<{ song: Song; notes: SongNot
   return stored && { song: parseSongText(stored.text), notes: stored.notes ?? [] };
 }
 
-/** Saves the song, with its notes when they're given (otherwise it keeps those it has). */
-export async function saveSong(id: string, song: Song, notes?: SongNote[]): Promise<void> {
-  await db.transaction('rw', db.songs, async () => {
+/**
+ * Saves the song, with its notes when they're given (otherwise it keeps those it has). A song too long for an
+ * account is still saved here, marked so it doesn't sync until it's shorter; that returns why it's too long.
+ */
+export async function saveSong(id: string, song: Song, notes?: SongNote[]): Promise<string | null> {
+  const problem = await db.transaction('rw', db.songs, async () => {
     const stored = await db.songs.get(id);
-    await db.songs.put(record(id, song, notes ?? stored?.notes ?? [], stored?.version ?? 0, stored?.updatedAt));
+    const saved = record(id, song, notes ?? stored?.notes ?? [], stored?.version ?? 0, stored?.updatedAt);
+    const tooLong = sizeProblem(saved, saved.text, saved.notes ?? []);
+    await db.songs.put(tooLong ? { ...saved, refused: { reason: 'size', at: saved.updatedAt } } : saved);
+    return tooLong;
   });
   keepLibrary();
+  return problem;
 }
 
 /** Removes the song from the library, and from every setlist it's in; the next sync removes it from the account. */

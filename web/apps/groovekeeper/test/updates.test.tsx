@@ -35,34 +35,34 @@ beforeEach(() => {
 
 describe('a new version', () => {
   it('is offered with a Reload button that stays, and reloads only after what is being edited is saved', async () => {
-    let saved = false;
-    const unregister = saveBeforeLeaving(async () => {
-      await new Promise((done) => setTimeout(done, 10));
-      saved = true;
-      return true;
-    });
+    let finishSaving = (_saved: boolean) => {};
+    const stop = saveBeforeLeaving(() => new Promise<boolean>((done) => (finishSaving = done)));
+    try {
+      render(<Toasts />);
+      act(() => pwa.needRefresh());
+      expect(screen.getByRole('status')).toHaveTextContent('A new version of Groovekeeper is ready');
 
-    render(<Toasts />);
-    act(() => pwa.needRefresh());
-    expect(screen.getByRole('status')).toHaveTextContent('A new version of Groovekeeper is ready');
-
-    await userEvent.click(screen.getByRole('button', { name: 'Reload' }));
-    expect(saved).toBe(false);
-    expect(pwa.update).not.toHaveBeenCalled();
-    await vi.waitFor(() => expect(pwa.update).toHaveBeenCalledWith(true));
-    expect(saved).toBe(true);
-    unregister();
+      await userEvent.click(screen.getByRole('button', { name: 'Reload' }));
+      expect(pwa.update).not.toHaveBeenCalled();
+      finishSaving(true);
+      await vi.waitFor(() => expect(pwa.update).toHaveBeenCalledWith(true));
+    } finally {
+      stop();
+    }
   });
 
   it('doesn’t reload when a change couldn’t be saved, and offers the reload again', async () => {
-    const unregister = saveBeforeLeaving(async () => false);
-    render(<Toasts />);
-    act(() => pwa.needRefresh());
+    const stop = saveBeforeLeaving(async () => false);
+    try {
+      render(<Toasts />);
+      act(() => pwa.needRefresh());
 
-    await userEvent.click(screen.getByRole('button', { name: 'Reload' }));
-    expect(await screen.findByRole('button', { name: 'Reload' })).toBeInTheDocument();
-    expect(pwa.update).not.toHaveBeenCalled();
-    unregister();
+      await userEvent.click(screen.getByRole('button', { name: 'Reload' }));
+      expect(await screen.findByRole('button', { name: 'Reload' })).toBeInTheDocument();
+      expect(pwa.update).not.toHaveBeenCalled();
+    } finally {
+      stop();
+    }
   });
 });
 

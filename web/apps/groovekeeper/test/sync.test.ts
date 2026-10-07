@@ -3,14 +3,28 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { db, type RemoteRow, type RemoteSong, type SyncedTable } from '../src/library/db';
 import { addSongs, deleteSong, saveSong } from '../src/library/library';
 import { addEntry, createSetlist, updateSetlist } from '../src/library/setlists';
-import { DuplicateError, keepAccount, keepThisDevice, sync, type Remote, type RemoteFields } from '../src/sync/sync';
+import { DuplicateError, keepAccount, keepThisDevice, RefusedError, sync, type Remote, type RemoteFields } from '../src/sync/sync';
 
 /** The account, kept in memory with the database's rules: versions count up, the server sets the time. */
 class FakeAccount implements Remote {
   rows: Record<SyncedTable, Map<string, RemoteRow>> = { songs: new Map(), setlists: new Map() };
   private clock = Date.parse('2026-10-03T12:00:00Z');
   /** Runs once during the next insert, as if the user typed while the push was on its way. */
-  duringInsert: (() => Promise<void>) | null = null;
+  duringInsert: (() => Promise<unknown>) | null = null;
+  /** The database's limits, when a test sets them: how many rows an account keeps, how long a song may be. */
+  limit: Partial<Record<SyncedTable, number>> = {};
+  maxText = Infinity;
+  /** How many rows each insert was asked to add, to see what was tried. */
+  inserted: number[] = [];
+
+  private live(table: SyncedTable) {
+    return [...this.rows[table].values()].filter((row) => !row.deleted).length;
+  }
+
+  private check(table: SyncedTable, fields: RemoteFields[], adding: number) {
+    if (fields.some((f) => 'text' in f && f.text.length > this.maxText)) throw new RefusedError('size');
+    if (this.live(table) + adding > (this.limit[table] ?? Infinity)) throw new RefusedError('limit');
+  }
 
   private now() {
     this.clock += 1000;
@@ -18,7 +32,9 @@ class FakeAccount implements Remote {
   }
 
   async insert(table: SyncedTable, rows: (RemoteFields & { id: string })[]) {
+    this.inserted.push(rows.length);
     if (rows.some((row) => this.rows[table].has(row.id))) throw new DuplicateError();
+    this.check(table, rows, rows.length);
     const during = this.duringInsert;
     this.duringInsert = null;
     await during?.();
@@ -32,6 +48,7 @@ class FakeAccount implements Remote {
   async update(table: SyncedTable, id: string, fields: RemoteFields, version: number) {
     const row = this.rows[table].get(id);
     if (!row || row.version !== version) return null;
+    if (!fields.deleted) this.check(table, [fields], row.deleted ? 1 : 0);
     const stored = { ...row, ...fields, version: version + 1, updated_at: this.now() } as RemoteRow;
     this.rows[table].set(id, stored);
     return stored;
@@ -274,5 +291,72 @@ describe('syncing', () => {
   it('refuses to sync a library that belongs to another account', async () => {
     await syncNow();
     await expect(sync(account, 'user-b', () => false)).rejects.toThrow('another account');
+  });
+});
+
+describe('the sync record', () => {
+  it('keeps the account\'s email, which asks for it again when the session ends', async () => {
+    await db.meta.put({ key: 'sync', userId: USER, email: 'me@example.com', lastPulled: null, held: [] });
+    await addSongs([song('Amazing Grace')]);
+    await syncNow();
+    expect(await db.meta.get('sync')).toMatchObject({ email: 'me@example.com', userId: USER });
+  });
+});
+
+describe('what the account refuses', () => {
+  it('uploads 200 of 250 guest songs, keeps the rest here marked, and doesn\'t try them on every sync', async () => {
+    account.limit.songs = 200;
+    await addSongs(Array.from({ length: 250 }, (_, i) => song(`Song ${i}`)));
+
+    await syncNow();
+    expect(account.rows.songs.size).toBe(200);
+    const waiting = await db.songs.filter((row) => row.refused !== undefined).toArray();
+    expect(waiting).toHaveLength(50);
+    expect(waiting.every((row) => row.refused?.reason === 'limit' && row.version === 0 && row.dirty === 1)).toBe(true);
+
+    account.inserted = [];
+    await syncNow();
+    expect(account.inserted).toEqual([]);
+  });
+
+  it('tries the waiting songs again once a song is deleted, and one fits', async () => {
+    account.limit.songs = 2;
+    const [a] = await addSongs([song('A')]);
+    await syncNow(); // A is in the account; of B and C, one fits
+    await addSongs([song('B'), song('C')]);
+    await syncNow();
+    expect(await db.songs.filter((row) => row.refused !== undefined).count()).toBe(1);
+
+    await deleteSong(a!);
+    await syncNow();
+    expect(account.rows.songs.size).toBe(3); // A is kept, deleted
+    expect(await db.songs.filter((row) => row.refused !== undefined).count()).toBe(0);
+    expect(await db.songs.where('dirty').equals(1).count()).toBe(0);
+  });
+
+  it('keeps a song too long for the account here, pushes the others, and tries it again once it changes', async () => {
+    account.maxText = 200;
+    const [long] = await addSongs([parseSongText(`Long\n\n\nKey: G\n\n[Verse 1]\n${'la '.repeat(100)}\n`)]);
+    const [short] = await addSongs([song('Short')]);
+
+    await syncNow();
+    expect(account.song(short!)?.title).toBe('Short');
+    expect(account.song(long!)).toBeUndefined();
+    expect((await db.songs.get(long!))?.refused?.reason).toBe('size');
+
+    await saveSong(long!, song('Long, shorter'));
+    await syncNow();
+    expect(account.song(long!)?.title).toBe('Long, shorter');
+    expect((await db.songs.get(long!))?.refused).toBeUndefined();
+  });
+
+  it('puts a song back that the account no longer remembers when it was changed here', async () => {
+    const [grace] = await addSongs([song('Amazing Grace')]);
+    await syncNow();
+    account.rows.songs.delete(grace!); // deleted elsewhere over a month ago, its record cleared
+
+    await saveSong(grace!, song('Amazing Grace (live)'));
+    await syncNow();
+    expect(account.song(grace!)?.title).toBe('Amazing Grace (live)');
   });
 });

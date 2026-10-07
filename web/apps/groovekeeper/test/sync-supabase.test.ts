@@ -34,6 +34,33 @@ describe.runIf(running)('syncing with Supabase', () => {
     await Promise.all([db.songs.clear(), db.setlists.clear(), db.deletions.clear(), db.conflicts.clear(), db.meta.clear()]);
   });
 
+  it('deletes an account with its songs, and then tells its old session the account is gone', async () => {
+    const d = await signUp();
+    await addSongs([{ ...createTemplate(), title: 'Amazing Grace' }]);
+    await sync(supabaseRemote(d.client), d.userId, () => false);
+
+    const { error: deleting } = await d.client.rpc('delete_account');
+    expect(deleting).toBeNull();
+    // An answer lost on the way: deleting again does nothing.
+    expect((await d.client.rpc('delete_account')).error).toBeNull();
+
+    const { error } = await d.client.auth.getUser();
+    expect(error?.code).toBe('user_not_found');
+    const { data: songs } = await d.client.from('songs').select('id');
+    expect(songs).toEqual([]);
+  });
+
+  it('uploads 200 songs of a new account and keeps the 201st here, refused for the limit', async () => {
+    const c = await signUp();
+    const ids = await addSongs(Array.from({ length: 201 }, (_, i) => ({ ...createTemplate(), title: `Song ${i}` })));
+    await sync(supabaseRemote(c.client), c.userId, () => false);
+
+    const { count } = await c.client.from('songs').select('id', { count: 'exact', head: true });
+    expect(count).toBe(200);
+    const refused = await db.songs.filter((row) => row.refused !== undefined).toArray();
+    expect(refused.map((row) => [row.refused?.reason, ids.includes(row.id)])).toEqual([['limit', true]]);
+  });
+
   it('uploads, changes, and keeps each account\'s songs to itself', async () => {
     const [id] = await addSongs([{ ...createTemplate(), title: 'Amazing Grace' }]);
     await sync(supabaseRemote(a.client), a.userId, () => false);

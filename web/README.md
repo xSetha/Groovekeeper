@@ -76,6 +76,11 @@ The app is a static site: there's no server of its own. Accounts and sync need a
    account may read and change. Never put the secret (service role) key in the app. The build stops if
    these are missing or point at the local Supabase.
 
+   Each account holds up to 200 songs and 20 setlists, and a song up to 20,000 characters with 50 notes
+   (5,000 characters together), so that one account can't fill a small database. The numbers are in the
+   migration `supabase/migrations/20261007120000_account_limits.sql` and in
+   `apps/groovekeeper/src/library/limits.ts`; change both to change them.
+
 4. **Put `apps/groovekeeper/dist` on a static host** (Cloudflare Pages, Netlify, …), on HTTPS.
    Addresses like `/songs/…` belong to the app, so the host must answer them with
    `index.html`. Cloudflare Pages does that when the site has no `404.html`; other hosts need a

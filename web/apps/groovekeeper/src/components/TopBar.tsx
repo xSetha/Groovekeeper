@@ -75,7 +75,7 @@ function SyncNotes() {
         <span className="px-2 text-sm text-muted" title="Changes are saved on this device and sync when you’re back online.">
           Offline
         </span>
-      ) : sync === 'failed' ? (
+      ) : sync === 'failed' || sync === 'unavailable' ? (
         <Link to="/account" className="rounded px-2 py-1 text-sm text-chord hover:bg-hover">
           Couldn’t sync
         </Link>
@@ -88,11 +88,15 @@ function SyncNotes() {
 function AccountLink() {
   const status = useAccount((s) => s.status);
   const email = useAccount((s) => s.email);
+  const ended = useAccount((s) => s.endedSession !== null);
   if (status === 'starting') return null;
   if (status === 'guest') {
     return (
-      <Link to="/account" className="rounded px-2 py-1 text-sm whitespace-nowrap text-muted hover:bg-hover hover:text-fg pointer-coarse:min-h-11 pointer-coarse:flex pointer-coarse:items-center">
-        Sign in
+      <Link
+        to="/account"
+        className={`rounded px-2 py-1 text-sm whitespace-nowrap hover:bg-hover pointer-coarse:min-h-11 pointer-coarse:flex pointer-coarse:items-center ${ended ? 'font-semibold text-accent' : 'text-muted hover:text-fg'}`}
+      >
+        {ended ? 'Sign in again' : 'Sign in'}
       </Link>
     );
   }

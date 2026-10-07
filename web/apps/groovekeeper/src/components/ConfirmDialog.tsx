@@ -6,10 +6,12 @@ interface Props {
   confirmLabel: string;
   onConfirm: () => void;
   onCancel: () => void;
+  /** A third choice between Cancel and the confirmation, such as exporting before deleting. */
+  extra?: { label: string; onClick: () => void };
 }
 
 /** A modal question with Cancel focused, so Enter doesn't confirm by accident. Esc cancels. */
-export function ConfirmDialog({ title, message, confirmLabel, onConfirm, onCancel }: Props) {
+export function ConfirmDialog({ title, message, confirmLabel, onConfirm, onCancel, extra }: Props) {
   const cancel = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
@@ -32,10 +34,15 @@ export function ConfirmDialog({ title, message, confirmLabel, onConfirm, onCance
           {title}
         </h2>
         <p className="mt-2 text-sm text-muted">{message}</p>
-        <div className="mt-5 flex justify-end gap-2">
+        <div className="mt-5 flex flex-wrap justify-end gap-2">
           <button ref={cancel} type="button" onClick={onCancel} className="rounded px-3 py-1.5 text-sm hover:bg-hover pointer-coarse:min-h-11">
             Cancel
           </button>
+          {extra ? (
+            <button type="button" onClick={extra.onClick} className="rounded border border-line px-3 py-1.5 text-sm hover:bg-hover pointer-coarse:min-h-11">
+              {extra.label}
+            </button>
+          ) : null}
           <button
             type="button"
             onClick={onConfirm}

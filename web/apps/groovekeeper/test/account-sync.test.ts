@@ -8,7 +8,8 @@ type AuthCallback = (event: string, session: { user: { id: string; email: string
 
 const supabase = vi.hoisted(() => {
   // failImport: the next load of the Supabase client fails, as when its file is gone after a deploy.
-  const state = { onAuth: null as AuthCallback | null, failImport: false };
+  // userGone: the server says the session's account no longer exists (deleted on another device).
+  const state = { onAuth: null as AuthCallback | null, failImport: false, userGone: false };
   const client = {
     auth: {
       onAuthStateChange: (callback: AuthCallback) => {
@@ -17,7 +18,9 @@ const supabase = vi.hoisted(() => {
       },
       signInWithPassword: async () => ({ error: null }),
       signOut: async (_options?: { scope: string }) => ({ error: null }),
+      getUser: async () => (state.userGone ? { data: { user: null }, error: { code: 'user_not_found' } } : { data: { user: {} }, error: null }),
     },
+    rpc: async (_name: string) => ({ error: null as { message: string } | null }),
   };
   return { state, client };
 });
@@ -126,6 +129,92 @@ describe('signed in', () => {
     const counts = await Promise.all([t.db.songs.count(), t.db.setlists.count(), t.db.deletions.count(), t.db.meta.count()]);
     expect(counts).toEqual([0, 0, 0, 0]);
     expect(t.account.accountStore.getState()).toMatchObject({ status: 'guest', userId: null });
+  });
+
+  it('deletes the account and empties the library on this device', async () => {
+    const rpc = vi.spyOn(supabase.client, 'rpc');
+    await t.library.addSongs([createTemplate()]);
+
+    expect(await t.account.deleteAccount()).toBeNull();
+    expect(rpc).toHaveBeenCalledWith('delete_account');
+    expect([await t.db.songs.count(), await t.db.meta.count()]).toEqual([0, 0]);
+    expect(t.account.accountStore.getState()).toMatchObject({ status: 'guest', userId: null, endedSession: null });
+  });
+
+  it('keeps everything when deleting the account fails, or the device is offline', async () => {
+    await t.library.addSongs([createTemplate()]);
+    vi.spyOn(supabase.client, 'rpc').mockResolvedValueOnce({ error: { message: 'The server is down' } });
+    expect(await t.account.deleteAccount()).toEqual({ error: 'Couldn’t delete your account: The server is down' });
+
+    vi.spyOn(navigator, 'onLine', 'get').mockReturnValueOnce(false);
+    expect(await t.account.deleteAccount()).toEqual({ error: 'You’re offline. Connect to the internet to delete your account.' });
+    expect(await t.db.songs.count()).toBe(1);
+    expect(t.account.accountStore.getState().status).toBe('signedIn');
+  });
+
+  it('empties the library when a sync finds the account deleted elsewhere, and says so', async () => {
+    await t.library.addSongs([createTemplate()]);
+    supabase.state.userGone = true;
+    t.sync.mockRejectedValueOnce(new Error('insert or update on table "songs" violates foreign key constraint'));
+    try {
+      await t.account.runSync();
+      expect(await t.db.songs.count()).toBe(0);
+      expect(t.account.accountStore.getState()).toMatchObject({ status: 'guest', endedSession: null });
+    } finally {
+      supabase.state.userGone = false;
+    }
+  });
+
+  it('keeps the library when a sync fails for another reason', async () => {
+    await t.library.addSongs([createTemplate()]);
+    t.sync.mockRejectedValueOnce(new Error('The server is down'));
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    await t.account.runSync();
+    expect(await t.db.songs.count()).toBe(1);
+    expect(t.account.accountStore.getState().status).toBe('signedIn');
+  });
+
+  it('doesn\'t let a sync still running write songs back after signing out', async () => {
+    let finish = () => {};
+    t.sync.mockImplementationOnce(async () => {
+      await new Promise<void>((done) => (finish = done));
+      await t.db.songs.put({ id: 'pulled', title: 'Pulled', artist: '', key: '', text: '', notes: [], updatedAt: 1, version: 1, dirty: 0 });
+    });
+    const syncing = t.account.runSync();
+    await vi.waitFor(() => expect(t.sync).toHaveBeenCalled());
+
+    const leaving = t.account.signOut();
+    finish();
+    await Promise.all([syncing, leaving]);
+    expect([await t.db.songs.count(), await t.db.meta.count()]).toEqual([0, 0]);
+  });
+
+  it('asks to remove another account\'s songs when a different account signs in, or to keep them', async () => {
+    await t.library.addSongs([createTemplate()]);
+    supabase.state.onAuth?.('SIGNED_OUT', null);
+    await vi.waitFor(() => expect(t.account.accountStore.getState().endedSession).not.toBeNull());
+
+    await signInAs(t.account, 'user-2');
+    await vi.waitFor(() => expect(t.account.accountStore.getState().guestLibrary).toMatchObject({
+      songs: 1, otherAccount: { email: 'me@example.com' },
+    }));
+    // Adding isn't offered; settling removes them either way.
+    await t.account.settleGuestLibrary(true);
+    expect(await t.db.songs.count()).toBe(0);
+    expect((await t.db.meta.get('sync'))?.userId).toBe('user-2');
+  });
+
+  it('keeps the library when the session ends on its own, and asks to sign in again', async () => {
+    await t.library.addSongs([createTemplate()]);
+    supabase.state.onAuth?.('SIGNED_OUT', null);
+
+    await vi.waitFor(() => expect(t.account.accountStore.getState().endedSession).toEqual({ email: 'me@example.com' }));
+    expect(t.account.accountStore.getState().status).toBe('guest');
+    expect(await t.db.songs.count()).toBe(1);
+
+    await t.account.forgetEndedSession();
+    expect([await t.db.songs.count(), await t.db.meta.count()]).toEqual([0, 0]);
+    expect(t.account.accountStore.getState().endedSession).toBeNull();
   });
 
   it('runs one sync at a time, and the one asked for meanwhile right after', async () => {

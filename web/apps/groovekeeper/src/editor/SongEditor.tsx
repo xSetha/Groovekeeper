@@ -9,6 +9,7 @@ import { useCharWidth } from '../components/useCharWidth';
 import type { SongNote } from '../library/db';
 import { download, songFile, type SongFormat } from '../library/files';
 import { deleteSong, saveSong } from '../library/library';
+import { toastFailure } from '../library/limits';
 import { useNewSong } from '../navigation';
 import { saveBeforeLeaving } from '../saving';
 import { holdOpenSong } from '../sync/account';
@@ -409,13 +410,23 @@ function useAutosave(id: string, store: EditorStore, isNew: boolean) {
       if (!song) return Promise.resolve(true);
       // A song that couldn't be saved mustn't go unnoticed: the toast stays until a save works again.
       return saveSong(id, song, song.notes).then(
-        () => {
-          dismissToast(`save:${id}`);
+        (tooLong) => {
+          // Saved here either way; a song too long for an account says so until it's shorter.
+          if (tooLong) {
+            toast(
+              'error',
+              `“${displayTitle(song)}” is too long to sync`,
+              `${tooLong} It’s saved on this device; shorten it and it syncs again.`,
+              `save:${id}`,
+            );
+          } else {
+            dismissToast(`save:${id}`);
+          }
           return true;
         },
-        () => {
-          toast(
-            'error',
+        (error: unknown) => {
+          toastFailure(
+            error,
             `Couldn't save “${displayTitle(song)}”`,
             "Your latest changes aren't stored yet. Free some space on this device, then change the song to save again.",
             `save:${id}`,

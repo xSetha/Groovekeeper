@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -15,6 +15,8 @@ vi.mock('../src/sync/account', async (importOriginal) => ({
   settleGuestLibrary: vi.fn(() => Promise.resolve()),
   hasUnsyncedChanges: vi.fn(),
   signOut: vi.fn(() => Promise.resolve()),
+  deleteAccount: vi.fn(() => Promise.resolve(null)),
+  forgetEndedSession: vi.fn(() => Promise.resolve()),
   runSync: vi.fn(() => Promise.resolve()),
 }));
 
@@ -30,7 +32,9 @@ const signedIn = (extra: Partial<account.AccountState> = {}) =>
 
 beforeEach(async () => {
   vi.clearAllMocks();
-  account.accountStore.setState({ status: 'guest', email: null, userId: null, sync: 'idle', lastSynced: null, guestLibrary: null, resettingPassword: false });
+  account.accountStore.setState({
+    status: 'guest', email: null, userId: null, sync: 'idle', lastSynced: null, guestLibrary: null, resettingPassword: false, endedSession: null,
+  });
   await Promise.all([db.songs.clear(), db.conflicts.clear()]);
 });
 
@@ -153,5 +157,61 @@ describe('the account', () => {
     await waitFor(async () => expect((await db.songs.get('grace'))?.text).toBe('Changed there\n'));
     expect(await screen.findByText(/Nothing to settle/)).toBeInTheDocument();
     expect(account.runSync).toHaveBeenCalled();
+  });
+
+  it('says which songs the account refused, and marks them in the library', async () => {
+    signedIn();
+    const refused = { title: 'Song 201', artist: '', key: '', text: 'Song 201\n', notes: [], updatedAt: 1, version: 0, dirty: 1 as const };
+    await db.songs.bulkPut([
+      { ...refused, id: 'one', refused: { reason: 'limit', at: 1 } },
+      { ...refused, id: 'two', title: 'Song 202', refused: { reason: 'limit', at: 1 } },
+    ]);
+    const { unmount } = renderAt('/account');
+    expect(await screen.findByText(/2 songs aren’t in your account: it holds up to 200 songs/)).toBeInTheDocument();
+    unmount();
+
+    renderAt('/');
+    const library = within(await screen.findByRole('navigation', { name: 'Library' }));
+    expect(await library.findAllByText('Not in your account')).toHaveLength(2);
+  });
+
+  it('deletes the account after asking, and offers to export the library first', async () => {
+    const user = userEvent.setup();
+    signedIn();
+    renderAt('/account');
+
+    await user.click(await screen.findByRole('button', { name: 'Delete account' }));
+    const dialog = within(screen.getByRole('dialog', { name: 'Delete your account for good?' }));
+    expect(dialog.getByRole('button', { name: 'Export library first' })).toBeInTheDocument();
+    expect(account.deleteAccount).not.toHaveBeenCalled();
+
+    await user.click(dialog.getByRole('button', { name: 'Delete account' }));
+    expect(account.deleteAccount).toHaveBeenCalled();
+    expect(await screen.findByText('Your account is deleted')).toBeInTheDocument();
+  });
+
+  it('says why the account couldn\'t be deleted', async () => {
+    const user = userEvent.setup();
+    vi.mocked(account.deleteAccount).mockResolvedValueOnce({ error: 'You’re offline. Connect to the internet to delete your account.' });
+    signedIn();
+    renderAt('/account');
+
+    await user.click(await screen.findByRole('button', { name: 'Delete account' }));
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Delete account' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('You’re offline');
+  });
+
+  it('asks to sign in again after the session ended, or to remove the songs instead', async () => {
+    const user = userEvent.setup();
+    account.accountStore.setState({ endedSession: { email: 'me@example.com' } });
+    renderAt('/account');
+
+    expect(await screen.findByRole('heading', { name: 'Sign in again' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Sign in again' })).toBeInTheDocument(); // in the top bar
+    expect(screen.getByRole('textbox', { name: 'Email' })).toHaveValue('me@example.com');
+
+    await user.click(screen.getByRole('button', { name: 'Remove these songs from this device' }));
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Remove them' }));
+    expect(account.forgetEndedSession).toHaveBeenCalled();
   });
 });

@@ -3,12 +3,15 @@ import { displayTitle, parseChordPro, parseSongText, songToChordPro, songToText,
 
 export const CHORDPRO_EXTENSIONS = ['.cho', '.chopro', '.chordpro', '.pro'];
 
-/** What the file picker offers when importing. */
-export const SONG_FILE_TYPES = ['.txt', ...CHORDPRO_EXTENSIONS].join(',');
+/** Song files, by extension. */
+export const SONG_EXTENSIONS = ['.txt', ...CHORDPRO_EXTENSIONS];
+
+/** What the file picker offers when importing: song files, and a library exported as a zip. */
+export const SONG_FILE_TYPES = [...SONG_EXTENSIONS, '.zip'].join(',');
 
 export type SongFormat = 'text' | 'chordpro';
 
-const extensionOf = (fileName: string): string => {
+export const extensionOf = (fileName: string): string => {
   const dot = fileName.lastIndexOf('.');
   return dot < 0 ? '' : fileName.slice(dot).toLowerCase();
 };
@@ -40,9 +43,9 @@ export function songFile(song: Song, format: SongFormat): { name: string; text: 
   return { name: name + FORMATS[format].extension, text: FORMATS[format].write(song) };
 }
 
-/** Lets the browser save `text` as a file named `fileName`. */
-export function download(fileName: string, text: string): void {
-  const url = URL.createObjectURL(new Blob([text], { type: 'text/plain;charset=utf-8' }));
+/** Lets the browser save `content` as a file named `fileName`. */
+export function download(fileName: string, content: string | Uint8Array<ArrayBuffer>, type = 'text/plain;charset=utf-8'): void {
+  const url = URL.createObjectURL(new Blob([content], { type }));
   const link = document.createElement('a');
   link.href = url;
   link.download = fileName;
