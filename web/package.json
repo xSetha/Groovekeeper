@@ -12,6 +12,7 @@
     "typecheck": "npm run typecheck --workspaces --if-present",
     "dev": "npm run dev -w @groovekeeper/app --",
     "build": "npm run build -w @groovekeeper/app",
+    "build:e2e": "npm run build:e2e -w @groovekeeper/app",
     "db:start": "supabase start",
     "db:stop": "supabase stop",
     "db:reset": "supabase db reset",

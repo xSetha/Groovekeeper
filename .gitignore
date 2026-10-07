@@ -21,6 +21,8 @@ artifacts/
 !web/packages/*
 node_modules/
 dist/
+# wrangler's local state (the e2e tests serve the built app with it)
+.wrangler/
 
 # The web plan is kept locally, not in the repo
 docs/WEB-PLAN.md

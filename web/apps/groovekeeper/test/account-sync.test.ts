@@ -7,7 +7,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 type AuthCallback = (event: string, session: { user: { id: string; email: string } } | null) => void;
 
 const supabase = vi.hoisted(() => {
-  const state = { onAuth: null as AuthCallback | null };
+  // failImport: the next load of the Supabase client fails, as when its file is gone after a deploy.
+  const state = { onAuth: null as AuthCallback | null, failImport: false };
   const client = {
     auth: {
       onAuthStateChange: (callback: AuthCallback) => {
@@ -21,7 +22,13 @@ const supabase = vi.hoisted(() => {
   return { state, client };
 });
 
-vi.mock('@supabase/supabase-js', () => ({ createClient: () => supabase.client }));
+vi.mock('@supabase/supabase-js', () => {
+  if (supabase.state.failImport) {
+    supabase.state.failImport = false;
+    throw new TypeError('Failed to fetch dynamically imported module');
+  }
+  return { createClient: () => supabase.client };
+});
 vi.mock('../src/sync/sync', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../src/sync/sync')>()),
   sync: vi.fn(() => Promise.resolve()),
@@ -49,6 +56,16 @@ async function signInAs(account: Awaited<ReturnType<typeof load>>['account'], id
 afterEach(() => {
   vi.useRealTimers();
   Reflect.deleteProperty(navigator, 'locks');
+});
+
+describe('loading the Supabase client', () => {
+  it('tries again on the next sign-in after it failed to load', async () => {
+    const { account } = await load();
+    supabase.state.failImport = true;
+
+    expect(await account.signIn('me@example.com', 'long enough')).toHaveProperty('error');
+    expect(await account.signIn('me@example.com', 'long enough')).toBeNull();
+  });
 });
 
 describe('signing in with a library made as a guest', () => {

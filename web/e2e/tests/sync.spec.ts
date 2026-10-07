@@ -1,7 +1,8 @@
 // Two devices on one account, as two separate browsers: the guest library joins the account, changes go
 // both ways (notes too), an offline edit syncs once back online, a song changed on both becomes a change to settle,
 // and signing out empties the device. Needs the local Supabase (`npm run db:start` in web/).
-import { expect, test, type Browser, type Page } from '@playwright/test';
+import type { Browser, Page } from '@playwright/test';
+import { expect, test, watchCsp } from './csp';
 import { supabaseRunning } from './supabase';
 
 const PASSWORD = 'correct horse battery';
@@ -11,8 +12,9 @@ test.beforeAll(async () => {
 });
 
 /** A new browser, like another device: its own storage, nothing shared with the others. */
-async function device(browser: Browser): Promise<Page> {
+async function device(browser: Browser, blocked: string[]): Promise<Page> {
   const context = await browser.newContext();
+  await watchCsp(context, blocked);
   return context.newPage();
 }
 
@@ -33,10 +35,10 @@ async function retitle(page: Page, song: RegExp, title: string): Promise<void> {
   await page.getByRole('link', { name: 'Songs' }).click();
 }
 
-test('two devices on one account', async ({ browser }) => {
+test('two devices on one account', async ({ browser, blocked }) => {
   const email = `e2e-${Date.now()}@example.com`;
-  const a = await device(browser);
-  const b = await device(browser);
+  const a = await device(browser, blocked);
+  const b = await device(browser, blocked);
 
   await test.step('a guest with songs creates an account and adds them', async () => {
     await a.goto('/');

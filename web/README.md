@@ -8,8 +8,9 @@ npm install          # once
 npm run dev          # start the app at http://localhost:5173
 npm test             # run the tests
 npm run typecheck    # check the types
-npm run build        # build the app into apps/groovekeeper/dist
-npm run test:e2e     # end-to-end tests in Chrome (starts its own copy of the app on port 5174)
+npm run build        # build the app into apps/groovekeeper/dist, for a host (see Running your own copy)
+npm run build:e2e    # build it against the local Supabase, for trying the built app
+npm run test:e2e     # end-to-end tests in Chrome, on the dev server (port 5174) and on the built app (5175)
 ```
 
 The app keeps its songs in the browser (IndexedDB). Signed in, it also syncs them with the account, so
@@ -72,9 +73,12 @@ The app is a static site: there's no server of its own. Accounts and sync need a
    ```
 
    The publishable key is meant to be in the browser; access rules in the database decide what each
-   account may read and change. Never put the secret (service role) key in the app.
+   account may read and change. Never put the secret (service role) key in the app. The build stops if
+   these are missing or point at the local Supabase.
 
 4. **Put `apps/groovekeeper/dist` on a static host** (Cloudflare Pages, Netlify, …), on HTTPS.
    Addresses like `/songs/…` belong to the app, so the host must answer them with
    `index.html`. Cloudflare Pages does that when the site has no `404.html`; other hosts need a
-   rewrite rule.
+   rewrite rule. The build also writes `dist/_headers`, the security headers Cloudflare Pages sends with
+   every page (a Content Security Policy that allows only the app's own files and your Supabase
+   project); on another host, set the same headers in its own way.

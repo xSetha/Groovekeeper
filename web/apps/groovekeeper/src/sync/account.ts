@@ -62,10 +62,17 @@ export const useAccount = <T>(select: (state: AccountState) => T): T => useStore
 let client: Promise<SupabaseClient> | null = null;
 
 function getClient(): Promise<SupabaseClient> {
-  client ??= import('@supabase/supabase-js').then(({ createClient }) =>
-    createClient(import.meta.env.VITE_SUPABASE_URL as string, import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string, {
-      auth: { storageKey: SESSION_KEY },
-    }));
+  client ??= import('@supabase/supabase-js').then(
+    ({ createClient }) =>
+      createClient(import.meta.env.VITE_SUPABASE_URL as string, import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string, {
+        auth: { storageKey: SESSION_KEY },
+      }),
+    (error: unknown) => {
+      // Not loaded (offline, or a file gone after a deploy): the next call tries again.
+      client = null;
+      throw error;
+    },
+  );
   return client;
 }
 
