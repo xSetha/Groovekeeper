@@ -13,6 +13,13 @@ export interface Toast {
   message: string;
   /** Names a toast that something can take away again, such as "couldn't save" once a save works. */
   key?: string;
+  /** A button on the toast, such as Reload; a toast with one stays until it's used or closed. */
+  action?: ToastAction;
+}
+
+export interface ToastAction {
+  label: string;
+  run: () => void;
 }
 
 const MAX_SHOWN = 3;
@@ -23,18 +30,19 @@ const store = createStore<{ toasts: Toast[] }>(() => ({ toasts: [] }));
 let lastId = 0;
 
 /** Shows a toast. The same one again (an error that keeps happening) isn't stacked. */
-export function toast(kind: ToastKind, title: string, message = '', key?: string): void {
+export function toast(kind: ToastKind, title: string, message = '', key?: string, action?: ToastAction): void {
   const { toasts } = store.getState();
   if (toasts.some((t) => t.kind === kind && t.title === title && t.message === message)) return;
   const shown = toasts.filter((t) => key === undefined || t.key !== key);
-  // Errors don't go on their own, so they make way last: the oldest other toast goes first.
+  // Errors and toasts with a button don't go on their own, so they make way last: the oldest other toast goes
+  // first, then the oldest error. A toast with a button (Reload for a new version) goes only if all have one.
   if (shown.length === MAX_SHOWN) {
-    const leaving = shown.find((t) => t.kind !== 'error') ?? shown[0]!;
+    const leaving = shown.find((t) => t.kind !== 'error' && !t.action) ?? shown.find((t) => !t.action) ?? shown[0]!;
     shown.splice(shown.indexOf(leaving), 1);
   }
   const id = ++lastId;
-  store.setState({ toasts: [...shown, { id, kind, title, message, key }] });
-  if (kind !== 'error') setTimeout(() => dismissToast(id), SHOWN_MS);
+  store.setState({ toasts: [...shown, { id, kind, title, message, key, action }] });
+  if (kind !== 'error' && !action) setTimeout(() => dismissToast(id), SHOWN_MS);
 }
 
 /** Takes a toast away: by its id, or every toast with this key. */

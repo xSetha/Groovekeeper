@@ -10,7 +10,7 @@ export function Toasts() {
   return (
     <section
       aria-label="Notifications"
-      className="pointer-events-none fixed inset-x-4 bottom-[max(1rem,env(safe-area-inset-bottom))] z-50 flex flex-col gap-2 sm:left-auto sm:w-96"
+      className="pointer-events-none fixed right-[max(1rem,env(safe-area-inset-right))] bottom-[max(1rem,env(safe-area-inset-bottom))] left-[max(1rem,env(safe-area-inset-left))] z-50 flex flex-col gap-2 sm:left-auto sm:w-96"
     >
       {toasts.map((t) => (
         <ToastCard key={t.id} toast={t} />
@@ -34,6 +34,18 @@ function ToastCard({ toast }: { toast: Toast }) {
       <div className="min-w-0 flex-1">
         <p className="font-semibold break-words">{toast.title}</p>
         {toast.message ? <p className="mt-0.5 break-words text-muted">{toast.message}</p> : null}
+        {toast.action ? (
+          <button
+            type="button"
+            className="mt-2 rounded bg-accent-fill px-3 py-1 font-semibold text-on-accent hover:brightness-125 pointer-coarse:min-h-11"
+            onClick={() => {
+              dismissToast(toast.id);
+              toast.action?.run();
+            }}
+          >
+            {toast.action.label}
+          </button>
+        ) : null}
       </div>
       <button
         type="button"

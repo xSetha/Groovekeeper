@@ -6,10 +6,11 @@ import './index.css';
 import { startAccount } from './sync/account';
 import './themes';
 import { reportUncaughtErrors } from './toasts';
-import { reloadWhenFilesAreGone } from './updates';
+import { reloadWhenFilesAreGone, watchForUpdates } from './updates';
 
 reportUncaughtErrors();
 reloadWhenFilesAreGone();
+watchForUpdates();
 startAccount();
 
 createRoot(document.getElementById('root')!).render(

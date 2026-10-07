@@ -10,6 +10,7 @@ import type { SongNote } from '../library/db';
 import { download, songFile, type SongFormat } from '../library/files';
 import { deleteSong, saveSong } from '../library/library';
 import { useNewSong } from '../navigation';
+import { saveBeforeLeaving } from '../saving';
 import { holdOpenSong } from '../sync/account';
 import { dismissToast, toast } from '../toasts';
 import { addNote, addSection, setArtist, setKey, setTitle, withIds, type KeyedSong } from './edit';
@@ -400,14 +401,18 @@ function useAutosave(id: string, store: EditorStore, isNew: boolean) {
   const cancelled = useRef(false);
 
   useEffect(() => {
-    const flush = () => {
+    // Resolves to whether the song is saved.
+    const flush = (): Promise<boolean> => {
       clearTimeout(timer.current);
       const song = pending.current;
       pending.current = null;
-      if (!song) return;
+      if (!song) return Promise.resolve(true);
       // A song that couldn't be saved mustn't go unnoticed: the toast stays until a save works again.
-      saveSong(id, song, song.notes).then(
-        () => dismissToast(`save:${id}`),
+      return saveSong(id, song, song.notes).then(
+        () => {
+          dismissToast(`save:${id}`);
+          return true;
+        },
         () => {
           toast(
             'error',
@@ -417,6 +422,7 @@ function useAutosave(id: string, store: EditorStore, isNew: boolean) {
           );
           // Saved again with the next change, or when leaving the song.
           pending.current ??= song;
+          return false;
         },
       );
     };
@@ -426,18 +432,18 @@ function useAutosave(id: string, store: EditorStore, isNew: boolean) {
       clearTimeout(timer.current);
       timer.current = setTimeout(flush, SAVE_DELAY_MS);
     });
-    const onHidden = () => document.visibilityState === 'hidden' && flush();
+    const onHidden = () => document.visibilityState === 'hidden' && void flush();
     document.addEventListener('visibilitychange', onHidden);
-    window.addEventListener('pagehide', flush);
+    const stopSavingBeforeLeaving = saveBeforeLeaving(flush);
     return () => {
       unsubscribe();
       document.removeEventListener('visibilitychange', onHidden);
-      window.removeEventListener('pagehide', flush);
+      stopSavingBeforeLeaving();
       if (isNew && !cancelled.current && !hasContent(store.getState().song)) {
         clearTimeout(timer.current);
         void deleteSong(id);
       } else if (!cancelled.current) {
-        flush();
+        void flush();
       }
     };
   }, [id, store, isNew]);

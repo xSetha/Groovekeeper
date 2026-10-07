@@ -5,6 +5,7 @@ import { Link, useNavigate } from 'react-router';
 import { listSongs, matchesSearch } from '../library/library';
 import { useNewSong } from '../navigation';
 import { useAccount } from '../sync/account';
+import { GuestNote } from './GuestNote';
 import { ImportSongs } from './ImportSongs';
 
 interface Props {
@@ -22,11 +23,13 @@ export function LibraryPanel({ className = '', activeId, canImport = true }: Pro
   const navigate = useNavigate();
   const newSong = useNewSong();
   const signedIn = useAccount((s) => s.status === 'signedIn');
+  const guest = useAccount((s) => s.status === 'guest');
   const shown = songs?.filter((song) => matchesSearch(song, search));
 
   return (
     <nav aria-label="Library" className={`flex min-h-0 flex-col ${className}`}>
       <h2 className="font-semibold">Library</h2>
+      {guest && songs && songs.length > 0 ? <GuestNote /> : null}
       <input
         type="search"
         value={search}

@@ -30,6 +30,20 @@ describe('toasts', () => {
     expect(shown()).toEqual([]);
   });
 
+  it('keeps a toast with a button until the button is used, then runs it', async () => {
+    vi.useFakeTimers();
+    const run = vi.fn();
+    render(<Toasts />);
+    act(() => toast('info', 'A new version of Groovekeeper is ready', 'Reload to start using it.', 'update', { label: 'Reload', run }));
+    act(() => void vi.advanceTimersByTime(5000));
+    expect(shown()).toEqual(['A new version of Groovekeeper is ready']);
+
+    vi.useRealTimers();
+    await userEvent.click(screen.getByRole('button', { name: 'Reload' }));
+    expect(run).toHaveBeenCalledOnce();
+    expect(shown()).toEqual([]);
+  });
+
   it("shows three at most, the oldest that isn't an error making way, and doesn't stack the same one", () => {
     render(<Toasts />);
     act(() => {

@@ -3,7 +3,7 @@
   "compilerOptions": {
     "lib": ["ES2023", "DOM", "DOM.Iterable"],
     "jsx": "react-jsx",
-    "types": ["vite/client"],
+    "types": ["vite/client", "vite-plugin-pwa/client"],
     // vite.config.ts imports deploy.ts with its extension, as Vite's native config loader needs.
     "allowImportingTsExtensions": true
   },

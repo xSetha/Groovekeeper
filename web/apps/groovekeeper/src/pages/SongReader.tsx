@@ -40,7 +40,7 @@ export function SongReader({ song, notes, back = { to: '/', label: 'Library' }, 
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="min-h-0 flex-1 overflow-auto px-4 pt-3 pb-6">
+      <div className="min-h-0 flex-1 overflow-auto px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-6">
         <Link to={back.to} className="-ml-2 inline-flex min-h-11 items-center px-2 text-muted">
           ‹ {back.label}
         </Link>

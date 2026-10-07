@@ -26,7 +26,12 @@ export function App() {
   const readingOnPhone = phone && reading;
   const { pathname } = useLocation();
   return (
-    <div className="flex h-dvh flex-col">
+    // Installed on a phone, the app reaches under the notch, the rounded corners and the home indicator
+    // (viewport-fit=cover): the app keeps clear of them here; the top bar pads itself, and so does the reading
+    // view's bar at the bottom, which takes its color down to the edge.
+    <div
+      className={`flex h-dvh flex-col pr-[env(safe-area-inset-right)] pl-[env(safe-area-inset-left)] ${readingOnPhone ? '' : 'pb-[env(safe-area-inset-bottom)]'}`}
+    >
       {readingOnPhone ? null : <TopBar />}
       <ErrorBoundary resetKey={pathname}>
         <Routes>

@@ -1,5 +1,5 @@
 import { cloneElement, useEffect, useId, useState, type FormEvent, type ReactElement } from 'react';
-import { useNavigate } from 'react-router';
+import { useLocation, useNavigate } from 'react-router';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import {
   hasUnsyncedChanges, runSync, sendPasswordReset, setNewPassword, settleGuestLibrary, signIn, signOut, signUp, useAccount,
@@ -38,7 +38,9 @@ type Mode = 'signIn' | 'create' | 'reset';
 const PASSWORDS_DIFFER = 'The passwords don’t match. Type the same password in both boxes.';
 
 function SignInForms() {
-  const [mode, setMode] = useState<Mode>('signIn');
+  // Opened from the guest note's "Create an account": that form first.
+  const create = (useLocation().state as { create?: boolean } | null)?.create === true;
+  const [mode, setMode] = useState<Mode>(create ? 'create' : 'signIn');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmation, setConfirmation] = useState('');

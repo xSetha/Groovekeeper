@@ -55,7 +55,7 @@
   --gk-logo-label: #c4161c;
   /* The start page's photo, dimmed under the window color so the text stays readable. Only the current
      theme's photo is downloaded. */
-  --start-photo: url('./assets/amp.jpg');
+  --start-photo: url('./assets/amp.webp');
   --start-dim: 0.84;
   color-scheme: dark;
 }
@@ -80,7 +80,7 @@
   --gk-logo-record: #120f0d;
   --gk-logo-ring: #c9a227;
   --gk-logo-label: #c9a227;
-  --start-photo: url('./assets/backstage.jpg');
+  --start-photo: url('./assets/backstage.webp');
   --start-dim: 0.8;
 }
 
@@ -104,7 +104,7 @@
   --gk-logo-record: #121a15;
   --gk-logo-ring: #e0a526;
   --gk-logo-label: #c8572b;
-  --start-photo: url('./assets/record.jpg');
+  --start-photo: url('./assets/record.webp');
   --start-dim: 0.74;
 }
 
@@ -128,7 +128,7 @@
   --gk-logo-record: #0b0a09;
   --gk-logo-ring: #f6f1e7;
   --gk-logo-label: #b8322b;
-  --start-photo: url('./assets/songbook.jpg');
+  --start-photo: url('./assets/songbook.webp');
   --start-dim: 0.82;
   color-scheme: light;
 }

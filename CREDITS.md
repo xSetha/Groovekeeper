@@ -4,7 +4,7 @@
 
 Each theme's start page has a photo behind it, in `SongCreator/Assets/Backgrounds`. They are in the
 public domain or under CC0, from Wikimedia Commons; the app uses cropped, resized copies. The web
-version uses the same files (`web/apps/groovekeeper/src/assets`).
+version uses the same photos as WebP files (`web/apps/groovekeeper/src/assets`).
 
 | Theme | Photo | By | License |
 | --- | --- | --- | --- |
@@ -41,4 +41,5 @@ The PDFs the web app writes embed two fonts, kept with their license texts in
 | [supabase-js](https://github.com/supabase/supabase-js) | Accounts and sync | MIT |
 | [jsPDF](https://github.com/parallax/jsPDF) | Writing PDFs | MIT |
 | fflate, fast-png, pako, iobuffer, @babel/runtime, canvg, core-js, html2canvas, [DOMPurify](https://github.com/cure53/DOMPurify) | Come with jsPDF: the first five are part of the code that writes PDFs, the others belong to jsPDF features the app doesn't use | MIT, except pako (MIT and Zlib) and DOMPurify (MPL 2.0 or Apache 2.0) |
+| [Workbox](https://developer.chrome.com/docs/workbox) | Keeping the app for offline use (the service worker) | MIT |
 | [Tailwind CSS](https://tailwindcss.com) | Styles | MIT |

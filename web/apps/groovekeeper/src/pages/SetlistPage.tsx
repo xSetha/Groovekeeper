@@ -11,6 +11,7 @@ import {
 } from '../library/setlists';
 import { isNewFrom } from '../navigation';
 import { useIsPhone } from '../phone';
+import { saveBeforeLeaving } from '../saving';
 import { toast } from '../toasts';
 
 // The name is saved this long after the last key, so typing doesn't write on every key.
@@ -227,21 +228,22 @@ function NameField({ setlist }: { setlist: LibrarySetlist }) {
   const save = (value: string) => {
     clearTimeout(timer.current);
     pending.current = null;
-    saveName(setlist.id, value);
+    void saveName(setlist.id, value);
   };
 
   // Leaving the page saves what's typed; the setlist's id is all this needs, and it never changes here.
   const id = setlist.id;
   useEffect(() => {
-    const flush = () => {
+    const flush = (): Promise<boolean> => {
       clearTimeout(timer.current);
-      if (pending.current !== null) saveName(id, pending.current);
+      const name = pending.current;
       pending.current = null;
+      return name === null ? Promise.resolve(true) : saveName(id, name);
     };
-    window.addEventListener('pagehide', flush);
+    const stopSavingBeforeLeaving = saveBeforeLeaving(flush);
     return () => {
-      window.removeEventListener('pagehide', flush);
-      flush();
+      stopSavingBeforeLeaving();
+      void flush();
     };
   }, [id]);
 
@@ -265,10 +267,17 @@ function NameField({ setlist }: { setlist: LibrarySetlist }) {
 }
 
 /** Saves a setlist's name; a blank name is left unsaved. */
-function saveName(id: string, value: string): void {
+/** Resolves to whether the name is saved (an empty name isn't, and needn't be). */
+function saveName(id: string, value: string): Promise<boolean> {
   const name = value.trim();
-  if (name.length === 0) return;
-  updateSetlist(id, (s) => (s.name === name ? s : { ...s, name })).catch(saveFailed);
+  if (name.length === 0) return Promise.resolve(true);
+  return updateSetlist(id, (s) => (s.name === name ? s : { ...s, name })).then(
+    () => true,
+    () => {
+      saveFailed();
+      return false;
+    },
+  );
 }
 
 const saveFailed = () => toast('error', "Couldn't save the setlist", 'Reload the page and try again.');

@@ -28,7 +28,7 @@ export function Logo({ className, rim = false }: { className?: string; rim?: boo
 export function TopBar() {
   const onSetlists = useLocation().pathname.startsWith('/setlists');
   return (
-    <header className="flex h-11 shrink-0 items-center justify-between border-b border-line bg-toolbar px-4">
+    <header className="box-content flex h-11 shrink-0 items-center justify-between border-b border-line bg-toolbar px-4 pt-[env(safe-area-inset-top)]">
       <Link to="/" className="flex items-center gap-2 text-sm font-semibold">
         <Logo className="size-5" rim />
         {/* On a phone only the logo shows, to leave room for the rest of the bar; the name is still read out. */}
