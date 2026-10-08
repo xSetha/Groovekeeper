@@ -3,7 +3,7 @@ import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 import { defineConfig } from 'vitest/config';
-import { securityHeaders, supabaseUrl } from './deploy.ts';
+import { checkSiteSettings, securityHeaders, supabaseUrl } from './deploy.ts';
 
 // The repository root: the app imports the sample songs from samples/songs.
 const repoRoot = fileURLToPath(new URL('../../..', import.meta.url));
@@ -57,19 +57,27 @@ const pwa = VitePWA({
 // jsPDF's HTML and SVG rendering (html2canvas, DOMPurify, canvg) are chunks the app never loads.
 const UNUSED = /[\\/]node_modules[\\/](html2canvas|dompurify|canvg)[\\/]/;
 
-export default defineConfig(({ command, mode }) => ({
-  // A build checks which Supabase it syncs with before anything else (deploy.ts).
-  plugins: [react(), tailwindcss(), pwa, ...(command === 'build' ? [securityHeaders(supabaseUrl(mode, appDir))] : [])],
-  build: {
-    rolldownOptions: {
-      output: {
-        chunkFileNames: (chunk) => (UNUSED.test(chunk.facadeModuleId ?? '') ? 'assets/unused-[name]-[hash].js' : 'assets/[name]-[hash].js'),
+export default defineConfig(({ command, mode }) => {
+  // A build checks its settings before anything else (deploy.ts).
+  if (command === 'build') checkSiteSettings(mode, appDir);
+  return {
+    plugins: [
+      react(),
+      tailwindcss(),
+      pwa,
+      ...(command === 'build' ? [securityHeaders(supabaseUrl(mode, appDir))] : []),
+    ],
+    build: {
+      rolldownOptions: {
+        output: {
+          chunkFileNames: (chunk) => (UNUSED.test(chunk.facadeModuleId ?? '') ? 'assets/unused-[name]-[hash].js' : 'assets/[name]-[hash].js'),
+        },
       },
     },
-  },
-  server: { fs: { allow: [repoRoot] } },
-  test: {
-    environment: 'jsdom',
-    setupFiles: ['./test/react-renders.ts', './test/setup.ts'],
-  },
-}));
+    server: { fs: { allow: [repoRoot] } },
+    test: {
+      environment: 'jsdom',
+      setupFiles: ['./test/react-renders.ts', './test/setup.ts'],
+    },
+  };
+});

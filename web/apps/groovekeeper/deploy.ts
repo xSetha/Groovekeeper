@@ -1,5 +1,5 @@
-// What a build needs before it goes on a host (vite.config.ts): the account database it syncs with, and the
-// security headers Cloudflare Pages sends with every page (`_headers`, written next to the built files).
+// What a build needs before it goes on a host (vite.config.ts): the account database it syncs with, its other
+// settings, and the security headers Cloudflare Pages sends with every page (`_headers`, written next to the built files).
 import { createHash } from 'node:crypto';
 import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -37,6 +37,28 @@ export function supabaseUrl(mode: string, appDir: string): URL {
   return url;
 }
 
+// Cloudflare's Turnstile test keys (always pass, always fail, ...): fine locally, never on a host.
+const TURNSTILE_TEST_KEY = /^[123]x0{20}[A-F]{2}$/;
+
+/**
+ * The other settings a build needs: Turnstile's site key, and who runs the site and how to reach them (the
+ * privacy page names them). Throws when one is missing, or when a build for a host has the local stand-ins.
+ */
+export function checkSiteSettings(mode: string, appDir: string): void {
+  const env = loadEnv(mode, appDir, 'VITE_');
+  const missing = ['VITE_TURNSTILE_SITE_KEY', 'VITE_SITE_OPERATOR', 'VITE_CONTACT_EMAIL'].filter((name) => !env[name]?.trim());
+  if (missing.length > 0) throw new Error(`Set ${missing.join(', ')} for this build.`);
+  if (mode === E2E_MODE) return;
+  if (TURNSTILE_TEST_KEY.test(env.VITE_TURNSTILE_SITE_KEY!)) {
+    throw new Error('VITE_TURNSTILE_SITE_KEY is a Turnstile test key; set the site key of your Turnstile widget.');
+  }
+  if (/@example\.com$/i.test(env.VITE_CONTACT_EMAIL!) || env.VITE_SITE_OPERATOR!.trim() === 'the person running this copy') {
+    throw new Error('Set VITE_SITE_OPERATOR and VITE_CONTACT_EMAIL to who runs this site; the privacy page names them.');
+  }
+}
+
+const TURNSTILE = 'https://challenges.cloudflare.com';
+
 /** The sha256 hashes of the scripts written into a page, which the CSP lets run. */
 export function inlineScriptHashes(html: string): string[] {
   return [...html.matchAll(/<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script>/g)].map(([, script]) => {
@@ -55,11 +77,13 @@ export function inlineScriptHashes(html: string): string[] {
 export function headersFile(supabase: URL, scriptHashes: string[]): string {
   const csp = [
     "default-src 'self'",
-    `script-src 'self' ${scriptHashes.join(' ')}`.trim(),
+    `script-src 'self' ${TURNSTILE} ${scriptHashes.join(' ')}`.trim(),
     "style-src 'self'",
     "img-src 'self'",
     "font-src 'self'",
     `connect-src 'self' ${supabase.origin}`,
+    // Turnstile, the check against bots on the sign-in forms, runs in a frame from Cloudflare.
+    `frame-src ${TURNSTILE}`,
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",

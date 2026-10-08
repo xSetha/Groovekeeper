@@ -1,5 +1,5 @@
-import { lazy, Suspense } from 'react';
-import { Navigate, Route, Routes, useLocation, useMatch } from 'react-router';
+import { lazy, Suspense, useEffect, useRef } from 'react';
+import { Navigate, Route, Routes, useLocation, useMatch, useNavigate } from 'react-router';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { Toasts } from './components/Toasts';
 import { TopBar } from './components/TopBar';
@@ -9,12 +9,14 @@ import { SetlistsPage } from './pages/SetlistsPage';
 import { SongPage } from './pages/SongPage';
 import { StartPage } from './pages/StartPage';
 import { useIsPhone } from './phone';
+import { useAccount } from './sync/account';
 
 // Exporting a PDF is done now and then, so its page is loaded only when it's opened.
 const PdfPage = lazy(() => import('./pages/PdfPage'));
 // The account pages are opened now and then too.
 const AccountPage = lazy(() => import('./pages/AccountPage'));
 const ConflictsPage = lazy(() => import('./pages/ConflictsPage'));
+const PrivacyPage = lazy(() => import('./pages/PrivacyPage'));
 
 export function App() {
   // A song read on a phone gets the whole screen; it has its own way back to the library.
@@ -25,6 +27,16 @@ export function App() {
   const reading = songMatch !== null || setlistSongMatch !== null;
   const readingOnPhone = phone && reading;
   const { pathname } = useLocation();
+  // An email link (a new password, or one that didn't work) is answered on the account page, wherever it landed:
+  // the app goes there once when the link comes in, and the user may leave it.
+  const emailLink = useAccount((s) => s.resettingPassword || s.linkError !== null);
+  const navigate = useNavigate();
+  // The router gives a new navigate after every page change; only the link's arrival may move the user.
+  const navigateRef = useRef(navigate);
+  navigateRef.current = navigate;
+  useEffect(() => {
+    if (emailLink) navigateRef.current('/account', { replace: true });
+  }, [emailLink]);
   return (
     // Installed on a phone, the app reaches under the notch, the rounded corners and the home indicator
     // (viewport-fit=cover): the app keeps clear of them here; the top bar pads itself, and so does the reading
@@ -42,6 +54,7 @@ export function App() {
           <Route path="/setlists/:id/:position" element={<SetlistSongPage />} />
           <Route path="/pdf" element={<Suspense><PdfPage /></Suspense>} />
           <Route path="/account" element={<Suspense><AccountPage /></Suspense>} />
+          <Route path="/privacy" element={<Suspense><PrivacyPage /></Suspense>} />
           <Route path="/conflicts" element={<Suspense><ConflictsPage /></Suspense>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

@@ -3,7 +3,7 @@
 // and signing out empties the device. Needs the local Supabase (`npm run db:start` in web/).
 import type { Browser, Page } from '@playwright/test';
 import { expect, test, watchCsp } from './csp';
-import { supabaseRunning } from './supabase';
+import { linkInEmail, supabaseRunning } from './supabase';
 
 const PASSWORD = 'correct horse battery';
 
@@ -50,6 +50,9 @@ test('two devices on one account', async ({ browser, blocked }) => {
     await a.getByLabel('Password', { exact: true }).fill(PASSWORD);
     await a.getByLabel('Confirm password').fill(PASSWORD);
     await a.getByRole('button', { name: 'Create account' }).click();
+    // The account is made once its email is confirmed: the link in it signs this device in.
+    await expect(a.getByRole('heading', { name: 'Check your email' })).toBeVisible();
+    await a.goto(await linkInEmail(email));
     await a.getByRole('button', { name: 'Add 6 songs to my account' }).click();
     await expect(a.getByText(/^Synced at/)).toBeVisible();
   });

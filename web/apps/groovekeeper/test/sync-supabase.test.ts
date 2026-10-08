@@ -13,12 +13,41 @@ const KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
 
 const running = await fetch(`${URL}/auth/v1/health`, { headers: { apikey: KEY } }).then((r) => r.ok, () => false);
 
-/** A new account, signed in on its own client. */
+// The local Supabase checks a Turnstile token with Cloudflare's test secret, which takes this dummy token.
+const CAPTCHA_TOKEN = 'XXXX.DUMMY.TOKEN.XXXX';
+// The emails the local Supabase sends end up in Mailpit.
+const MAILPIT = 'http://127.0.0.1:54324';
+
+/** The confirmation link in the email sent to `email`, once it has arrived. */
+async function confirmationLink(email: string): Promise<string> {
+  for (let tries = 0; tries < 30; tries++) {
+    const found = (await (await fetch(`${MAILPIT}/api/v1/search?query=${encodeURIComponent(`to:"${email}"`)}`)).json()) as {
+      messages: { ID: string }[];
+    };
+    if (found.messages[0]) {
+      const message = (await (await fetch(`${MAILPIT}/api/v1/message/${found.messages[0].ID}`)).json()) as { Text: string };
+      const link = message.Text.match(/https?:\/\/\S+\/auth\/v1\/verify\S+/)?.[0];
+      if (link) return link.replace(/[)\].,]+$/, '');
+    }
+    await new Promise((done) => setTimeout(done, 300));
+  }
+  throw new Error(`No confirmation email for ${email}`);
+}
+
+/** A new account, confirmed (as by opening the link in its email) and signed in on its own client. */
 async function signUp(): Promise<{ client: SupabaseClient; userId: string }> {
   const client = createClient(URL, KEY, { auth: { persistSession: false } });
   const email = `test-${crypto.randomUUID()}@example.com`;
-  const { data, error } = await client.auth.signUp({ email, password: 'correct horse battery' });
+  const { data, error } = await client.auth.signUp({ email, password: 'correct horse battery', options: { captchaToken: CAPTCHA_TOKEN } });
   if (error || !data.user) throw error ?? new Error('No user');
+  // The link confirms the account and redirects with the new session in the address.
+  const answer = await fetch(await confirmationLink(email), { redirect: 'manual' });
+  const session = new URLSearchParams(new globalThis.URL(answer.headers.get('location') ?? '').hash.slice(1));
+  const { error: signingIn } = await client.auth.setSession({
+    access_token: session.get('access_token') ?? '',
+    refresh_token: session.get('refresh_token') ?? '',
+  });
+  if (signingIn) throw signingIn;
   return { client, userId: data.user.id };
 }
 

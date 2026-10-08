@@ -51,7 +51,7 @@ async function load() {
 
 /** Signs in as `id`, the way Supabase reports it. */
 async function signInAs(account: Awaited<ReturnType<typeof load>>['account'], id: string) {
-  await account.signIn('me@example.com', 'correct horse');
+  await account.signIn('me@example.com', 'correct horse', 'test-token');
   supabase.state.onAuth?.('SIGNED_IN', { user: { id, email: 'me@example.com' } });
   await vi.waitFor(() => expect(account.accountStore.getState().userId).toBe(id));
 }
@@ -61,13 +61,34 @@ afterEach(() => {
   Reflect.deleteProperty(navigator, 'locks');
 });
 
+describe('an email link that didn\'t work', () => {
+  it('is read from the address at start, and taken out of it', async () => {
+    history.replaceState(null, '', '/#error=access_denied&error_code=otp_expired&error_description=Email+link+is+invalid+or+has+expired');
+    const { account } = await load();
+    account.startAccount();
+    expect(account.accountStore.getState().linkError).toEqual({ code: 'otp_expired', expired: true });
+    expect(location.hash).toBe('');
+    history.replaceState(null, '', '/');
+  });
+
+  it('leaves other addresses with an error alone', async () => {
+    history.replaceState(null, '', '/?error=something');
+    const { account } = await load();
+    account.startAccount();
+    expect(account.accountStore.getState().linkError).toBeNull();
+    expect(location.search).toBe('?error=something');
+    history.replaceState(null, '', '/');
+  });
+});
+
+
 describe('loading the Supabase client', () => {
   it('tries again on the next sign-in after it failed to load', async () => {
     const { account } = await load();
     supabase.state.failImport = true;
 
-    expect(await account.signIn('me@example.com', 'long enough')).toHaveProperty('error');
-    expect(await account.signIn('me@example.com', 'long enough')).toBeNull();
+    expect(await account.signIn('me@example.com', 'long enough', 'test-token')).toHaveProperty('error');
+    expect(await account.signIn('me@example.com', 'long enough', 'test-token')).toBeNull();
   });
 });
 
@@ -268,5 +289,17 @@ describe('signed in', () => {
     expect([isOpen('other-tab'), isOpen('this-tab'), isOpen('closed')]).toEqual([true, true, false]);
     expect(requests.map((r) => r.name)).toContain('groovekeeper.sync');
     close();
+  });
+});
+
+describe('what went wrong signing in', () => {
+  it('says how long to wait before asking for another email to the same address', async () => {
+    const { account } = await load();
+    vi.spyOn(supabase.client.auth, 'signInWithPassword').mockResolvedValueOnce({
+      error: { code: 'over_email_send_rate_limit', message: 'For security purposes, you can only request this after 52 seconds.' },
+    } as never);
+    expect(await account.signIn('me@example.com', 'x', 'token')).toMatchObject({
+      error: 'An email was sent to this address just now. Wait 52 seconds and try again.',
+    });
   });
 });

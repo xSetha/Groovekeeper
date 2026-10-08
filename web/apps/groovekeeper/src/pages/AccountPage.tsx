@@ -1,13 +1,14 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { cloneElement, useEffect, useId, useState, type FormEvent, type ReactElement } from 'react';
-import { useLocation, useNavigate } from 'react-router';
+import { Link, useLocation, useNavigate } from 'react-router';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { ExportLibrary, saveLibraryExport } from '../components/ExportLibrary';
+import { CHECK_PROBLEMS, useTurnstile } from '../components/Turnstile';
 import { db, type Refusal, type Synced } from '../library/db';
 import { LIMITS } from '../library/limits';
 import {
-  deleteAccount, forgetEndedSession, hasUnsyncedChanges, keepOtherAccountsSongs, runSync, sendPasswordReset, setNewPassword,
-  settleGuestLibrary, signIn, signOut, signUp, useAccount,
+  deleteAccount, dismissLinkError, forgetEndedSession, keepPassword, hasUnsyncedChanges, keepOtherAccountsSongs, runSync, sendPasswordReset, setNewPassword,
+  resendConfirmation, settleGuestLibrary, signIn, signOut, signUp, useAccount,
   type AuthResult, type GuestLibrary as GuestLibraryState,
 } from '../sync/account';
 import { toast } from '../toasts';
@@ -25,6 +26,7 @@ export default function AccountPage() {
   return (
     <main className="min-h-0 flex-1 overflow-y-auto">
       <div className="mx-auto max-w-md px-4 py-8">
+        <LinkErrorBanner />
         {status === 'starting' ? null : resetting ? (
           <NewPassword />
         ) : status === 'guest' ? (
@@ -49,6 +51,7 @@ function SignInForms() {
   const [mode, setMode] = useState<Mode>(create ? 'create' : 'signIn');
   // The session of the account this device synced with ended: sign in to it again, or remove its songs.
   const ended = useAccount((s) => s.endedSession);
+  const linkError = useAccount((s) => s.linkError);
   const [forgetting, setForgetting] = useState(false);
   const [email, setEmail] = useState(ended?.email ?? '');
   // The ended session is known only once the library has been read; its email then fills an empty field.
@@ -59,7 +62,22 @@ function SignInForms() {
   const [password, setPassword] = useState('');
   const [confirmation, setConfirmation] = useState('');
   const [busy, setBusy] = useState(false);
-  const [result, setResult] = useState<AuthResult | 'resetSent'>(null);
+  const [result, setResult] = useState<AuthResult | 'resetSent' | 'confirmationSent'>(null);
+  // The account just made, waiting for its email to be confirmed.
+  const [confirming, setConfirming] = useState(false);
+  const check = useTurnstile();
+
+  /** Runs one request with this form's token; a token works once, so a new one is fetched after. */
+  const withCheck = async (request: (token: string) => Promise<AuthResult | 'resetSent' | 'confirmationSent'>) => {
+    if (!check.token) return;
+    setBusy(true);
+    setResult(null);
+    const outcome = await request(check.token);
+    check.renew();
+    if (outcome !== null && typeof outcome === 'object' && 'confirmEmail' in outcome) setConfirming(true);
+    else setResult(outcome);
+    setBusy(false);
+  };
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
@@ -67,100 +85,149 @@ function SignInForms() {
       setResult({ error: PASSWORDS_DIFFER });
       return;
     }
-    setBusy(true);
-    setResult(null);
-    if (mode === 'reset') {
-      const sent = await sendPasswordReset(email);
-      setResult(sent ?? 'resetSent');
-    } else {
-      setResult(await (mode === 'signIn' ? signIn(email, password) : signUp(email, password)));
+    dismissLinkError();
+    await withCheck(async (token) => {
+      if (mode === 'reset') return (await sendPasswordReset(email, token)) ?? 'resetSent';
+      return mode === 'signIn' ? signIn(email, password, token) : signUp(email, password, token);
+    });
+  };
+
+  const sendConfirmationAgain = () => {
+    if (!email) {
+      setResult({ error: 'Type your email first.' });
+      return;
     }
-    setBusy(false);
+    dismissLinkError();
+    void withCheck(async (token) => (await resendConfirmation(email, token)) ?? 'confirmationSent');
   };
 
   const switchTo = (next: Mode) => {
     setMode(next);
     setConfirmation('');
     setResult(null);
+    setConfirming(false);
   };
 
-  if (result !== null && result !== 'resetSent' && 'confirmEmail' in result) {
-    return (
-      <>
-        <h1 className="text-2xl font-semibold">Check your email</h1>
-        <p className="mt-3">
-          We sent a link to <strong>{email}</strong>. Open it to confirm your account, then sign in here.
-        </p>
-        <TextButton onClick={() => switchTo('signIn')}>Back to sign in</TextButton>
-      </>
-    );
-  }
+  const canSend = check.token !== null && !busy;
+  const sent =
+    result === 'resetSent' ? (
+      <p role="status">If there’s an account for {email}, a link to choose a new password is on its way.</p>
+    ) : result === 'confirmationSent' ? (
+      <p role="status">
+        If {email} has an account waiting to be confirmed, a new link is on its way. If it’s confirmed already, sign
+        in, or reset your password.
+      </p>
+    ) : result && 'error' in result ? (
+      <p role="alert" className="text-chord">
+        {result.error}
+      </p>
+    ) : null;
 
   return (
     <>
-      <h1 className="text-2xl font-semibold">
-        {mode === 'signIn' ? (ended ? 'Sign in again' : 'Sign in') : mode === 'create' ? 'Create an account' : 'Reset your password'}
-      </h1>
-      <p className="mt-2 text-muted">
-        {mode === 'reset'
-          ? 'Type your account’s email and we’ll send you a link to choose a new password.'
-          : ended
-            ? `Your session on this device ended (signed out on all devices, or the account was deleted), so the songs here aren’t syncing. Sign in${ended.email ? ` as ${ended.email}` : ''} to keep syncing them.`
-            : 'With an account, your songs and setlists are kept in it and on every device you sign in on. Without one, they stay in this browser.'}
-      </p>
-      <form className="mt-6 flex flex-col gap-4" onSubmit={(event) => void submit(event)}>
-        <Field label="Email">
-          <input type="email" required autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} className={INPUT} />
-        </Field>
-        {mode === 'reset' ? null : (
-          <Field label="Password" hint={mode === 'create' ? 'At least 8 characters.' : undefined}>
-            <input
-              type="password"
-              required
-              minLength={mode === 'create' ? 8 : undefined}
-              autoComplete={mode === 'create' ? 'new-password' : 'current-password'}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className={INPUT}
-            />
-          </Field>
-        )}
-        {mode === 'create' ? (
-          <Field label="Confirm password">
-            <input
-              type="password"
-              required
-              autoComplete="new-password"
-              value={confirmation}
-              onChange={(e) => setConfirmation(e.target.value)}
-              className={INPUT}
-            />
-          </Field>
-        ) : null}
-        {result === 'resetSent' ? (
-          <p role="status">If there’s an account for {email}, a link to choose a new password is on its way.</p>
-        ) : result && 'error' in result ? (
-          <p role="alert" className="text-chord">{result.error}</p>
-        ) : null}
-        <button type="submit" disabled={busy} className={PRIMARY}>
-          {mode === 'signIn' ? 'Sign in' : mode === 'create' ? 'Create account' : 'Send reset link'}
-        </button>
-      </form>
-      <div className="mt-4 flex flex-wrap gap-x-4 text-sm">
-        {mode === 'signIn' ? (
-          <>
-            <TextButton onClick={() => switchTo('create')}>Create an account</TextButton>
-            <TextButton onClick={() => switchTo('reset')}>Forgot password?</TextButton>
-          </>
-        ) : (
-          <TextButton onClick={() => switchTo('signIn')}>I have an account: sign in</TextButton>
-        )}
-      </div>
-      {ended ? (
+      {confirming ? (
         <>
-          <p className="mt-8 text-sm text-muted">Not signing in again? The songs on this device can go instead.</p>
-          <TextButton onClick={() => setForgetting(true)}>Remove these songs from this device</TextButton>
+          <h1 className="text-2xl font-semibold">Check your email</h1>
+          <p className="mt-3">
+            We sent a link to <strong>{email}</strong>. Open it to confirm your account, then sign in here.
+          </p>
+          <p className="mt-3 text-muted">
+            Already have an account with this email? Then no email comes: sign in, or reset your password.
+          </p>
+          <div className="mt-3">{sent}</div>
+          <div className="mt-2 flex flex-wrap gap-x-4 text-sm">
+            <TextButton onClick={sendConfirmationAgain} disabled={!canSend}>
+              Send the email again
+            </TextButton>
+            <TextButton onClick={() => switchTo('signIn')}>Back to sign in</TextButton>
+          </div>
         </>
+      ) : (
+        <>
+          <h1 className="text-2xl font-semibold">
+            {mode === 'signIn' ? (ended ? 'Sign in again' : 'Sign in') : mode === 'create' ? 'Create an account' : 'Reset your password'}
+          </h1>
+          <p className="mt-2 text-muted">
+            {mode === 'reset'
+              ? 'Type your account’s email and we’ll send you a link to choose a new password.'
+              : ended
+                ? `Your session on this device ended (signed out on all devices, or the account was deleted), so the songs here aren’t syncing. Sign in${ended.email ? ` as ${ended.email}` : ''} to keep syncing them.`
+                : 'With an account, your songs and setlists are kept in it and on every device you sign in on. Without one, they stay in this browser.'}
+          </p>
+          <form className="mt-6 flex flex-col gap-4" onSubmit={(event) => void submit(event)}>
+            <Field label="Email">
+              <input type="email" required autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} className={INPUT} />
+            </Field>
+            {mode === 'reset' ? null : (
+              <Field label="Password" hint={mode === 'create' ? 'At least 8 characters.' : undefined}>
+                <input
+                  type="password"
+                  required
+                  minLength={mode === 'create' ? 8 : undefined}
+                  autoComplete={mode === 'create' ? 'new-password' : 'current-password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className={INPUT}
+                />
+              </Field>
+            )}
+            {mode === 'create' ? (
+              <Field label="Confirm password">
+                <input
+                  type="password"
+                  required
+                  autoComplete="new-password"
+                  value={confirmation}
+                  onChange={(e) => setConfirmation(e.target.value)}
+                  className={INPUT}
+                />
+              </Field>
+            ) : null}
+            {sent}
+            <button type="submit" disabled={!canSend} className={PRIMARY}>
+              {mode === 'signIn' ? 'Sign in' : mode === 'create' ? 'Create account' : 'Send reset link'}
+            </button>
+          </form>
+          <p className="mt-3 text-sm text-muted">
+            What an account keeps about you, and where: the{' '}
+            <Link to="/privacy" className="text-accent hover:underline">
+              privacy page
+            </Link>
+            .
+          </p>
+          <div className="mt-4 flex flex-wrap gap-x-4 text-sm">
+            {mode === 'signIn' ? (
+              <>
+                <TextButton onClick={() => switchTo('create')}>Create an account</TextButton>
+                <TextButton onClick={() => switchTo('reset')}>Forgot password?</TextButton>
+              </>
+            ) : (
+              <TextButton onClick={() => switchTo('signIn')}>I have an account: sign in</TextButton>
+            )}
+            {linkError || (result && typeof result === 'object' && 'code' in result && result.code === 'email_not_confirmed') ? (
+              <TextButton onClick={sendConfirmationAgain} disabled={!canSend}>
+                Send the confirmation email again
+              </TextButton>
+            ) : null}
+          </div>
+          {ended ? (
+            <>
+              <p className="mt-8 text-sm text-muted">Not signing in again? The songs on this device can go instead.</p>
+              <TextButton onClick={() => setForgetting(true)}>Remove these songs from this device</TextButton>
+            </>
+          ) : null}
+        </>
+      )}
+      {/* The check against bots: shown only when it needs the user (managed mode); kept in one place across forms. */}
+      <div ref={check.box} className="mt-4" />
+      {check.problem ? (
+        <p role="alert" className="mt-2 text-sm text-chord">
+          {CHECK_PROBLEMS[check.problem]}
+        </p>
+      ) : check.token === null ? (
+        <p role="status" className="mt-2 text-sm text-muted">
+          {check.waitingForUser ? 'Tick the box above to show you’re not a bot.' : 'Checking that you’re not a bot…'}
+        </p>
       ) : null}
       {forgetting ? (
         <ConfirmDialog
@@ -175,6 +242,36 @@ function SignInForms() {
         />
       ) : null}
     </>
+  );
+}
+
+/** An email link that didn't work: why, and how to get a new one. It stays until it's closed or a new link is asked for. */
+function LinkErrorBanner() {
+  const linkError = useAccount((s) => s.linkError);
+  const signedIn = useAccount((s) => s.status === 'signedIn');
+  if (!linkError) return null;
+  return (
+    <div role="alert" className="mb-6 flex items-start gap-2 rounded border border-chord px-4 py-3">
+      <div className="min-w-0 flex-1">
+        <p className="font-semibold">
+          {linkError.expired ? 'That email link has expired or was already used' : 'That email link didn’t work'}
+        </p>
+        <p className="mt-1 text-sm text-muted">
+          A link works once, for an hour (some email apps open links to check them, which uses them up).{' '}
+          {signedIn
+            ? 'You’re signed in already, so nothing is needed here.'
+            : 'Type your email below to get a new one: send the confirmation again, or reset your password.'}
+        </p>
+      </div>
+      <button
+        type="button"
+        aria-label="Close"
+        className="-my-1 -mr-2 rounded px-2 py-1 text-muted hover:bg-hover hover:text-fg pointer-coarse:min-h-11 pointer-coarse:min-w-11"
+        onClick={dismissLinkError}
+      >
+        ×
+      </button>
+    </div>
   );
 }
 
@@ -212,6 +309,7 @@ function NewPassword() {
           Save password
         </button>
       </form>
+      <TextButton onClick={keepPassword}>Keep my password</TextButton>
     </>
   );
 }
@@ -373,6 +471,13 @@ function SignedIn() {
         </button>
       </div>
       <p className="mt-3 text-sm text-muted">Signing out removes your songs from this device. They stay in your account.</p>
+      <p className="mt-3 text-sm text-muted">
+        What’s kept about you, and where: the{' '}
+        <Link to="/privacy" className="text-accent hover:underline">
+          privacy page
+        </Link>
+        .
+      </p>
       <h2 className="mt-10 font-semibold">Delete your account</h2>
       <p className="mt-2 text-sm text-muted">
         Deletes the account and everything in it for good, and removes its songs from this device.
@@ -436,9 +541,14 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
   );
 }
 
-function TextButton({ onClick, children }: { onClick: () => void; children: string }) {
+function TextButton({ onClick, children, disabled }: { onClick: () => void; children: string; disabled?: boolean }) {
   return (
-    <button type="button" className="mt-3 text-accent hover:underline pointer-coarse:min-h-11" onClick={onClick}>
+    <button
+      type="button"
+      disabled={disabled}
+      className="mt-3 text-accent hover:underline disabled:opacity-50 pointer-coarse:min-h-11"
+      onClick={onClick}
+    >
       {children}
     </button>
   );

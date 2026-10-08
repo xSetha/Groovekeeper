@@ -4,7 +4,7 @@ import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { headersFile, inlineScriptHashes, supabaseUrl } from '../deploy';
+import { checkSiteSettings, headersFile, inlineScriptHashes, supabaseUrl } from '../deploy';
 
 /** A folder with an `.env` holding these lines, like the app's own. */
 function appWith(env: string): string {
@@ -19,6 +19,7 @@ beforeEach(() => {
   // The shell running the tests may hold a hosted project's settings; each test sets what it needs.
   vi.stubEnv('VITE_SUPABASE_URL', undefined);
   vi.stubEnv('VITE_SUPABASE_PUBLISHABLE_KEY', undefined);
+  for (const name of ['VITE_TURNSTILE_SITE_KEY', 'VITE_SITE_OPERATOR', 'VITE_CONTACT_EMAIL']) vi.stubEnv(name, undefined);
 });
 
 afterEach(() => {
@@ -61,8 +62,35 @@ describe('the security headers', () => {
 
   it('allows connections to the Supabase project, and leaves caching to Pages', () => {
     const headers = headersFile(new URL('https://abc.supabase.co'), ["'sha256-x'"]);
-    expect(headers).toContain("script-src 'self' 'sha256-x'");
+    expect(headers).toContain("script-src 'self' https://challenges.cloudflare.com 'sha256-x'");
+    expect(headers).toContain('frame-src https://challenges.cloudflare.com');
     expect(headers).toContain("connect-src 'self' https://abc.supabase.co;");
     expect(headers).not.toContain('Cache-Control');
+  });
+});
+
+describe('the other settings a build needs', () => {
+  const LOCAL = appWith(
+    'VITE_TURNSTILE_SITE_KEY=1x00000000000000000000AA\nVITE_SITE_OPERATOR=the person running this copy\nVITE_CONTACT_EMAIL=privacy@example.com\n',
+  );
+
+  it('takes the local stand-ins only in a build for the end-to-end tests', () => {
+    expect(() => checkSiteSettings('e2e', LOCAL)).not.toThrow();
+    expect(() => checkSiteSettings('production', LOCAL)).toThrow(/Turnstile test key/);
+    vi.stubEnv('VITE_TURNSTILE_SITE_KEY', '0x4AAAAAAABkMYinukE8nzY');
+    expect(() => checkSiteSettings('production', LOCAL)).toThrow(/who runs this site/);
+  });
+
+  it('builds with a real site key, and who runs the site', () => {
+    vi.stubEnv('VITE_TURNSTILE_SITE_KEY', '0x4AAAAAAABkMYinukE8nzY');
+    vi.stubEnv('VITE_SITE_OPERATOR', 'xSetha');
+    vi.stubEnv('VITE_CONTACT_EMAIL', 'privacy@groovekeeper.app');
+    expect(() => checkSiteSettings('production', LOCAL)).not.toThrow();
+  });
+
+  it('names what\'s missing', () => {
+    expect(() => checkSiteSettings('production', appWith(''))).toThrow(
+      'Set VITE_TURNSTILE_SITE_KEY, VITE_SITE_OPERATOR, VITE_CONTACT_EMAIL for this build.',
+    );
   });
 });

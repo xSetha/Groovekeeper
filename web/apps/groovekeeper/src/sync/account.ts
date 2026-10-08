@@ -17,6 +17,12 @@ const RETRY_FIRST_MS = 30_000;
 const RETRY_LONGEST_MS = 5 * 60_000;
 
 /** `unavailable`: the account's database takes no changes for now (its storage is full, or it's paused). */
+/** An email link that didn't work: `expired` when it ran out or was used already. */
+export interface LinkError {
+  code: string;
+  expired: boolean;
+}
+
 /**
  * What's on this device when an account signs in: made as a guest, or synced with another account whose
  * session ended here (`otherAccount`, with its email if known); those are only removed, never added.
@@ -41,6 +47,8 @@ export interface AccountState {
   guestLibrary: GuestLibrary | null;
   /** Opened from a password reset link: the user sets a new password. */
   resettingPassword: boolean;
+  /** An email link that didn't work; the account page says so and offers a new one. */
+  linkError: LinkError | null;
   /**
    * Set when this device's session ended without signing out here (signed out everywhere, or the account
    * deleted elsewhere): the library is still the account's, until the user signs in again or removes it.
@@ -57,7 +65,21 @@ function hasStoredSession(): boolean {
 }
 
 /** Whether the page was opened from a link in one of the account's emails (confirm, reset password). */
-const openedFromEmail = (): boolean => /access_token|error_description/.test(location.hash) || /[?&]code=/.test(location.search);
+const openedFromEmail = (): boolean => /access_token/.test(location.hash) || /[?&]code=/.test(location.search);
+
+/**
+ * An email link that didn't work (expired, or already used: mail scanners often open links first) comes back
+ * with the error in the address. It's taken out of the address, so the page doesn't try it again.
+ */
+function takeLinkError(): LinkError | null {
+  const params = new URLSearchParams(location.hash.slice(1));
+  for (const [key, value] of new URLSearchParams(location.search)) params.set(key, value);
+  // Supabase's answer to a link has all three; an `error` alone in some other address isn't a link's.
+  const code = params.get('error_code') ?? params.get('error');
+  if (!code || !params.has('error_description')) return null;
+  history.replaceState(history.state, '', location.pathname);
+  return { code, expired: code === 'otp_expired' || /expired|invalid/i.test(params.get('error_description') ?? '') };
+}
 
 /** Whether to load the Supabase client at start: this browser was signed in, or an email link was opened. */
 const needsClient = (): boolean => hasStoredSession() || openedFromEmail();
@@ -71,6 +93,7 @@ export const accountStore = createStore<AccountState>(() => ({
   guestLibrary: null,
   resettingPassword: false,
   endedSession: null,
+  linkError: null,
 }));
 
 export const useAccount = <T>(select: (state: AccountState) => T): T => useStore(accountStore, select);
@@ -136,6 +159,8 @@ export async function openSongIds(): Promise<Set<string>> {
 
 /** Called once when the app starts. */
 export function startAccount(): void {
+  const linkError = takeLinkError();
+  if (linkError) accountStore.setState({ linkError });
   if (needsClient()) void getClient().then(listen);
   else void noticeEndedSession();
 }
@@ -220,16 +245,25 @@ async function clearLibrary(): Promise<void> {
   });
 }
 
-/** What went wrong signing in, in the app's words; null when it worked. */
-export type AuthResult = { error: string } | { confirmEmail: true } | null;
+/** What went wrong signing in, in the app's words (`code`: Supabase's, so the page can offer what helps). */
+export type AuthResult = { error: string; code?: string } | { confirmEmail: true } | null;
 
 function explain(error: AuthError | Error): string {
   const code = 'code' in error ? error.code : undefined;
   if (code === 'invalid_credentials') return 'Wrong email or password.';
   if (code === 'user_already_exists' || code === 'email_exists') return 'There’s already an account with this email. Sign in instead.';
   if (code === 'weak_password') return 'Choose a longer password: at least 8 characters.';
-  if (code === 'email_not_confirmed') return 'Confirm your email first: open the link in the email we sent you.';
-  if (code === 'over_email_send_rate_limit' || code === 'over_request_rate_limit') return 'Too many tries. Wait a minute and try again.';
+  if (code === 'email_not_confirmed') return 'Confirm your email first: open the link in the email we sent you, or send it again.';
+  if (code === 'captcha_failed') return 'The check that keeps bots out didn’t pass. Try again.';
+  if (code === 'over_email_send_rate_limit') {
+    // The same code for an address asking again too soon ("after 52 seconds") and for the site's emails an hour.
+    const seconds = error.message.match(/after (\d+) seconds?/)?.[1];
+    return seconds
+      ? `An email was sent to this address just now. Wait ${seconds} seconds and try again.`
+      : 'Too many emails were sent just now. Wait an hour and try again.';
+  }
+  if (code === 'over_request_rate_limit') return 'Too many tries. Wait a few minutes and try again.';
+  if (/sending (confirmation|recovery|magic link)? ?email/i.test(error.message)) return 'The email couldn’t be sent. Try again later.';
   if (error.name === 'AuthRetryableFetchError' || error instanceof TypeError) return 'Couldn’t reach the server. Check your connection and try again.';
   return `Couldn’t sign in: ${error.message}`;
 }
@@ -239,19 +273,25 @@ async function attempt(action: (supabase: SupabaseClient) => Promise<{ error: Au
     const supabase = await getClient();
     listen(supabase);
     const { error } = await action(supabase);
-    return error ? { error: explain(error) } : null;
+    return error ? { error: explain(error), code: error.code } : null;
   } catch (error) {
     return { error: explain(error instanceof Error ? error : new Error(String(error))) };
   }
 }
 
-export const signIn = (email: string, password: string): Promise<AuthResult> =>
-  attempt((supabase) => supabase.auth.signInWithPassword({ email, password }));
+// Each call that can make an account or send an email carries a token from the check against bots (Turnstile).
 
-export async function signUp(email: string, password: string): Promise<AuthResult> {
+export const signIn = (email: string, password: string, captchaToken: string): Promise<AuthResult> =>
+  attempt((supabase) => supabase.auth.signInWithPassword({ email, password, options: { captchaToken } }));
+
+export async function signUp(email: string, password: string, captchaToken: string): Promise<AuthResult> {
   let confirm = false;
   const result = await attempt(async (supabase) => {
-    const { data, error } = await supabase.auth.signUp({ email, password, options: { emailRedirectTo: `${location.origin}/account` } });
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { emailRedirectTo: `${location.origin}/account`, captchaToken },
+    });
     // No session yet: the account is made once the email is confirmed.
     confirm = !error && data.session === null;
     return { error };
@@ -259,8 +299,19 @@ export async function signUp(email: string, password: string): Promise<AuthResul
   return result ?? (confirm ? { confirmEmail: true } : null);
 }
 
-export const sendPasswordReset = (email: string): Promise<AuthResult> =>
-  attempt((supabase) => supabase.auth.resetPasswordForEmail(email, { redirectTo: `${location.origin}/account` }));
+export const sendPasswordReset = (email: string, captchaToken: string): Promise<AuthResult> =>
+  attempt((supabase) => supabase.auth.resetPasswordForEmail(email, { redirectTo: `${location.origin}/account`, captchaToken }));
+
+/** Sends the email that confirms a new account again. */
+export const resendConfirmation = (email: string, captchaToken: string): Promise<AuthResult> =>
+  attempt((supabase) =>
+    supabase.auth.resend({ type: 'signup', email, options: { emailRedirectTo: `${location.origin}/account`, captchaToken } }));
+
+/** Opened from a reset link, the user keeps the password they have (they're signed in by the link either way). */
+export const keepPassword = (): void => accountStore.setState({ resettingPassword: false });
+
+/** The user saw what went wrong with an email link. */
+export const dismissLinkError = (): void => accountStore.setState({ linkError: null });
 
 export async function setNewPassword(password: string): Promise<AuthResult> {
   const result = await attempt((supabase) => supabase.auth.updateUser({ password }));
