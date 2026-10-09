@@ -1,4 +1,5 @@
 import { parseSongText, songToText, type Song } from '@groovekeeper/core';
+import { warnGuestOnce } from '../guestWarning';
 import { changedAt, db, type LibrarySong, type SongNote } from './db';
 import { newId } from './ids';
 import { checkRoom, sizeProblem } from './limits';
@@ -61,6 +62,7 @@ export async function addSongsWithNotes(items: { song: Song; notes: SongNote[] }
   const records = items.map(({ song, notes }) => record(newId(), song, notes, 0));
   await db.songs.bulkAdd(records);
   keepLibrary();
+  warnGuestOnce();
   return records.map((r) => r.id);
 }
 

@@ -6,7 +6,6 @@ import { listSongs, matchesSearch } from '../library/library';
 import { useNewSong } from '../navigation';
 import { useAccount } from '../sync/account';
 import { ExportLibrary } from './ExportLibrary';
-import { GuestNote } from './GuestNote';
 import { ImportSongs } from './ImportSongs';
 
 interface Props {
@@ -24,14 +23,11 @@ export function LibraryPanel({ className = '', activeId, canImport = true }: Pro
   const navigate = useNavigate();
   const newSong = useNewSong();
   const signedIn = useAccount((s) => s.status === 'signedIn');
-  // A guest's own songs, not those of an account whose session ended here (that asks to sign in again).
-  const guest = useAccount((s) => s.status === 'guest' && s.endedSession === null);
   const shown = songs?.filter((song) => matchesSearch(song, search));
 
   return (
     <nav aria-label="Library" className={`flex min-h-0 flex-col ${className}`}>
       <h2 className="font-semibold">Library</h2>
-      {guest && songs && songs.length > 0 ? <GuestNote /> : null}
       <input
         type="search"
         value={search}
@@ -58,7 +54,7 @@ export function LibraryPanel({ className = '', activeId, canImport = true }: Pro
                 <span className="block truncate text-sm font-semibold">{song.title || UNTITLED_TITLE}</span>
                 {song.artist ? <span className="block truncate text-xs text-muted">{song.artist}</span> : null}
                 {song.refused ? (
-                  <span className="block text-xs text-chord" title="It's on this device only; the account page says why.">
+                  <span className="block text-xs text-chord" title="It's on this device only; Settings → Sync and storage says why.">
                     {song.refused.reason === 'size' ? 'Too long to sync' : 'Not in your account'}
                   </span>
                 ) : null}
@@ -81,7 +77,7 @@ export function LibraryPanel({ className = '', activeId, canImport = true }: Pro
           ) : (
             <>
               No songs yet.{' '}
-              <Link to="/account" className="text-accent hover:underline">
+              <Link to="/signin" className="text-accent hover:underline">
                 Sign in
               </Link>{' '}
               to get the songs from your account; songs are written on a computer or tablet.

@@ -82,14 +82,14 @@ export default function PrivacyPage() {
         <Section title="What you can do">
           <ul className="list-disc pl-6">
             <li>
-              Take all your songs, notes and setlists with you: <strong>Export library</strong> in the library or on the{' '}
-              <Link to="/account" className="text-accent hover:underline">
-                account page
+              Take all your songs, notes and setlists with you: <strong>Export library</strong> in the library, or in{' '}
+              <Link to="/settings/sync" className="text-accent hover:underline">
+                Settings → Sync and storage
               </Link>
               .
             </li>
             <li>
-              Delete your account and everything in it: <strong>Delete account</strong> on the account page. It’s gone at
+              Delete your account and everything in it: <strong>Delete account</strong> in Settings → Privacy and data. It’s gone at
               once; the nightly copies keep it for up to 7 days more.
             </li>
             <li>

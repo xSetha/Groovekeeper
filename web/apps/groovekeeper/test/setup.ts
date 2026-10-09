@@ -1,8 +1,13 @@
 import '@testing-library/jest-dom/vitest';
 import 'fake-indexeddb/auto';
 import { cleanup } from '@testing-library/react';
-import { afterEach } from 'vitest';
+import { afterEach, beforeEach } from 'vitest';
 import { clearToasts } from '../src/toasts';
+
+// The warning a guest sees on their first song (src/guestWarning.ts) counts as seen, except in its own tests.
+beforeEach(() => {
+  if (typeof window !== 'undefined') localStorage.setItem('groovekeeper.guestWarningShown', '1');
+});
 
 afterEach(() => {
   cleanup();

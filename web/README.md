@@ -57,8 +57,8 @@ The app is a static site: there's no server of its own. Accounts and sync need a
    ```
 
 2. **Set up sign-in** in the project's dashboard, under Authentication:
-   - URL Configuration: the Site URL is your copy's address, and `https://<your address>/account` is
-     a Redirect URL. The confirmation and password reset emails link there.
+   - URL Configuration: the Site URL is your copy's address, and `https://<your address>/auth` is
+     a Redirect URL. The emails' links (confirming an account or a new email, forgot password) land there.
    - Email: keep "Confirm email" on, and set the minimum password length to 8, which the app asks for.
    - SMTP: Supabase's own sender is only for trying things out (a few emails an hour). Before others
      sign up, add an email service's SMTP settings.

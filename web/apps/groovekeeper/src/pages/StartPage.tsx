@@ -88,10 +88,8 @@ export function StartPage() {
             {samples}
           </div>
           <p className="mt-6 max-w-md text-sm text-muted">
-            Write a new song, or import <code>.txt</code> and ChordPro files.{' '}
-            {signedIn
-              ? 'Your songs are kept in your account and on every device you sign in on.'
-              : 'Your songs are kept in this browser, on this device, until you sign in.'}
+            Write a new song, or import <code>.txt</code> and ChordPro files.
+            {signedIn ? ' Your songs are kept in your account and on every device you sign in on.' : null}
           </p>
         </section>
 

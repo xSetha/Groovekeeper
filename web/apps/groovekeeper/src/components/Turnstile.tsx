@@ -106,3 +106,22 @@ export function useTurnstile() {
 
   return { box, token, problem, waitingForUser, renew };
 }
+
+/**
+ * Sends a form's request with the check's token, and fetches a new token after (a token works once).
+ * `canSend` is false while there's no token or a request is on its way.
+ */
+export function useCheckedRequest(check: ReturnType<typeof useTurnstile>) {
+  const [busy, setBusy] = useState(false);
+  const run = async <T,>(request: (token: string) => Promise<T>): Promise<T | undefined> => {
+    if (!check.token) return undefined;
+    setBusy(true);
+    try {
+      return await request(check.token);
+    } finally {
+      check.renew();
+      setBusy(false);
+    }
+  };
+  return { busy, run, canSend: check.token !== null && !busy };
+}

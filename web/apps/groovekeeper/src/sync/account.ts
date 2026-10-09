@@ -47,8 +47,15 @@ export interface AccountState {
   guestLibrary: GuestLibrary | null;
   /** Opened from a password reset link: the user sets a new password. */
   resettingPassword: boolean;
-  /** An email link that didn't work; the account page says so and offers a new one. */
+  /** An email link that didn't work; the sign-in page says so and offers a new one. */
   linkError: LinkError | null;
+  /** A new email address asked for, waiting to be confirmed from both addresses. */
+  newEmail: string | null;
+  /**
+   * What the email link this page was opened from was for (`type`: signup, recovery, email_change...) and the
+   * message Supabase sent with it, read at start before the Supabase client takes them out of the address.
+   */
+  emailLink: { type: string | null; message: string | null } | null;
   /**
    * Set when this device's session ended without signing out here (signed out everywhere, or the account
    * deleted elsewhere): the library is still the account's, until the user signs in again or removes it.
@@ -94,6 +101,8 @@ export const accountStore = createStore<AccountState>(() => ({
   resettingPassword: false,
   endedSession: null,
   linkError: null,
+  newEmail: null,
+  emailLink: null,
 }));
 
 export const useAccount = <T>(select: (state: AccountState) => T): T => useStore(accountStore, select);
@@ -161,6 +170,10 @@ export async function openSongIds(): Promise<Set<string>> {
 export function startAccount(): void {
   const linkError = takeLinkError();
   if (linkError) accountStore.setState({ linkError });
+  const link = new URLSearchParams(location.hash.slice(1));
+  if (link.has('type') || link.has('message')) {
+    accountStore.setState({ emailLink: { type: link.get('type'), message: link.get('message') } });
+  }
   if (needsClient()) void getClient().then(listen);
   else void noticeEndedSession();
 }
@@ -202,26 +215,50 @@ async function signedInAs(session: Session | null): Promise<void> {
   const user = session?.user ?? null;
   const current = accountStore.getState();
   if (!user) {
-    accountStore.setState({ status: 'guest', email: null, userId: null, guestLibrary: null });
+    accountStore.setState({ status: 'guest', email: null, userId: null, guestLibrary: null, newEmail: null, resettingPassword: false });
     if (!leaving) await noticeEndedSession();
     return;
   }
-  if (current.userId === user.id) return;
-  accountStore.setState({ status: 'signedIn', email: user.email ?? null, userId: user.id, endedSession: null });
-
-  const state = await db.meta.get('sync');
-  if (state && state.userId === user.id) {
-    if (user.email && state.email !== user.email) await db.meta.put({ ...state, email: user.email });
-    scheduleSync(0);
+  // The same account again (a renewed session, an email change confirmed): only its email may have changed.
+  const newEmail = user.new_email ?? null;
+  if (current.userId === user.id) {
+    accountStore.setState({ email: user.email ?? null, newEmail });
+    // The email saved with the library, asked for again when a session ends, follows a confirmed change.
+    const state = await db.meta.get('sync');
+    if (state && state.userId === user.id && user.email && state.email !== user.email) await db.meta.put({ ...state, email: user.email });
     return;
   }
-  // First sign-in on this device: what was made as a guest joins the account only if the user says so.
-  const [songs, setlists] = await Promise.all([db.songs.count(), db.setlists.count()]);
-  // Songs of another account (its session ended here) belong to that account: they can be removed, not added.
-  const otherAccount = state ? { email: state.email ?? null } : undefined;
-  if (songs + setlists > 0) accountStore.setState({ guestLibrary: { songs, setlists, otherAccount } });
-  else await adoptLibrary(user.id);
+  // Supabase may tell of one sign-in twice (signed in, then the session restored): the first one handles it.
+  if (signingIn === user.id) return;
+  signingIn = user.id;
+  try {
+    // Signed in, and whether songs on this device need settling first, are known together: the pages that
+    // follow a sign-in go to the question, or home, from one look.
+    const signedIn = { status: 'signedIn' as const, email: user.email ?? null, userId: user.id, endedSession: null, newEmail };
+    const state = await db.meta.get('sync');
+    if (state && state.userId === user.id) {
+      accountStore.setState(signedIn);
+      if (user.email && state.email !== user.email) await db.meta.put({ ...state, email: user.email });
+      scheduleSync(0);
+      return;
+    }
+    // First sign-in on this device: what was made as a guest joins the account only if the user says so.
+    const [songs, setlists] = await Promise.all([db.songs.count(), db.setlists.count()]);
+    // Songs of another account (its session ended here) belong to that account: they can be removed, not added.
+    const otherAccount = state ? { email: state.email ?? null } : undefined;
+    if (songs + setlists > 0) {
+      accountStore.setState({ ...signedIn, guestLibrary: { songs, setlists, otherAccount } });
+      return;
+    }
+    accountStore.setState(signedIn);
+    await adoptLibrary(user.id);
+  } finally {
+    signingIn = null;
+  }
 }
+
+// The account being signed in to, while signedInAs looks at the library.
+let signingIn: string | null = null;
 
 /** The library from here on syncs with the account; what's in it now is uploaded at the next sync. */
 async function adoptLibrary(userId: string): Promise<void> {
@@ -248,7 +285,8 @@ async function clearLibrary(): Promise<void> {
 /** What went wrong signing in, in the app's words (`code`: Supabase's, so the page can offer what helps). */
 export type AuthResult = { error: string; code?: string } | { confirmEmail: true } | null;
 
-function explain(error: AuthError | Error): string {
+/** What went wrong, in the app's words; `doing` names the action for an error it has no words for. */
+function explain(error: AuthError | Error, doing = 'sign in'): string {
   const code = 'code' in error ? error.code : undefined;
   if (code === 'invalid_credentials') return 'Wrong email or password.';
   if (code === 'user_already_exists' || code === 'email_exists') return 'There’s already an account with this email. Sign in instead.';
@@ -265,17 +303,20 @@ function explain(error: AuthError | Error): string {
   if (code === 'over_request_rate_limit') return 'Too many tries. Wait a few minutes and try again.';
   if (/sending (confirmation|recovery|magic link)? ?email/i.test(error.message)) return 'The email couldn’t be sent. Try again later.';
   if (error.name === 'AuthRetryableFetchError' || error instanceof TypeError) return 'Couldn’t reach the server. Check your connection and try again.';
-  return `Couldn’t sign in: ${error.message}`;
+  return `Couldn’t ${doing}: ${error.message}`;
 }
 
-async function attempt(action: (supabase: SupabaseClient) => Promise<{ error: AuthError | null }>): Promise<AuthResult> {
+async function attempt(
+  action: (supabase: SupabaseClient) => Promise<{ error: AuthError | null }>,
+  doing = 'sign in',
+): Promise<AuthResult> {
   try {
     const supabase = await getClient();
     listen(supabase);
     const { error } = await action(supabase);
-    return error ? { error: explain(error), code: error.code } : null;
+    return error ? { error: explain(error, doing), code: error.code } : null;
   } catch (error) {
-    return { error: explain(error instanceof Error ? error : new Error(String(error))) };
+    return { error: explain(error instanceof Error ? error : new Error(String(error)), doing) };
   }
 }
 
@@ -290,7 +331,7 @@ export async function signUp(email: string, password: string, captchaToken: stri
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { emailRedirectTo: `${location.origin}/account`, captchaToken },
+      options: { emailRedirectTo: `${location.origin}/auth`, captchaToken },
     });
     // No session yet: the account is made once the email is confirmed.
     confirm = !error && data.session === null;
@@ -300,15 +341,12 @@ export async function signUp(email: string, password: string, captchaToken: stri
 }
 
 export const sendPasswordReset = (email: string, captchaToken: string): Promise<AuthResult> =>
-  attempt((supabase) => supabase.auth.resetPasswordForEmail(email, { redirectTo: `${location.origin}/account`, captchaToken }));
+  attempt((supabase) => supabase.auth.resetPasswordForEmail(email, { redirectTo: `${location.origin}/auth`, captchaToken }));
 
 /** Sends the email that confirms a new account again. */
 export const resendConfirmation = (email: string, captchaToken: string): Promise<AuthResult> =>
   attempt((supabase) =>
-    supabase.auth.resend({ type: 'signup', email, options: { emailRedirectTo: `${location.origin}/account`, captchaToken } }));
-
-/** Opened from a reset link, the user keeps the password they have (they're signed in by the link either way). */
-export const keepPassword = (): void => accountStore.setState({ resettingPassword: false });
+    supabase.auth.resend({ type: 'signup', email, options: { emailRedirectTo: `${location.origin}/auth`, captchaToken } }));
 
 /** The user saw what went wrong with an email link. */
 export const dismissLinkError = (): void => accountStore.setState({ linkError: null });
@@ -334,8 +372,11 @@ export async function hasUnsyncedChanges(): Promise<boolean> {
 // one that ended on its own.
 let leaving = false;
 
-/** Ends the session on this device and removes the account's songs from it. */
-async function leaveAccount(supabase: SupabaseClient, fromSync = false): Promise<void> {
+/**
+ * Ends the session on this device (`everywhere`: on every device first, which needs a connection and changes
+ * nothing here if it fails) and removes the account's songs from this device.
+ */
+async function leaveAccount(supabase: SupabaseClient, fromSync = false, everywhere = false): Promise<void> {
   leaving = true;
   clearTimeout(timer);
   try {
@@ -344,13 +385,20 @@ async function leaveAccount(supabase: SupabaseClient, fromSync = false): Promise
     // Under the sync lock, so no sync in any tab writes songs back while the library is emptied. The library
     // goes first: other tabs, told the session ended, then find no account's songs to ask about.
     const leave = async () => {
+      // Every other session ends on the server first; this one stays until the library is empty, so no tab is
+      // told its session ended while the account's songs are still here. If it fails, nothing has changed.
+      if (everywhere) {
+        const { error } = await supabase.auth.signOut({ scope: 'others' });
+        if (error) throw error;
+      }
       await clearLibrary();
       // Signing out locally works offline too; the session simply ends here.
       await supabase.auth.signOut({ scope: 'local' });
     };
     await (navigator.locks ? navigator.locks.request(SYNC_LOCK, leave) : leave());
     accountStore.setState({
-      status: 'guest', email: null, userId: null, sync: 'idle', lastSynced: null, guestLibrary: null, endedSession: null,
+      status: 'guest', email: null, userId: null, sync: 'idle', lastSynced: null, guestLibrary: null, endedSession: null, newEmail: null,
+      resettingPassword: false,
     });
   } finally {
     leaving = false;
@@ -366,7 +414,9 @@ export async function keepOtherAccountsSongs(): Promise<void> {
   leaving = true;
   try {
     await supabase.auth.signOut({ scope: 'local' });
-    accountStore.setState({ status: 'guest', email: null, userId: null, sync: 'idle', lastSynced: null, guestLibrary: null });
+    accountStore.setState({
+      status: 'guest', email: null, userId: null, sync: 'idle', lastSynced: null, guestLibrary: null, newEmail: null, resettingPassword: false,
+    });
     await noticeEndedSession();
   } finally {
     leaving = false;
@@ -376,6 +426,50 @@ export async function keepOtherAccountsSongs(): Promise<void> {
 /** Signs out and removes the account's songs from this device; they stay in the account. */
 export async function signOut(): Promise<void> {
   await leaveAccount(await getClient());
+}
+
+/**
+ * Signs out on every device: this one forgets the account's songs, as signing out does; the others find their
+ * session ended and ask to sign in again, keeping theirs. Needs a connection.
+ */
+export async function signOutEverywhere(): Promise<AuthResult> {
+  if (!navigator.onLine) return { error: 'You’re offline. Connect to the internet to sign out everywhere.' };
+  try {
+    await leaveAccount(await getClient(), false, true);
+    return null;
+  } catch (error) {
+    return { error: explain(error instanceof Error ? error : new Error(String(error)), 'sign out everywhere') };
+  }
+}
+
+/**
+ * Changes the password of the signed-in account: the current one is checked first (a sign-in, so it carries
+ * a token from the check against bots), then the new one is saved. No email is sent.
+ */
+export async function changePassword(current: string, next: string, captchaToken: string): Promise<AuthResult> {
+  const email = accountStore.getState().email;
+  if (!email) return { error: 'Sign in first.' };
+  const checked = await signIn(email, current, captchaToken);
+  if (checked && 'error' in checked) {
+    return checked.code === 'invalid_credentials' ? { error: 'Your current password isn’t right.', code: checked.code } : checked;
+  }
+  return attempt((supabase) => supabase.auth.updateUser({ password: next }), 'change your password');
+}
+
+/**
+ * Asks to change the account's email: Supabase sends a link to both the old and the new address, and the change
+ * is made once both are opened. Until then `newEmail` holds the address asked for.
+ */
+export async function changeEmail(email: string): Promise<AuthResult> {
+  const result = await attempt(async (supabase) => {
+    const { data, error } = await supabase.auth.updateUser({ email }, { emailRedirectTo: `${location.origin}/auth` });
+    if (!error) accountStore.setState({ newEmail: data.user.new_email ?? email });
+    return { error };
+  }, 'change your email');
+  if (result && 'code' in result && (result.code === 'email_exists' || result.code === 'user_already_exists')) {
+    return { error: 'Another account uses that email. Choose a different one.', code: result.code };
+  }
+  return result;
 }
 
 /**

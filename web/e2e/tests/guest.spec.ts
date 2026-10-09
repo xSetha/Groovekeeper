@@ -5,6 +5,12 @@ import { expect, test } from './csp';
 test('a guest\'s songs and changes stay in the browser', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('button', { name: 'Try the sample songs' }).click();
+  // The first songs bring the one note about where a guest's songs are kept.
+  const warning = page.getByRole('dialog', { name: 'Your songs are kept only in this browser' });
+  await warning.getByRole('button', { name: 'OK' }).click();
+  await expect(warning).toBeHidden();
+  // Setlists are for accounts.
+  await expect(page.getByRole('link', { name: 'Setlists' })).toHaveCount(0);
   const library = page.getByRole('navigation', { name: 'Library' });
   await expect(library.getByText('Scarborough Fair')).toBeVisible();
 
@@ -28,6 +34,7 @@ test('the built app opens without a connection once it has been opened', async (
   test.skip(test.info().project.name !== 'built', 'The dev server has no service worker.');
   await page.goto('/');
   await page.getByRole('button', { name: 'Try the sample songs' }).click();
+  await page.getByRole('button', { name: 'OK' }).click();
   await expect(page.getByRole('navigation', { name: 'Library' }).getByText('Scarborough Fair')).toBeVisible();
   // The service worker has kept the app once it's ready.
   await page.evaluate(() => navigator.serviceWorker.ready);
@@ -35,6 +42,6 @@ test('the built app opens without a connection once it has been opened', async (
   await page.context().setOffline(true);
   await page.reload();
   await expect(page.getByRole('navigation', { name: 'Library' }).getByText('Scarborough Fair')).toBeVisible();
-  await page.getByRole('link', { name: 'Setlists' }).click();
-  await expect(page.getByRole('heading', { name: 'Setlists' })).toBeVisible();
+  await page.getByRole('navigation', { name: 'Library' }).getByRole('link', { name: /Scarborough Fair/ }).click();
+  await expect(page.getByRole('textbox', { name: 'Title' })).toHaveValue('Scarborough Fair');
 });

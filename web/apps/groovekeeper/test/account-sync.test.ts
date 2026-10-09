@@ -303,3 +303,16 @@ describe('what went wrong signing in', () => {
     });
   });
 });
+
+describe('changing the email', () => {
+  it('says another account uses the address, in words for someone signed in', async () => {
+    const { account } = await load();
+    (supabase.client.auth as Record<string, unknown>).updateUser = async () => ({
+      data: { user: null },
+      error: { code: 'email_exists', message: 'A user with this email address has already been registered' },
+    });
+    expect(await account.changeEmail('taken@example.com')).toMatchObject({
+      error: 'Another account uses that email. Choose a different one.',
+    });
+  });
+});

@@ -2,6 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { Link, useLocation } from 'react-router';
 import { db } from '../library/db';
 import { useAccount } from '../sync/account';
+import { AccountMenu } from './AccountMenu';
 import { ThemePicker } from './ThemePicker';
 
 /** The app's logo: a record with a red label, as on the desktop start page. */
@@ -26,7 +27,11 @@ export function Logo({ className, rim = false }: { className?: string; rim?: boo
 }
 
 export function TopBar() {
-  const onSetlists = useLocation().pathname.startsWith('/setlists');
+  const { pathname } = useLocation();
+  const onSetlists = pathname.startsWith('/setlists');
+  // Songs is the start page, a song, and exporting songs; Settings and the account pages are neither tab.
+  const onSongs = pathname === '/' || pathname.startsWith('/songs') || pathname.startsWith('/pdf');
+  const signedIn = useAccount((s) => s.status === 'signedIn');
   return (
     <header className="box-content flex h-11 shrink-0 items-center justify-between border-b border-line bg-toolbar px-4 pt-[env(safe-area-inset-top)]">
       <Link to="/" className="flex items-center gap-2 text-sm font-semibold">
@@ -35,12 +40,13 @@ export function TopBar() {
         <span className="max-sm:sr-only">Groovekeeper</span>
       </Link>
       <nav aria-label="Main" className="flex h-full items-stretch gap-1 text-sm">
-        <Tab to="/" active={!onSetlists}>Songs</Tab>
-        <Tab to="/setlists" active={onSetlists}>Setlists</Tab>
+        <Tab to="/" active={onSongs}>Songs</Tab>
+        {/* Setlists are for accounts. */}
+        {signedIn ? <Tab to="/setlists" active={onSetlists}>Setlists</Tab> : null}
       </nav>
       <div className="flex items-center gap-1">
         <SyncNotes />
-        <AccountLink />
+        <AccountMenu />
         <ThemePicker />
       </div>
     </header>
@@ -60,58 +66,14 @@ function Tab({ to, active, children }: { to: string; active: boolean; children: 
   );
 }
 
-/** Only when something needs attention: songs changed on two devices, being offline, or a failed sync. */
+/** Only when something needs attention: songs changed on two devices. */
 function SyncNotes() {
-  const sync = useAccount((s) => s.sync);
   const conflicts = useLiveQuery(() => db.conflicts.count(), [], 0);
+  if (conflicts === 0) return null;
   return (
-    <>
-      {conflicts > 0 ? (
-        <Link to="/conflicts" className="rounded px-2 py-1 text-sm font-semibold text-accent hover:bg-hover">
-          {conflicts === 1 ? '1 change' : `${conflicts} changes`} to settle
-        </Link>
-      ) : null}
-      {sync === 'offline' ? (
-        <span className="px-2 text-sm text-muted" title="Changes are saved on this device and sync when you’re back online.">
-          Offline
-        </span>
-      ) : sync === 'failed' || sync === 'unavailable' ? (
-        <Link to="/account" className="rounded px-2 py-1 text-sm text-chord hover:bg-hover">
-          Couldn’t sync
-        </Link>
-      ) : null}
-    </>
-  );
-}
-
-/** "Sign in", or the account once signed in; both open the account page. */
-function AccountLink() {
-  const status = useAccount((s) => s.status);
-  const email = useAccount((s) => s.email);
-  const ended = useAccount((s) => s.endedSession !== null);
-  if (status === 'starting') return null;
-  if (status === 'guest') {
-    return (
-      <Link
-        to="/account"
-        className={`rounded px-2 py-1 text-sm whitespace-nowrap hover:bg-hover pointer-coarse:min-h-11 pointer-coarse:flex pointer-coarse:items-center ${ended ? 'font-semibold text-accent' : 'text-muted hover:text-fg'}`}
-      >
-        {ended ? 'Sign in again' : 'Sign in'}
-      </Link>
-    );
-  }
-  return (
-    <Link
-      to="/account"
-      aria-label={`Account: ${email ?? ''}`}
-      title={`Account: ${email ?? ''}`}
-      className="flex items-center justify-center rounded p-1.5 text-muted hover:bg-hover hover:text-fg pointer-coarse:min-h-11 pointer-coarse:min-w-11"
-    >
-      {/* A person: the account. */}
-      <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
-        <circle cx="12" cy="8" r="4" />
-        <path d="M4 21c0-4 3.6-7 8-7s8 3 8 7" />
-      </svg>
+    <Link to="/conflicts" className="rounded px-2 py-1 text-sm font-semibold text-accent hover:bg-hover">
+      {conflicts === 1 ? '1 change' : `${conflicts} changes`} to settle
     </Link>
   );
 }
+

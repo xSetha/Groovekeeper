@@ -9,6 +9,7 @@ import {
   addEntry, moveEntry, removeEntry, setlistSongs,
 } from '../src/library/setlists';
 import { PHONE_QUERY } from '../src/phone';
+import { signedIn } from './account-mocks';
 
 const GRACE = 'Amazing Grace\nJohn Newton\n\nKey: G\n\n[Verse 1]\nG          C\nAmazing grace\n';
 const HOUSE = 'House of the Rising Sun\nTraditional\n\n[Verse]\nAm      C      D      F\nThere is a house\nAm     E     Am\nin New Orleans\n';
@@ -16,6 +17,8 @@ const HOUSE = 'House of the Rising Sun\nTraditional\n\n[Verse]\nAm      C      D
 const setlist = (songs: LibrarySetlist['songs'] = []): LibrarySetlist => ({ id: 'gig', name: 'Friday gig', songs, updatedAt: 0, version: 0, dirty: 1 });
 
 beforeEach(async () => {
+  // Setlists are for accounts.
+  signedIn();
   await db.songs.clear();
   await db.setlists.clear();
   await db.songs.bulkAdd([

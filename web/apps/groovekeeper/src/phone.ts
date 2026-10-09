@@ -7,13 +7,20 @@ import { useSyncExternalStore } from 'react';
  */
 export const PHONE_QUERY = '(pointer: coarse) and (max-width: 767px), (pointer: coarse) and (max-height: 500px)';
 
-const query = () => (typeof window.matchMedia === 'function' ? window.matchMedia(PHONE_QUERY) : null);
+const listFor = (media: string): MediaQueryList | null =>
+  typeof window.matchMedia === 'function' ? window.matchMedia(media) : null;
 
-const subscribe = (onChange: () => void) => {
-  const list = query();
-  list?.addEventListener('change', onChange);
-  return () => list?.removeEventListener('change', onChange);
-};
+/** Whether a CSS media query matches; updates when it changes. */
+export function useMediaQuery(media: string): boolean {
+  return useSyncExternalStore(
+    (onChange) => {
+      const list = listFor(media);
+      list?.addEventListener('change', onChange);
+      return () => list?.removeEventListener('change', onChange);
+    },
+    () => listFor(media)?.matches ?? false,
+  );
+}
 
 /** Whether the app runs on a phone; updates when the window changes (a phone turned sideways stays a phone). */
-export const useIsPhone = (): boolean => useSyncExternalStore(subscribe, () => query()?.matches ?? false);
+export const useIsPhone = (): boolean => useMediaQuery(PHONE_QUERY);

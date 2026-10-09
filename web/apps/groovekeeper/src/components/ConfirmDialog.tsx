@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 
 interface Props {
   title: string;
@@ -8,10 +8,16 @@ interface Props {
   onCancel: () => void;
   /** A third choice between Cancel and the confirmation, such as exporting before deleting. */
   extra?: { label: string; onClick: () => void };
+  /** More under the message, such as a field to type in before confirming. */
+  children?: ReactNode;
+  /** The confirmation can't be chosen yet (what's typed doesn't match, or it's on its way). */
+  confirmDisabled?: boolean;
+  /** The button that closes the dialog without confirming. */
+  cancelLabel?: string;
 }
 
 /** A modal question with Cancel focused, so Enter doesn't confirm by accident. Esc cancels. */
-export function ConfirmDialog({ title, message, confirmLabel, onConfirm, onCancel, extra }: Props) {
+export function ConfirmDialog({ title, message, confirmLabel, onConfirm, onCancel, extra, children, confirmDisabled, cancelLabel = 'Cancel' }: Props) {
   const cancel = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
@@ -34,9 +40,10 @@ export function ConfirmDialog({ title, message, confirmLabel, onConfirm, onCance
           {title}
         </h2>
         <p className="mt-2 text-sm text-muted">{message}</p>
+        {children}
         <div className="mt-5 flex flex-wrap justify-end gap-2">
           <button ref={cancel} type="button" onClick={onCancel} className="rounded px-3 py-1.5 text-sm hover:bg-hover pointer-coarse:min-h-11">
-            Cancel
+            {cancelLabel}
           </button>
           {extra ? (
             <button type="button" onClick={extra.onClick} className="rounded border border-line px-3 py-1.5 text-sm hover:bg-hover pointer-coarse:min-h-11">
@@ -46,7 +53,8 @@ export function ConfirmDialog({ title, message, confirmLabel, onConfirm, onCance
           <button
             type="button"
             onClick={onConfirm}
-            className="rounded bg-accent-fill px-3 py-1.5 text-sm font-semibold text-on-accent hover:brightness-125 pointer-coarse:min-h-11"
+            disabled={confirmDisabled}
+            className="rounded bg-accent-fill disabled:opacity-40 px-3 py-1.5 text-sm font-semibold text-on-accent hover:brightness-125 pointer-coarse:min-h-11"
           >
             {confirmLabel}
           </button>

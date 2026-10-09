@@ -53,7 +53,7 @@ export function SetlistsPage() {
                 <span>
                   <span className="block font-semibold">{setlist.name}</span>
                   {setlist.refused ? (
-                    <span className="block text-xs text-chord" title="It's on this device only; the account page says why.">
+                    <span className="block text-xs text-chord" title="It's on this device only; Settings → Sync and storage says why.">
                       {setlist.refused.reason === 'size' ? 'Too long to sync' : 'Not in your account'}
                     </span>
                   ) : null}

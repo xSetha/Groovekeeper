@@ -18,9 +18,9 @@ async function device(browser: Browser, blocked: string[]): Promise<Page> {
   return context.newPage();
 }
 
-/** Syncs now and waits for it to finish, from the account page. */
+/** Syncs now and waits for it to finish, from Settings → Sync and storage. */
 async function syncNow(page: Page): Promise<void> {
-  await page.goto('/account');
+  await page.goto('/settings/sync');
   await page.getByRole('button', { name: 'Sync now' }).click();
   await expect(page.getByText(/^Synced at/)).toBeVisible();
 }
@@ -44,8 +44,8 @@ test('two devices on one account', async ({ browser, blocked }) => {
     await a.goto('/');
     await a.getByRole('button', { name: 'Try the sample songs' }).click();
     await expect(library(a).getByText('Scarborough Fair')).toBeVisible();
-    await a.getByRole('banner').getByRole('link', { name: 'Sign in' }).click();
-    await a.getByRole('button', { name: 'Create an account' }).click();
+    // The note on a guest's first songs leads to creating an account.
+    await a.getByRole('dialog', { name: 'Your songs are kept only in this browser' }).getByRole('button', { name: 'Create account' }).click();
     await a.getByRole('textbox', { name: 'Email' }).fill(email);
     await a.getByLabel('Password', { exact: true }).fill(PASSWORD);
     await a.getByLabel('Confirm password').fill(PASSWORD);
@@ -54,15 +54,16 @@ test('two devices on one account', async ({ browser, blocked }) => {
     await expect(a.getByRole('heading', { name: 'Check your email' })).toBeVisible();
     await a.goto(await linkInEmail(email));
     await a.getByRole('button', { name: 'Add 6 songs to my account' }).click();
-    await expect(a.getByText(/^Synced at/)).toBeVisible();
+    await syncNow(a);
   });
 
   await test.step('another device signs in and gets the songs', async () => {
-    await b.goto('/account');
+    await b.goto('/signin');
     await b.getByRole('textbox', { name: 'Email' }).fill(email);
     await b.getByLabel('Password').fill(PASSWORD);
     await b.getByRole('button', { name: 'Sign in' }).click();
-    await expect(b.getByText(/^Synced at/)).toBeVisible();
+    await expect(b.getByRole('button', { name: `Account: ${email}` })).toBeVisible();
+    await syncNow(b);
     await b.goto('/');
     await expect(library(b).getByText('Scarborough Fair')).toBeVisible();
   });
@@ -97,9 +98,7 @@ test('two devices on one account', async ({ browser, blocked }) => {
     await a.context().setOffline(true);
     await a.getByRole('textbox', { name: 'Title' }).fill('Twinkle (offline edit)');
     await a.getByRole('link', { name: 'Songs' }).click();
-    await expect(a.getByRole('banner').getByText('Offline', { exact: true })).toBeVisible();
     await a.context().setOffline(false);
-    await expect(a.getByRole('banner').getByText('Offline', { exact: true })).toBeHidden();
     await syncNow(a);
     await syncNow(b);
     await b.goto('/');
@@ -128,8 +127,8 @@ test('two devices on one account', async ({ browser, blocked }) => {
   });
 
   await test.step('signing out empties the device', async () => {
-    await b.goto('/account');
-    await b.getByRole('button', { name: 'Sign out' }).click();
+    await b.getByRole('button', { name: `Account: ${email}` }).click();
+    await b.getByRole('menuitem', { name: 'Sign out' }).click();
     await expect(b.getByRole('banner').getByRole('link', { name: 'Sign in' })).toBeVisible();
     await expect(b.getByRole('button', { name: 'Try the sample songs' })).toBeVisible();
   });
