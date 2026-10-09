@@ -64,5 +64,11 @@ export function supabaseRemote(client: SupabaseClient): Remote {
         if (page.length < PAGE) return all;
       }
     },
+
+    async epoch() {
+      const result = await client.from('server_epoch').select('value').single();
+      if (result.error) throw new RemoteError(result.error);
+      return (result.data as { value: string }).value;
+    },
   };
 }

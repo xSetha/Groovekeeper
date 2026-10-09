@@ -6,7 +6,8 @@
 #
 # The dump holds the data of the tables in `public` (songs and setlists) and of `auth.users` and
 # `auth.identities`, since every row's owner_id points at a user and signing in needs both. The tables
-# themselves come from the migrations (README: Restoring a backup). It stops with an error, so the
+# themselves come from the migrations (README: Restoring a backup). `public.server_epoch`, which tells devices
+# the database was restored, is left out: a restore must not bring back an old value. It stops with an error, so the
 # workflow fails and GitHub sends a notice, when the dump is too small or lacks the songs table, or when the
 # database has grown close to the free plan's 500 MB, past which it turns read-only.
 set -euo pipefail
@@ -33,7 +34,8 @@ if ((size_mb > max_db_mb)); then
 fi
 
 pg pg_dump "$DATABASE_URL" --format custom --data-only --no-owner --no-privileges \
-  --table 'public.*' --table auth.users --table auth.identities --file /out/groovekeeper.dump
+  --table 'public.*' --exclude-table public.server_epoch --table auth.users --table auth.identities \
+  --file /out/groovekeeper.dump
 
 dump_bytes=$(stat -c %s "$folder/groovekeeper.dump")
 echo "The dump is $dump_bytes bytes."

@@ -82,6 +82,19 @@ export interface Deletion {
   version: number;
 }
 
+/**
+ * A deletion this device has sent to the account, kept for 90 days. If the account is restored from a backup made
+ * before it, the song or setlist is back there, and the deletion is sent again (sync.ts).
+ */
+export interface DeletionLogEntry {
+  id: string;
+  table: SyncedTable;
+  /** When it was sent (ms since 1970, this device's clock). */
+  at: number;
+  /** The version the account gave the deleted row. A backup's copy older than this is one the deletion is due to. */
+  version: number;
+}
+
 export type SyncedTable = 'songs' | 'setlists';
 
 /**
@@ -135,12 +148,18 @@ export interface SyncState {
   email?: string;
   lastPulled: string | null;
   held: string[];
+  /**
+   * The account database's restore marker (supabase/migrations/20261009120000_server_epoch.sql) as of the last
+   * sync. When it differs, the database was restored from a backup. Missing before the first sync.
+   */
+  epoch?: string;
 }
 
 export const db = new Dexie('groovekeeper') as Dexie & {
   songs: EntityTable<LibrarySong, 'id'>;
   setlists: EntityTable<LibrarySetlist, 'id'>;
   deletions: EntityTable<Deletion, 'id'>;
+  deletionLog: EntityTable<DeletionLogEntry, 'id'>;
   conflicts: EntityTable<Conflict, 'id'>;
   meta: EntityTable<SyncState, 'key'>;
 };
@@ -168,3 +187,12 @@ db.version(4)
     await tx.table<LibrarySong>('songs').toCollection().modify(unsynced);
     await tx.table<LibrarySetlist>('setlists').toCollection().modify(unsynced);
   });
+// Version 5 remembers the deletions sent to the account, for when it's restored from a backup.
+db.version(5).stores({
+  songs: 'id, title, dirty',
+  setlists: 'id, name, dirty',
+  deletions: 'id',
+  deletionLog: 'id, at',
+  conflicts: 'id',
+  meta: 'key',
+});

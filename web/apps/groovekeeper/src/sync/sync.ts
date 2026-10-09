@@ -25,6 +25,8 @@ export interface Remote {
   get(table: SyncedTable, id: string): Promise<RemoteRow | null>;
   /** Every row changed after `since` (a server time), or every row when it's null. */
   changedSince(table: SyncedTable, since: string | null): Promise<RemoteRow[]>;
+  /** The marker that changes when the database is restored from a backup (supabase/migrations/20261009120000). */
+  epoch(): Promise<string>;
 }
 
 export class DuplicateError extends Error {
@@ -47,6 +49,9 @@ const INSERT_BATCH = 50;
 // show up in the database a moment later. Rows already here are recognized by their version.
 const PULL_OVERLAP_MS = 60_000;
 
+// Deletions sent to the account are remembered this long, for when it's restored from a backup.
+const DELETION_LOG_MS = 90 * 24 * 60 * 60 * 1000;
+
 type LocalRow = LibrarySong | LibrarySetlist;
 
 const TABLES: SyncedTable[] = ['songs', 'setlists'];
@@ -61,6 +66,12 @@ function fields(name: SyncedTable, row: LocalRow): RemoteFields {
   const setlist = row as LibrarySetlist;
   return { name: setlist.name, songs: setlist.songs, deleted: false };
 }
+
+/** What a deleted row holds: nothing but its id. */
+const goneFields = (name: SyncedTable): RemoteFields =>
+  name === 'songs'
+    ? { title: '', artist: '', key: '', text: '', notes: [], deleted: true }
+    : { name: '', songs: [], deleted: true };
 
 /** The account's row as it's kept here: synced, so not changed here. */
 function fromRemote(name: SyncedTable, row: RemoteRow): LocalRow {
@@ -87,8 +98,21 @@ const getLocal = (name: SyncedTable, id: string): Promise<LocalRow | undefined> 
  * Changes made in both places become conflicts (db.conflicts) for the user to settle.
  */
 export async function sync(remote: Remote, userId: string, isOpen: (songId: string) => boolean): Promise<void> {
-  const state: SyncState = (await db.meta.get('sync')) ?? { key: 'sync', userId, lastPulled: null, held: [] };
+  let state: SyncState = (await db.meta.get('sync')) ?? { key: 'sync', userId, lastPulled: null, held: [] };
   if (state.userId !== userId) throw new Error('The library on this device belongs to another account');
+
+  await db.deletionLog.where('at').below(Date.now() - DELETION_LOG_MS).delete();
+  // A different marker than the one seen last: the account was restored from a backup, so it may have gone back
+  // in time. This device sends everything again as new (rows the account has the same are adopted, ones that
+  // differ become changes to settle) and takes in the account's rows afresh. A device's first sync only notes it.
+  const epoch = await remote.epoch();
+  if (state.epoch !== undefined && state.epoch !== epoch) {
+    await afterRestore(remote);
+    state = { ...state, lastPulled: null, held: [] };
+  }
+  // Saved now, so a sync cut short goes on from here instead of starting the restore over.
+  state = { ...state, epoch };
+  await db.meta.put(state);
 
   // The first sync on this device: songs made here as a guest that the account already has aren't added again.
   if (state.lastPulled === null) await dropCopiesOfAccountSongs(await remote.changedSince('songs', null));
@@ -116,6 +140,51 @@ export async function sync(remote: Remote, userId: string, isOpen: (songId: stri
     held.delete(id);
   }
   await db.meta.put({ ...state, lastPulled, held: [...held] });
+}
+
+/**
+ * Gets this device ready for an account restored from a backup. Deletions it sent, and ones waiting to be sent,
+ * are done again where the backup brought the row back (a row this device never deleted stays). A row that is
+ * newer here than the account's copy, or that the account lacks, goes up again as a change (a row the account
+ * has newer comes down as usual). Changes found to settle are found again.
+ */
+async function afterRestore(remote: Remote): Promise<void> {
+  const pending = await db.deletions.toArray();
+  // A row the backup has at a version older than the deletion is one that came back; one at or past it was changed
+  // after the deletion (on another device, which brought it back on purpose) and stays.
+  const due = [
+    ...(await db.deletionLog.toArray()).map(({ id, table, version }) => ({ id, table, version })),
+    ...pending.map(({ id, table, version }) => ({ id, table, version: version + 1 })),
+  ];
+  for (const { id, table: name, version } of due) {
+    const row = await remote.get(name, id);
+    if (row && !row.deleted && row.version < version) await remote.update(name, id, goneFields(name), row.version);
+  }
+  const account = new Map<SyncedTable, Map<string, RemoteRow>>();
+  for (const name of TABLES) account.set(name, new Map((await remote.changedSince(name, null)).map((row) => [row.id, row])));
+
+  await db.transaction('rw', db.songs, db.setlists, db.deletions, db.deletionLog, db.conflicts, async () => {
+    await db.deletionLog.bulkPut(pending.map(({ id, table: name, version }) => ({ id, table: name, at: Date.now(), version: version + 1 })));
+    // Only the ones handled here: one made while the account was being read still waits to be sent.
+    await db.deletions.bulkDelete(pending.map(({ id }) => id));
+    await db.conflicts.clear();
+    for (const name of TABLES) {
+      const adjust = (row: LocalRow) => {
+        const theirs = account.get(name)?.get(row.id);
+        if (!theirs) {
+          // The backup doesn't have it: it goes up as new.
+          row.version = 0;
+          row.dirty = 1;
+        } else if (theirs.version < row.version) {
+          // The backup has an older copy: this one goes up over it, if it isn't the same.
+          row.version = theirs.version;
+          if (!sameContent(name, row, theirs)) row.dirty = 1;
+        }
+      };
+      if (name === 'songs') await db.songs.toCollection().modify(adjust);
+      else await db.setlists.toCollection().modify(adjust);
+    }
+  });
 }
 
 /**
@@ -154,12 +223,11 @@ async function dropCopiesOfAccountSongs(account: RemoteRow[]): Promise<void> {
 async function pushDeletions(remote: Remote): Promise<void> {
   for (const deletion of await db.deletions.toArray()) {
     const name = deletion.table;
-    const gone: RemoteFields = name === 'songs'
-      ? { title: '', artist: '', key: '', text: '', notes: [], deleted: true }
-      : { name: '', songs: [], deleted: true };
-    const done = await remote.update(name, deletion.id, gone, deletion.version);
-    if (done) await mayHaveRoom(name);
-    else {
+    const done = await remote.update(name, deletion.id, goneFields(name), deletion.version);
+    if (done) {
+      await db.deletionLog.put({ id: deletion.id, table: name, at: Date.now(), version: done.version });
+      await mayHaveRoom(name);
+    } else {
       // Changed in the account since it was deleted here: the changed copy comes back rather than being lost.
       const row = await remote.get(name, deletion.id);
       if (row && !row.deleted && !(await getLocal(name, row.id))) await putLocal(name, fromRemote(name, row));

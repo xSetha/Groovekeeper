@@ -45,7 +45,7 @@ async function load() {
   const library = await import('../src/library/library');
   const setlists = await import('../src/library/setlists');
   const { sync } = await import('../src/sync/sync');
-  await Promise.all([db.songs.clear(), db.setlists.clear(), db.deletions.clear(), db.conflicts.clear(), db.meta.clear()]);
+  await Promise.all([db.songs.clear(), db.setlists.clear(), db.deletions.clear(), db.deletionLog.clear(), db.conflicts.clear(), db.meta.clear()]);
   return { account, db, library, setlists, sync: vi.mocked(sync) };
 }
 

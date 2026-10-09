@@ -277,8 +277,10 @@ export async function settleGuestLibrary(add: boolean): Promise<void> {
 }
 
 async function clearLibrary(): Promise<void> {
-  await db.transaction('rw', [db.songs, db.setlists, db.deletions, db.conflicts, db.meta], async () => {
-    await Promise.all([db.songs.clear(), db.setlists.clear(), db.deletions.clear(), db.conflicts.clear(), db.meta.clear()]);
+  await db.transaction('rw', [db.songs, db.setlists, db.deletions, db.deletionLog, db.conflicts, db.meta], async () => {
+    await Promise.all([
+      db.songs.clear(), db.setlists.clear(), db.deletions.clear(), db.deletionLog.clear(), db.conflicts.clear(), db.meta.clear(),
+    ]);
   });
 }
 

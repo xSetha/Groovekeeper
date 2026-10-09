@@ -163,6 +163,15 @@ You need `psql`, `pg_restore` (Postgres 17's tools, or `docker run postgres:17`)
    `$DATABASE_URL` is the same connection string as above. Accounts, their passwords and their songs come back
    as they were at the time of the dump, versions and times included.
 
-Devices that synced after the dump have newer songs than the restored database, and the app doesn't yet send
-them again by itself. Until it does, don't have people sign out to fix it: signing out empties the device. Ask them
-to use **Export library** first (in the library, or in Settings), so their songs can be imported again.
+4. Tell the devices. Each one keeps the value of `public.server_epoch` it saw at its last sync, and when the
+   value differs it knows the account was restored: it deletes again what it had deleted lately (90 days), sends
+   up the songs and setlists that are newer than the restored ones or missing from them, and takes in the rest.
+   The backup doesn't carry that value, so a restore into a new project changes it by itself; after a restore
+   into the same project, change it by hand:
+
+   ```powershell
+   psql $DATABASE_URL -c "update public.server_epoch set value = gen_random_uuid()"
+   ```
+
+   Each device does this at its next sync. A song changed on two devices since the backup is a change to settle,
+   as usual. A song deleted on a device that never syncs again comes back for everyone else.

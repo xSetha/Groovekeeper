@@ -60,7 +60,7 @@ describe.runIf(running)('syncing with Supabase', () => {
   });
 
   beforeEach(async () => {
-    await Promise.all([db.songs.clear(), db.setlists.clear(), db.deletions.clear(), db.conflicts.clear(), db.meta.clear()]);
+    await Promise.all([db.songs.clear(), db.setlists.clear(), db.deletions.clear(), db.deletionLog.clear(), db.conflicts.clear(), db.meta.clear()]);
   });
 
   it('deletes an account with its songs, and then tells its old session the account is gone', async () => {
@@ -104,6 +104,24 @@ describe.runIf(running)('syncing with Supabase', () => {
     const { data: changed } = await a.client.from('songs').select('title, version').eq('id', id!);
     expect(changed).toEqual([{ title: 'Amazing Grace (live)', version: 2 }]);
     expect(await db.songs.get(id!)).toMatchObject({ version: 2, dirty: 0 });
+  });
+
+  it('notes the database\'s restore marker, and goes through a sync when it has changed', async () => {
+    const [id] = await addSongs([{ ...createTemplate(), title: 'Amazing Grace' }]);
+    await sync(supabaseRemote(a.client), a.userId, () => false);
+    const epoch = (await db.meta.get('sync'))?.epoch;
+    expect(epoch).toMatch(/^[0-9a-f-]{36}$/);
+
+    // As if the database had been restored since: this device's marker is another one.
+    await db.meta.put({ ...(await db.meta.get('sync'))!, epoch: 'before the restore' });
+    await saveSong(id!, { ...createTemplate(), title: 'Amazing Grace (live)' });
+    await sync(supabaseRemote(a.client), a.userId, () => false);
+
+    expect((await db.meta.get('sync'))?.epoch).toBe(epoch);
+    expect(await db.songs.get(id!)).toMatchObject({ title: 'Amazing Grace (live)', dirty: 0 });
+    const { data } = await a.client.from('songs').select('title').eq('id', id!);
+    expect(data).toEqual([{ title: 'Amazing Grace (live)' }]);
+    expect(await db.conflicts.count()).toBe(0);
   });
 
   it('turns a save made from an old copy into a conflict', async () => {
