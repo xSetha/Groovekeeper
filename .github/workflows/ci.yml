@@ -69,9 +69,79 @@ jobs:
 
       - name: Keep the traces of failed end-to-end tests
         if: failure()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: e2e-test-results
           path: web/e2e/test-results
           retention-days: 7
           if-no-files-found: ignore
+
+  # Puts the app on the host once both jobs pass on main. It stays off until the repository variable DEPLOY is
+  # "true" (set when the hosting exists, see docs of step 8g). It runs in the `production` environment, where the
+  # secrets and the build settings live, so nothing else in the repository can read them.
+  deploy:
+    needs: [desktop, web]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.DEPLOY == 'true'
+    runs-on: ubuntu-latest
+    environment: production
+    # One deploy at a time, in the order of the pushes: a waiting run is replaced by the newer one, and a
+    # running one is never cut short (half a deploy), so an older run can't finish last.
+    concurrency:
+      group: deploy
+      cancel-in-progress: false
+    defaults:
+      run:
+        working-directory: web
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v7
+
+      # A newer commit on main may have landed while this one waited; its own run deploys it, and this one
+      # must not put the older app back.
+      - name: Stop if main has moved on
+        working-directory: .
+        run: |
+          git fetch --quiet origin main
+          if [ "$(git rev-parse HEAD)" != "$(git rev-parse FETCH_HEAD)" ]; then
+            echo "main has moved on; the run for the newer commit deploys."
+            exit 1
+          fi
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - run: npm ci
+
+      # Migrations first, and each one must work with the app that is live (add first, remove later), because
+      # the old app runs against the new database until the deploy below finishes.
+      - name: Link the Supabase project
+        run: npx supabase link --project-ref "${{ vars.SUPABASE_PROJECT_REF }}"
+
+      - name: Apply the migrations the database lacks
+        run: npx supabase db push
+
+      # `db push` stops when the database holds a migration the repo lacks; this also stops the deploy when the
+      # lists differ in any other way, so the app never goes up against a database it doesn't match.
+      - name: Check the database has exactly the repo's migrations
+        run: npx supabase migration list --linked | tee /dev/stderr | node apps/groovekeeper/migrations.ts
+
+      - name: Build
+        run: npm run build
+        env:
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
+          VITE_TURNSTILE_SITE_KEY: ${{ vars.VITE_TURNSTILE_SITE_KEY }}
+          VITE_SITE_OPERATOR: ${{ vars.VITE_SITE_OPERATOR }}
+          VITE_CONTACT_EMAIL: ${{ vars.VITE_CONTACT_EMAIL }}
+
+      - name: Deploy to Cloudflare Pages
+        run: npx wrangler pages deploy apps/groovekeeper/dist --project-name "${{ vars.CLOUDFLARE_PAGES_PROJECT }}" --branch main
+        env:
+          WRANGLER_SEND_METRICS: 'false'

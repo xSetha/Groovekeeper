@@ -7,5 +7,5 @@
     // vite.config.ts imports deploy.ts with its extension, as Vite's native config loader needs.
     "allowImportingTsExtensions": true
   },
-  "include": ["src", "test", "vite.config.ts", "deploy.ts"]
+  "include": ["src", "test", "vite.config.ts", "deploy.ts", "migrations.ts"]
 }

@@ -18,6 +18,8 @@ test('a guest\'s songs and changes stay in the browser', async ({ page }) => {
   await page.getByRole('textbox', { name: 'Title' }).fill('Oh! Susanna (live)');
   // Leaving the song saves it straight away.
   await page.getByRole('link', { name: 'Songs' }).click();
+  // The library shows the title once it's saved; reloading before that could cut the save short.
+  await expect(library.getByText('Oh! Susanna (live)')).toBeVisible();
 
   await page.reload();
   await expect(page.getByRole('navigation', { name: 'Library' }).getByText('Oh! Susanna (live)')).toBeVisible();

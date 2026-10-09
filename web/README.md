@@ -99,3 +99,17 @@ The app is a static site: there's no server of its own. Accounts and sync need a
    rewrite rule. The build also writes `dist/_headers`, the security headers Cloudflare Pages sends with
    every page (a Content Security Policy that allows only the app's own files, your Supabase project
    and Turnstile); on another host, set the same headers in its own way.
+
+### Deploying from GitHub Actions
+
+`.github/workflows/ci.yml` can deploy for you after the checks pass on `main`. It stays off until the repository
+variable `DEPLOY` is `true`. It runs in an environment named `production`, which holds:
+
+- secrets: `SUPABASE_ACCESS_TOKEN`, `SUPABASE_DB_PASSWORD`, `CLOUDFLARE_API_TOKEN` (Pages edit) and `CLOUDFLARE_ACCOUNT_ID`;
+- variables: `SUPABASE_PROJECT_REF`, `CLOUDFLARE_PAGES_PROJECT`, and the build settings from step 3 above
+  (`VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, `VITE_TURNSTILE_SITE_KEY`, `VITE_SITE_OPERATOR`, `VITE_CONTACT_EMAIL`).
+
+The job applies the migrations the database lacks, stops if the database and the repo don't then have exactly the
+same ones, builds, and publishes. The old app keeps running against the new database until the publish ends, so
+every migration must work with the previous version of the app: add a column or table in one release, and
+remove what is no longer used in a later one.

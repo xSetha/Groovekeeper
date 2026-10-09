@@ -33,6 +33,8 @@ async function retitle(page: Page, song: RegExp, title: string): Promise<void> {
   await library(page).getByRole('link', { name: song }).click();
   await page.getByRole('textbox', { name: 'Title' }).fill(title);
   await page.getByRole('link', { name: 'Songs' }).click();
+  // The library shows the title once it's saved; going to another page before that could cut the save short.
+  await expect(library(page).getByText(title)).toBeVisible();
 }
 
 test('two devices on one account', async ({ browser, blocked }) => {
@@ -54,6 +56,8 @@ test('two devices on one account', async ({ browser, blocked }) => {
     await expect(a.getByRole('heading', { name: 'Check your email' })).toBeVisible();
     await a.goto(await linkInEmail(email));
     await a.getByRole('button', { name: 'Add 6 songs to my account' }).click();
+    // Settings stays closed until the question is answered; going there before it has been is sent back to it.
+    await expect(a.getByRole('heading', { name: 'Add what’s on this device?' })).toBeHidden();
     await syncNow(a);
   });
 
@@ -84,6 +88,10 @@ test('two devices on one account', async ({ browser, blocked }) => {
     await a.keyboard.type('Capo 2');
     await a.keyboard.press('Enter');
     await a.getByRole('link', { name: 'Songs' }).click();
+    // Opened again, the song shows the note once it's saved; syncing before that would send the song without it.
+    await library(a).getByRole('link', { name: /Scarborough Fair/ }).click();
+    await expect(a.getByRole('textbox', { name: 'Note' })).toHaveValue('Capo 2');
+    await a.getByRole('link', { name: 'Songs' }).click();
     await syncNow(a);
     await syncNow(b);
     await b.goto('/');
@@ -98,6 +106,7 @@ test('two devices on one account', async ({ browser, blocked }) => {
     await a.context().setOffline(true);
     await a.getByRole('textbox', { name: 'Title' }).fill('Twinkle (offline edit)');
     await a.getByRole('link', { name: 'Songs' }).click();
+    await expect(library(a).getByText('Twinkle (offline edit)')).toBeVisible();
     await a.context().setOffline(false);
     await syncNow(a);
     await syncNow(b);
@@ -111,6 +120,7 @@ test('two devices on one account', async ({ browser, blocked }) => {
     await a.context().setOffline(true);
     await a.getByRole('textbox', { name: 'Title' }).fill('Auld Lang Syne (A)');
     await a.getByRole('link', { name: 'Songs' }).click();
+    await expect(library(a).getByText('Auld Lang Syne (A)')).toBeVisible();
     await retitle(b, /Auld Lang Syne/, 'Auld Lang Syne (B)');
     await syncNow(b);
     await a.context().setOffline(false);
