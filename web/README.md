@@ -113,3 +113,56 @@ The job applies the migrations the database lacks, stops if the database and the
 same ones, builds, and publishes. The old app keeps running against the new database until the publish ends, so
 every migration must work with the previous version of the app: add a column or table in one release, and
 remove what is no longer used in a later one.
+
+### Backups
+
+The free Supabase plan has no backups of its own, so `.github/workflows/backup.yml` makes one every night
+(03:17 UTC): it dumps the songs, the setlists and the accounts (`auth.users`, `auth.identities`), encrypts the dump
+with an [age](https://github.com/FiloSottile/age) public key, and keeps it for 7 days as the run's `backup`
+artifact. The repository is public, so only the owner of the private key can read a backup. The same run
+asks the project for its health, which keeps it from pausing after a week of silence, and turns the workflow
+on again, which GitHub otherwise turns off after 60 days without activity in the repository. The run fails, and
+GitHub sends its usual email about a failed scheduled run, when the dump is tiny or lacks a table, or when the
+database has passed 400 MB (the plan turns read-only at 500 MB). The workflow runs only in the repository
+`xSetha/Groovekeeper`; a copy that wants backups changes that line.
+
+Set up, once:
+
+1. Make a key pair, and keep `groovekeeper-backup.key` somewhere safe and outside the repository. Without it a
+   backup can't be read, and anyone who has it can read every backup.
+
+   ```powershell
+   age-keygen -o groovekeeper-backup.key      # prints "Public key: age1..."
+   ```
+
+2. In the `production` environment, add the variable `AGE_PUBLIC_KEY` (that public key) and the secret
+   `SUPABASE_DB_URL`: the project's connection string for the **Session pooler** (Connect → Session pooler,
+   with the database password filled in). The direct address needs IPv6, which Actions doesn't have.
+3. Run the workflow once by hand (Actions → Backup → Run workflow) and check that it passes.
+
+#### Restoring a backup
+
+You need `psql`, `pg_restore` (Postgres 17's tools, or `docker run postgres:17`) and `age`.
+
+1. Use a project that has the tables and is empty: a new project with `npx supabase db push` run on it, or the
+   same project with its `public.songs` and `public.setlists` rows (and its accounts) removed.
+2. Download the `backup` artifact from the run you want, unzip it, and decrypt it:
+
+   ```powershell
+   age -d -i groovekeeper-backup.key -o groovekeeper.dump groovekeeper-2026-10-09.dump.age
+   ```
+
+3. Load it, with the tables' own triggers off, since those would give every song a new version and time:
+
+   ```powershell
+   psql $DATABASE_URL -c "alter table public.songs disable trigger user" -c "alter table public.setlists disable trigger user"
+   pg_restore --dbname $DATABASE_URL --data-only --no-owner --exit-on-error groovekeeper.dump
+   psql $DATABASE_URL -c "alter table public.songs enable trigger user" -c "alter table public.setlists enable trigger user"
+   ```
+
+   `$DATABASE_URL` is the same connection string as above. Accounts, their passwords and their songs come back
+   as they were at the time of the dump, versions and times included.
+
+Devices that synced after the dump have newer songs than the restored database, and the app doesn't yet send
+them again by itself. Until it does, don't have people sign out to fix it: signing out empties the device. Ask them
+to use **Export library** first (in the library, or in Settings), so their songs can be imported again.

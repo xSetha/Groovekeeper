@@ -1,0 +1,52 @@
+# Every night: dumps the accounts database, encrypts the dump so only the owner of the private key can read it
+# (the repository is public), and keeps it for 7 days as an artifact. The same run keeps the free Supabase
+# project awake (it pauses after a week without use) and turns this workflow on again, which GitHub would turn
+# off after 60 days without activity in the repository. See web/README.md for the settings it needs and for
+# restoring a backup. A failed run sends the notice GitHub sends for any failed scheduled workflow.
+name: Backup
+
+on:
+  schedule:
+    - cron: '17 3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: write   # turn this workflow on again
+
+jobs:
+  backup:
+    # Only the real repository: a copy of it has none of the settings and must not run this.
+    if: github.repository == 'xSetha/Groovekeeper'
+    runs-on: ubuntu-latest
+    environment: production
+    defaults:
+      run:
+        shell: bash   # stops when a command in a pipe fails
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Turn this workflow on again
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow enable backup.yml
+
+      - name: Keep the Supabase project awake
+        run: |
+          curl -fsS -o /dev/null -H "apikey: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}" "${{ vars.VITE_SUPABASE_URL }}/auth/v1/health"
+
+      - name: Install age
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq age
+
+      - name: Dump and encrypt the database
+        env:
+          DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
+          AGE_PUBLIC_KEY: ${{ vars.AGE_PUBLIC_KEY }}
+        run: bash web/supabase/backup.sh "$RUNNER_TEMP/backup"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: backup
+          path: ${{ runner.temp }}/backup/*.age
+          retention-days: 7
+          if-no-files-found: error
