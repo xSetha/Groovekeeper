@@ -61,7 +61,12 @@ The app is a static site: there's no server of its own. Accounts and sync need a
      a Redirect URL. The emails' links (confirming an account or a new email, forgot password) land there.
    - Email: keep "Confirm email" on, and set the minimum password length to 8, which the app asks for.
    - SMTP: Supabase's own sender is only for trying things out (a few emails an hour). Before others
-     sign up, add an email service's SMTP settings.
+     sign up, add an email service's SMTP settings (with Resend: host `smtp.resend.com`, port 465, user
+     `resend`, an API key as the password, and a sender on a domain you verified there with its SPF, DKIM
+     and DMARC records). Then raise the email rate limit (Authentication → Rate Limits) to what the service allows.
+   - Emails: paste `supabase/templates/confirmation.html`, `recovery.html` and `email_change.html` into the
+     "Confirm sign up", "Reset password" and "Change email address" templates, with the subjects given for them in
+     `supabase/config.toml`. The local Supabase sends the same files.
    - In the Data API settings, keep the maximum rows at 1000: sync reads the account in pages of that size.
    - Bot protection: turn on CAPTCHA protection with Turnstile, and give it the secret key of a Turnstile
      widget you add in the Cloudflare dashboard (Turnstile → Add widget, managed mode, your copy's domain).
