@@ -1,0 +1,77 @@
+# Runs every check on each push to main and on pull requests: the desktop tests, and the web app's typecheck,
+# tests, database access-rule tests and end-to-end tests (against a local Supabase, as on a computer).
+# It uses no secrets, so pull requests from forks run the same checks.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+# A newer push to a pull request replaces the older run; runs on main always finish.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  desktop:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Test
+        run: dotnet test
+
+  web:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      # Only what the app uses: the database, sign-in and the data API, and the inbox the tests read emails from.
+      - name: Start the local Supabase
+        run: npx supabase start -x realtime,storage-api,imgproxy,postgres-meta,studio,edge-runtime,logflare,vector,supavisor
+
+      # The Supabase tests skip themselves when it doesn't answer; here that would hide a failure.
+      - name: Check the local Supabase answers
+        run: |
+          key=$(grep '^VITE_SUPABASE_PUBLISHABLE_KEY=' apps/groovekeeper/.env | cut -d= -f2-)
+          curl -fsS -H "apikey: $key" http://127.0.0.1:54321/auth/v1/health
+
+      - name: Tests
+        run: npm test
+
+      - name: Database access rules
+        run: npm run test:db
+
+      - name: End-to-end tests
+        run: npm run test:e2e
+
+      - name: Keep the traces of failed end-to-end tests
+        if: failure()
+        uses: actions/upload-artifact@v5
+        with:
+          name: e2e-test-results
+          path: web/e2e/test-results
+          retention-days: 7
+          if-no-files-found: ignore
