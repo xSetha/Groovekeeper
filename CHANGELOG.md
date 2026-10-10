@@ -6,6 +6,8 @@ version's section here becomes the text of its GitHub release.
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-10-10
+
 ### Added
 - Settings: the new Settings menu next to File (Ctrl+,) opens a window for the options that apply to
   every song, each remembered and applied straight away. Display: how chords are written, the size of
