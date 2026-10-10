@@ -1,14 +1,38 @@
 import { parseSongText } from '@groovekeeper/core';
 import { describe, expect, it } from 'vitest';
 import {
-  layoutPdf, lineSegments, PAGE, placeNotes, printedSections, PRINTED_COLUMNS, wrapLine, type Mark, type Measure,
+  chordDisplay, keyText, layoutPdf, lineSegments, PAGE, placeNotes, printedSections, PRINTED_COLUMNS, wrapLine, type Mark, type Measure,
 } from '../src/pdf/layout';
 
 // Letters of a fixed width: 0.6 of the size, as in Cascadia Mono, and half the size for the sans font.
 const measure: Measure = (text, face, size) => text.length * size * (face.startsWith('mono') ? 0.6 : 0.5);
-const options = { collapseRepeats: true, numerals: false };
+const options = { collapseRepeats: true, chords: 'letters' as const };
 
 const texts = (page: Mark[]) => page.flatMap((mark) => (mark.kind === 'text' ? [mark.text] : []));
+
+describe('chord styles', () => {
+  const song = parseSongText('Song\n\nKey: Dm\n\n[Verse]\nDm      Am/G\nla la\n');
+
+  it('writes the chords as letters, Do Re Mi or Roman numerals', () => {
+    const chordRow = (chords: 'letters' | 'solfege' | 'numerals') =>
+      printedSections(song, { ...options, chords })[0]!.lines[0]!.chords.trim().split(/\s+/);
+    expect(chordRow('letters')).toEqual(['Dm', 'Am/G']);
+    expect(chordRow('solfege')).toEqual(['Rem', 'Lam/Sol']);
+    expect(chordRow('numerals')).toEqual(['i', 'v/4']);
+  });
+
+  it('writes the key line in Do Re Mi only with Do Re Mi chords', () => {
+    expect(keyText(song, 'letters')).toBe('Dm');
+    expect(keyText(song, 'solfege')).toBe('Rem');
+    expect(keyText(song, 'numerals')).toBe('Dm');
+    const page = layoutPdf([{ song }], { ...options, chords: 'solfege' }, measure)[0]!;
+    expect(texts(page)).toContain('Key: Rem');
+  });
+
+  it('keeps letters for Roman numerals when the song has no key', () => {
+    expect(chordDisplay(parseSongText('Song\n\n[Verse]\nG\nla\n'), 'numerals')).toBeUndefined();
+  });
+});
 
 describe('cutting a line into pieces', () => {
   it('cuts at the start of words, each piece with its own chords', () => {

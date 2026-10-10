@@ -1,7 +1,8 @@
-import { UNTITLED_TITLE } from '@groovekeeper/core';
+import { displayChord, UNTITLED_TITLE } from '@groovekeeper/core';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router';
+import { useChordNaming } from '../chordNaming';
 import { listSongs, matchesSearch } from '../library/library';
 import { useNewSong } from '../navigation';
 import { useAccount } from '../sync/account';
@@ -19,6 +20,7 @@ interface Props {
 /** The library: every song by title, with a search over title, artist and key. */
 export function LibraryPanel({ className = '', activeId, canImport = true }: Props) {
   const songs = useLiveQuery(listSongs, []);
+  const naming = useChordNaming();
   const [search, setSearch] = useState('');
   const navigate = useNavigate();
   const newSong = useNewSong();
@@ -60,8 +62,8 @@ export function LibraryPanel({ className = '', activeId, canImport = true }: Pro
                 ) : null}
               </span>
               {song.key ? (
-                <span className="shrink-0 rounded bg-chip px-1.5 py-0.5 font-mono text-xs text-muted" title={`Key of ${song.key}`}>
-                  {song.key}
+                <span className="shrink-0 rounded bg-chip px-1.5 py-0.5 font-mono text-xs text-muted" title={`Key of ${displayChord(song.key, naming)}`}>
+                  {displayChord(song.key, naming)}
                 </span>
               ) : null}
             </Link>

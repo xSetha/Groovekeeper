@@ -35,7 +35,7 @@ To start a browser over as a guest, sign out, or clear the site's data in the br
 | Folder | Contents |
 | --- | --- |
 | `apps/groovekeeper` | The React app (Vite, React 19, Tailwind CSS, Dexie for the library) |
-| `packages/core` | Songs, chords, keys, transposing, key detection, Roman numerals, and the `.txt` and ChordPro formats: a TypeScript port of the desktop app's `Models`, `Music` and song file code. No React, no browser APIs |
+| `packages/core` | Songs, chords, keys, transposing, key detection, Roman numerals, Do Re Mi names, and the `.txt` and ChordPro formats: a TypeScript port of the desktop app's `Models`, `Music` and song file code. No React, no browser APIs |
 | `supabase` | The accounts database: settings for the local Supabase, the migrations (tables and access rules) and their pgTAP tests |
 | `e2e` | End-to-end tests with Playwright: a guest's library, and two devices syncing through one account |
 

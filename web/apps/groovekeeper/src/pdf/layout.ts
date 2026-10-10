@@ -2,14 +2,27 @@
 // pages follow the desktop's PDF export (SongPdfWriter): A4, 2 cm margins, songs one after another under a
 // thin line, and nothing split that's read together.
 import {
-  chordLine, displayTitle, parseKey, repeatedSections, romanNumeral, type Song,
+  chordLine, displayTitle, parseKey, repeatedSections, romanNumeral, toSolfege, type Song,
 } from '@groovekeeper/core';
 import type { SongNote } from '../library/db';
 
+/** How chords are written in the PDF: letters, Do Re Mi, or Roman numerals in each song's key (a song without a key keeps letters). */
+export type ChordStyle = 'letters' | 'solfege' | 'numerals';
+
 export interface ExportOptions {
   collapseRepeats: boolean;
-  numerals: boolean;
+  chords: ChordStyle;
 }
+
+/** How each chord of the song is written in the PDF, or undefined to write it as the song has it. */
+export function chordDisplay(song: Song, style: ChordStyle): ((name: string) => string) | undefined {
+  if (style === 'solfege') return toSolfege;
+  if (style === 'numerals' && parseKey(song.key)) return (name) => romanNumeral(name, song.key) ?? name;
+  return undefined;
+}
+
+/** The song's key as the "Key:" line writes it: in Do Re Mi when the chords are. */
+export const keyText = (song: Song, style: ChordStyle): string => (style === 'solfege' ? toSolfege(song.key) : song.key);
 
 /** A song to export, as it's written, with the notes floating over it. */
 export interface ExportSong {
@@ -39,7 +52,7 @@ export interface PrintedLine {
  */
 export function printedSections(song: Song, options: ExportOptions): PrintedSection[] {
   const repeated = options.collapseRepeats ? repeatedSections(song) : new Set<number>();
-  const display = options.numerals && parseKey(song.key) ? (name: string) => romanNumeral(name, song.key) ?? name : undefined;
+  const display = chordDisplay(song, options.chords);
   let lineIndex = 0;
   return song.sections.map((section, index) => {
     const collapsed = section.repeat || repeated.has(index);
@@ -245,7 +258,7 @@ export function layoutPdf(songs: ExportSong[], options: ExportOptions, measure: 
       rows.push(row(SUBTITLE_SIZE * 1.4, (top) => [text(left, baseline(top, SUBTITLE_SIZE * 1.4), song.artist, 'sans', SUBTITLE_SIZE, 'muted')]));
     }
     if (song.key) {
-      rows.push(row(4 + KEY_SIZE * 1.4, (top) => [text(left, baseline(top + 4, KEY_SIZE * 1.4), `Key: ${song.key}`, 'sans', KEY_SIZE, 'muted')]));
+      rows.push(row(4 + KEY_SIZE * 1.4, (top) => [text(left, baseline(top + 4, KEY_SIZE * 1.4), `Key: ${keyText(song, options.chords)}`, 'sans', KEY_SIZE, 'muted')]));
     }
     return rows;
   };

@@ -1,8 +1,9 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { App } from '../src/App';
+import { setChordNaming } from '../src/chordNaming';
 import { db } from '../src/library/db';
 
 const TEXT = 'Amazing Grace\n\nKey: G\n\n[Verse 1]\nG          C\nAmazing grace\nhow sweet\n';
@@ -22,6 +23,7 @@ const sheet = () => within(screen.getByRole('article', { name: 'Song' }));
 const stored = async () => (await db.songs.get('grace'))?.text;
 
 beforeEach(() => db.songs.clear());
+afterEach(() => setChordNaming('letters'));
 
 describe('the editor', () => {
   it('shows a song as stored, without sections when it has none', async () => {
@@ -301,6 +303,23 @@ describe('typing chords', () => {
     expect(sheet().getByRole('button', { name: 'I' })).toBeInTheDocument();
     expect(sheet().getByRole('button', { name: 'IV' })).toBeInTheDocument();
     expect(await stored()).toBe(TEXT);
+  });
+
+  it('shows chords and keys as Do Re Mi, takes chords typed either way, and keeps the song in letters', async () => {
+    const user = userEvent.setup();
+    await openSong();
+    await user.click(screen.getByRole('button', { name: 'Do Re Mi' }));
+
+    expect(sheet().getByRole('button', { name: 'Sol' })).toBeInTheDocument();
+    expect(sheet().getByRole('button', { name: 'Do' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Lam' })).toBeInTheDocument();
+    expect(await stored()).toBe(TEXT);
+
+    await user.click(chordRow(1));
+    await user.keyboard('Lam{Enter}');
+    expect(sheet().getByRole('button', { name: 'Lam' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Do Re Mi' }));
+    expect(sheet().getByRole('button', { name: 'Am' })).toBeInTheDocument();
   });
 
   it('no longer offers a key from the chords', async () => {

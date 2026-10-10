@@ -1,8 +1,9 @@
 import {
-  ALL_KEYS, displayTitle, hasContent, transposeSong, UNTITLED_TITLE, type Song,
+  ALL_KEYS, displayChord, displayTitle, hasContent, transposeSong, UNTITLED_TITLE, type Song,
 } from '@groovekeeper/core';
 import { Fragment, useCallback, useEffect, useRef, useState, type MouseEvent, type PointerEvent, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router';
+import { setChordNaming, useChordNaming } from '../chordNaming';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { ContextMenu, type MenuAt } from '../components/ContextMenu';
 import { useCharWidth } from '../components/useCharWidth';
@@ -214,6 +215,7 @@ function Toolbar(props: { id: string; onDelete: () => void; onDeleteFailed: () =
   const canRedo = useEditor((s) => s.future.length > 0);
   const key = useEditor((s) => s.song.key);
   const numerals = useEditor((s) => s.numerals);
+  const naming = useChordNaming();
   const { edit, undo, redo, setNumerals } = store.getState();
 
   const saveFile = (format: SongFormat) => {
@@ -255,7 +257,7 @@ function Toolbar(props: { id: string; onDelete: () => void; onDeleteFailed: () =
           <option value="">–</option>
           {ALL_KEYS.map((k) => (
             <option key={k} value={k}>
-              {k}
+              {displayChord(k, naming)}
             </option>
           ))}
         </select>
@@ -271,6 +273,15 @@ function Toolbar(props: { id: string; onDelete: () => void; onDeleteFailed: () =
           I IV V
         </button>
       ) : null}
+      <button
+        type="button"
+        aria-pressed={naming === 'solfege'}
+        title="Show chords and keys as Do Re Mi instead of letters (every song)"
+        className="rounded px-2 py-1.5 hover:bg-hover aria-pressed:bg-accent-fill aria-pressed:text-on-accent pointer-coarse:min-h-11"
+        onClick={() => setChordNaming(naming === 'solfege' ? 'letters' : 'solfege')}
+      >
+        Do Re Mi
+      </button>
       <span className="ml-auto flex items-center gap-1">
         <IconButton
           label="Save as file"

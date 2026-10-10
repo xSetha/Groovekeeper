@@ -3,9 +3,12 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import { db, type LibrarySong, type SongNote } from '../library/db';
+import { chordNaming } from '../chordNaming';
 import { listSongs } from '../library/library';
 import { setlistSongs } from '../library/setlists';
-import { lineSegments, placeNotes, printedSections, type ExportOptions, type ExportSong, type Ink } from '../pdf/layout';
+import {
+  keyText, lineSegments, placeNotes, printedSections, type ChordStyle, type ExportOptions, type ExportSong, type Ink,
+} from '../pdf/layout';
 import { toast } from '../toasts';
 
 /** A song in the PDF, with an id for its place in the preview. */
@@ -24,7 +27,8 @@ export default function PdfPage() {
   const [params] = useSearchParams();
   const songId = params.get('song');
   const setlistId = params.get('setlist');
-  const [options, setOptions] = useState<Options>({ collapseRepeats: true, numerals: false });
+  // The Chords choice starts on how the editor shows chords; it isn't remembered for the next export.
+  const [options, setOptions] = useState<Options>(() => ({ collapseRepeats: true, chords: chordNaming() }));
 
   const optionBoxes = (
     <fieldset className="mt-6 flex flex-col gap-2">
@@ -36,9 +40,19 @@ export default function PdfPage() {
       >
         Collapse repeated sections
       </CheckBox>
-      <CheckBox checked={options.numerals} onChange={(numerals) => setOptions({ ...options, numerals })} hint="In each song's key; songs without a key keep their chord names.">
-        Chords as Roman numerals
-      </CheckBox>
+      <label className="flex flex-col gap-1 rounded px-1 py-1">
+        <span>Chords</span>
+        <select
+          value={options.chords}
+          className="self-start rounded border border-line bg-window px-1 py-1 pointer-coarse:min-h-11"
+          onChange={(event) => setOptions({ ...options, chords: event.target.value as ChordStyle })}
+        >
+          <option value="letters">A B C (letters)</option>
+          <option value="solfege">Do Re Mi</option>
+          <option value="numerals">I IV V (Roman numerals)</option>
+        </select>
+        <span className="text-sm text-muted">Roman numerals are in each song's key; a song without a key keeps letters.</span>
+      </label>
     </fieldset>
   );
 
@@ -263,7 +277,7 @@ function PreviewSong({ song, notes = [], options }: { song: Song; notes?: SongNo
       <div className="font-sans">
         <h2 className="text-[18pt] leading-tight font-bold">{displayTitle(song)}</h2>
         {song.artist ? <p className="text-[11pt] text-muted">{song.artist}</p> : null}
-        {song.key ? <p className="mt-1 text-[9pt] text-muted">Key: {song.key}</p> : null}
+        {song.key ? <p className="mt-1 text-[9pt] text-muted">Key: {keyText(song, options.chords)}</p> : null}
       </div>
       <div ref={lyrics} className="relative font-mono text-[10.5pt]">
         {sections.map((section, index) => (

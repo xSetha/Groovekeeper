@@ -1,6 +1,6 @@
 // Edits to a song in the editor. Each returns a new song and leaves the old one as it was.
 import {
-  applyTextChange, isChord, isChordLine, joinLines, splitAt, textChange, type ChordPlacement, type Song,
+  applyTextChange, isChordLine, joinLines, normalizeChord, splitAt, textChange, type ChordPlacement, type Song,
 } from '@groovekeeper/core';
 import type { SongNote } from '../library/db';
 import { newId as newNoteId } from '../library/ids';
@@ -235,9 +235,11 @@ export function setChord(song: KeyedSong, at: LineAt, position: number, name: st
   const trimmed = name.trim();
   const existing = lineAt(song, at)?.chords.find((c) => c.position === position);
   if (trimmed.length === 0) return existing ? removeChord(song, at, existing.id) : song;
-  if (!isChord(trimmed)) return null;
+  // Typed as letters or as Do Re Mi; the song keeps letters.
+  const chord = normalizeChord(trimmed);
+  if (chord === null) return null;
   // Unchanged, so it's no undo step and nothing to save.
-  return existing?.name === trimmed ? song : placeChord(song, at, position, trimmed);
+  return existing?.name === chord ? song : placeChord(song, at, position, chord);
 }
 
 export function moveChord(song: KeyedSong, at: LineAt, chordId: string, position: number): KeyedSong {

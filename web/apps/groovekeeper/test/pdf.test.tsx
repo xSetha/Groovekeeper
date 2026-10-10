@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { App } from '../src/App';
+import { setChordNaming } from '../src/chordNaming';
 import { db } from '../src/library/db';
 import { exportPdf } from '../src/pdf/exportPdf';
 import { pdfFileName } from '../src/pages/PdfPage';
@@ -16,6 +17,7 @@ const GRACE =
 const HOUSE = 'House of the Rising Sun\nTraditional\n\n[Verse]\nAm      C      D      F\nThere is a house\nAm     E     Am\nin New Orleans\n';
 
 beforeEach(async () => {
+  setChordNaming('letters');
   vi.mocked(exportPdf).mockClear();
   await db.songs.clear();
   await db.setlists.clear();
@@ -54,21 +56,31 @@ describe('exporting a PDF', () => {
     expect(preview().queryByText('(repeat)')).toBeNull();
 
     expect(chordsShown()).toEqual(['G', 'C', 'D', 'G', 'C']);
-    await user.click(screen.getByRole('checkbox', { name: /Chords as Roman numerals/ }));
+    await user.selectOptions(screen.getByRole('combobox', { name: /Chords/ }), 'numerals');
     expect(chordsShown()).toEqual(['I', 'IV', 'V', 'I', 'IV']);
+    await user.selectOptions(screen.getByRole('combobox', { name: /Chords/ }), 'solfege');
+    expect(chordsShown()).toEqual(['Sol', 'Do', 'Re', 'Sol', 'Do']);
+    expect(preview().getByText('Key: Sol')).toBeInTheDocument();
+  });
+
+  it('starts the Chords choice on how the editor shows chords', async () => {
+    setChordNaming('solfege');
+    renderAt('/pdf?song=grace');
+    expect(await screen.findByRole('combobox', { name: /Chords/ })).toHaveValue('solfege');
+    expect(chordsShown()).toEqual(['Sol', 'Do', 'Re']); // the second chorus is collapsed
   });
 
   it('downloads the PDF with the options chosen, named after the song', async () => {
     const user = userEvent.setup();
     renderAt('/pdf?song=grace');
-    await user.click(await screen.findByRole('checkbox', { name: /Chords as Roman numerals/ }));
+    await user.selectOptions(await screen.findByRole('combobox', { name: /Chords/ }), 'numerals');
     await user.click(screen.getByRole('button', { name: 'Export PDF' }));
 
     await waitFor(() => expect(exportPdf).toHaveBeenCalledTimes(1));
     const [fileName, title, songs, options] = vi.mocked(exportPdf).mock.calls[0]!;
     expect([fileName, title]).toEqual(['Amazing Grace.pdf', 'Amazing Grace']);
     expect(songs.map((s) => s.song.title)).toEqual(['Amazing Grace']);
-    expect(options).toEqual({ collapseRepeats: true, numerals: true });
+    expect(options).toEqual({ collapseRepeats: true, chords: 'numerals' });
   });
 
   it('previews and exports a song’s notes', async () => {

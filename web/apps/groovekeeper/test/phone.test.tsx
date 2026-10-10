@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { App } from '../src/App';
+import { setChordNaming } from '../src/chordNaming';
 import { songColumns } from '../src/components/SongSheet';
 import { db } from '../src/library/db';
 import { PHONE_QUERY } from '../src/phone';
@@ -27,7 +28,10 @@ beforeEach(async () => {
   }));
 });
 
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+  vi.unstubAllGlobals();
+  setChordNaming('letters');
+});
 
 describe('on a phone', () => {
   it('a song shows its notes, read only', async () => {
@@ -74,9 +78,38 @@ describe('on a phone', () => {
   });
 });
 
+describe('Do Re Mi on a phone', () => {
+  it('writes the chords and the key in the reader the way the editor does', async () => {
+    const user = userEvent.setup();
+    await db.songs.add({ id: 'grace', title: 'Amazing Grace', artist: 'John Newton', key: 'G', text: TEXT, updatedAt: 0, version: 0, dirty: 1 });
+    setChordNaming('solfege');
+    renderApp('/songs/grace');
+
+    expect((await screen.findAllByText('Sol')).length).toBeGreaterThan(1); // the chord and the key
+    expect(screen.getByTestId('song-key')).toHaveTextContent('Sol');
+    await user.click(screen.getByRole('button', { name: 'Transpose up' }));
+    expect(screen.getByTestId('song-key')).toHaveTextContent('Lab'); // G up one is Ab
+    expect(screen.getByRole('button', { name: 'Back to Sol' })).toBeInTheDocument();
+  });
+
+  it('shows the key chip in the library and a setlist in Do Re Mi', async () => {
+    await db.songs.add({ id: 'grace', title: 'Amazing Grace', artist: 'John Newton', key: 'G', text: TEXT, updatedAt: 0, version: 0, dirty: 1 });
+    setChordNaming('solfege');
+    renderApp('/');
+
+    expect(await screen.findByText('Amazing Grace')).toBeInTheDocument();
+    expect(screen.getByTitle('Key of Sol')).toHaveTextContent('Sol');
+  });
+});
+
 describe('fitting a song to the screen', () => {
   it('counts the columns of the widest line, chords past the lyrics included', () => {
     expect(songColumns(parseSongText(TEXT))).toBe(13);
     expect(songColumns(parseSongText('[Intro]\nC   G   Am   Fmaj7\n'))).toBe(18);
+  });
+
+  it('counts the chords as they are written in Do Re Mi, which are wider', () => {
+    // Fmaj7 starts at column 13 and becomes Famaj7, one letter wider.
+    expect(songColumns(parseSongText('[Intro]\nC   G   Am   Fmaj7\n'), 'solfege')).toBe(19);
   });
 });

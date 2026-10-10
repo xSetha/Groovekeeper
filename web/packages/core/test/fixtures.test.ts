@@ -4,8 +4,8 @@ import { join, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
   chordToString, detectKey, diatonicChords, fitsKey, isChord, keyUsesFlats, parseChord, parseChordPro,
-  parseSongText, pitchClass, repeatedSections, romanNumeral, rootOf, songToChordPro, songToText, suggestNext,
-  transposeChordName, transposeKey, transposeSong, triadOf, noteToString, type Song,
+  fromSolfege, parseSongText, pitchClass, repeatedSections, romanNumeral, rootOf, songToChordPro, songToText, suggestNext,
+  toSolfege, transposeChordName, transposeKey, transposeSong, triadOf, noteToString, type Song,
 } from '../src';
 
 const FIXTURES = resolve(import.meta.dirname, '../../../../shared/fixtures');
@@ -113,6 +113,21 @@ describe('transpose', () => {
 describe('roman numerals', () => {
   it.each(music<{ chord: string; key: string; expected: string | null }[]>('roman-numerals.json'))('$chord in $key is $expected', ({ chord, key, expected }) => {
     expect(romanNumeral(chord, key)).toBe(expected);
+  });
+});
+
+describe('solfege', () => {
+  const fixture = music<{
+    toSolfege: { chord: string; expected: string }[];
+    fromSolfege: { text: string; expected: string | null }[];
+  }>('solfege.json');
+
+  it.each(fixture.toSolfege)('writes $chord as $expected', ({ chord, expected }) => {
+    expect(toSolfege(chord)).toBe(expected);
+  });
+
+  it.each(fixture.fromSolfege)('reads "$text" as $expected', ({ text, expected }) => {
+    expect(fromSolfege(text)).toBe(expected);
   });
 });
 

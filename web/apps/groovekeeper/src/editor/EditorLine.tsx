@@ -1,7 +1,8 @@
 import {
   memo, useLayoutEffect, useRef, useState, type ClipboardEvent, type KeyboardEvent, type MouseEvent, type PointerEvent,
 } from 'react';
-import { romanNumeral } from '@groovekeeper/core';
+import { displayChord, romanNumeral } from '@groovekeeper/core';
+import { useChordNaming } from '../chordNaming';
 import { trackDrag } from '../components/drag';
 import {
   editText, joinWithPrevious, moveChord, neighbourLine, partInRange, pasteLines, removeChord, setChord, splitLine,
@@ -28,6 +29,7 @@ export const EditorLine = memo(function EditorLine({ section, line: lineIndex, l
   const focus = useEditor((s) => (s.focus?.lineId === lineId ? s.focus : null));
   // The key to show chords as Roman numerals in, or '' to show their names.
   const numeralKey = useEditor((s) => (s.numerals ? s.song.key : ''));
+  const naming = useChordNaming();
   // This line's part of a selection across lines, as "from-to" ("from-" to the end of the line), or ''.
   const selected = useEditor((s) => {
     const part = s.selection && partInRange(s.song, s.selection, lineId);
@@ -54,7 +56,8 @@ export const EditorLine = memo(function EditorLine({ section, line: lineIndex, l
 
   if (!line) return null;
   const { edit, editAndFocus } = store.getState();
-  const shown = (name: string) => (numeralKey ? (romanNumeral(name, numeralKey) ?? name) : name);
+  // Roman numerals win over Do Re Mi while I IV V is on.
+  const shown = (name: string) => (numeralKey ? (romanNumeral(name, numeralKey) ?? displayChord(name, naming)) : displayChord(name, naming));
   // Wide enough for the lyrics, the chords past their end, and room to type.
   const width = Math.max(
     line.text.length + 2,
@@ -134,7 +137,8 @@ export const EditorLine = memo(function EditorLine({ section, line: lineIndex, l
     setSelectedId(null);
     setHoverColumn(null);
     boxOpen.current = true;
-    setTyping({ column, name, refused: false });
+    // The box shows the name the way chords are shown; typed as letters or Do Re Mi, the song keeps letters.
+    setTyping({ column, name: displayChord(name, naming), refused: false });
   }
 
   function closeBox() {

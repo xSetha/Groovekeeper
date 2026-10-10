@@ -95,6 +95,12 @@ describe('editing a song', () => {
     expect(setChord(SONG, verse(0), 11, 'C')).toBe(SONG);
   });
 
+  it('takes a chord typed in Do Re Mi and keeps it as letters', () => {
+    expect(chords(lineAt(setChord(SONG, verse(1), 4, 'lam7')!, verse(1)))).toEqual([{ position: 4, name: 'Am7' }]);
+    expect(chords(lineAt(setChord(SONG, verse(0), 11, 'Sol/Si')!, verse(0)))?.[1]).toEqual({ position: 11, name: 'G/B' });
+    expect(setChord(SONG, verse(1), 0, 'Domino')).toBeNull();
+  });
+
   it("refuses a name that isn't a chord", () => {
     expect(setChord(SONG, verse(1), 0, 'hello')).toBeNull();
     expect(setChord(SONG, verse(0), 0, 'G hello')).toBeNull();
