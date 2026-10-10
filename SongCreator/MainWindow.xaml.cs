@@ -5,6 +5,7 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
 using System.Windows.Shapes;
 using System.Windows.Threading;
 using Microsoft.Data.Sqlite;
@@ -58,6 +59,8 @@ namespace SongCreator
             {
                 if (e.PropertyName == nameof(MainViewModel.ActiveDocument))
                     WatchSelection(_viewModel.ActiveDocument);
+                else if (e.PropertyName == nameof(MainViewModel.IsLibraryPanelOpen))
+                    SlideLibrary(_viewModel.IsLibraryPanelOpen);
             };
             DataContext = _viewModel;
             SectionList.LayoutUpdated += (_, _) => UpdateNoteLayout();
@@ -101,6 +104,29 @@ namespace SongCreator
             Width = Math.Clamp(settings.Width, MinWidth, Math.Max(MinWidth, SystemParameters.WorkArea.Width));
             Height = Math.Clamp(settings.Height, MinHeight, Math.Max(MinHeight, SystemParameters.WorkArea.Height));
             _viewModel.IsLibraryPanelOpen = settings.IsLibraryPanelOpen;
+            // The remembered state is shown as it is, without sliding.
+            LibraryHost.BeginAnimation(WidthProperty, null);
+            LibraryHost.Width = LibraryWidth;
+            LibraryHost.Visibility = settings.IsLibraryPanelOpen ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        private const double LibraryWidth = 260;
+
+        /// <summary>Slides the library panel open or shut; once shut it leaves the tab order too.</summary>
+        private void SlideLibrary(bool open)
+        {
+            if (open)
+                LibraryHost.Visibility = Visibility.Visible;
+            var slide = new DoubleAnimation(open ? LibraryWidth : 0, TimeSpan.FromMilliseconds(200))
+            {
+                EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+            };
+            slide.Completed += (_, _) =>
+            {
+                if (!_viewModel.IsLibraryPanelOpen)
+                    LibraryHost.Visibility = Visibility.Collapsed;
+            };
+            LibraryHost.BeginAnimation(WidthProperty, slide);
         }
 
         private WindowSettings CurrentSettings()

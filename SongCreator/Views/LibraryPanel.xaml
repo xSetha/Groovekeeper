@@ -4,8 +4,16 @@
     <!-- The song library (LibraryViewModel): search, then the songs. Double-click or Enter opens one. -->
     <DockPanel>
         <StackPanel DockPanel.Dock="Top" Margin="0,0,0,8">
-            <TextBlock Text="LIBRARY" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource MutedForeground}"
-                       Margin="0,0,0,8" />
+            <DockPanel Margin="0,0,0,8">
+                <!-- Only where the host sets HideCommand (the editor's side panel, not the start page) -->
+                <Button x:Name="HideButton" DockPanel.Dock="Right" Style="{StaticResource FlatButton}" Padding="6,2" Visibility="Collapsed"
+                        ToolTip="Hide library (Ctrl+B)" AutomationProperties.Name="Hide library"
+                        Command="{Binding HideCommand, RelativeSource={RelativeSource AncestorType=UserControl}}">
+                    <TextBlock Text="&#xE76B;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="12" />
+                </Button>
+                <TextBlock Text="LIBRARY" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource MutedForeground}"
+                           VerticalAlignment="Center" />
+            </DockPanel>
             <Border Background="{DynamicResource CardBackground}" BorderBrush="{DynamicResource KeyCapBorder}" BorderThickness="1"
                     CornerRadius="4" Padding="6,4">
                 <TextBox Style="{StaticResource HintTextBox}" Tag="Search title, artist or key"

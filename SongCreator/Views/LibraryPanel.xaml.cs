@@ -10,9 +10,21 @@ namespace SongCreator.Views
     /// </summary>
     public partial class LibraryPanel : UserControl
     {
+        /// <summary>Hides the panel; set only where the panel can be hidden. The hide button shows once it is.</summary>
+        public static readonly DependencyProperty HideCommandProperty = DependencyProperty.Register(
+            nameof(HideCommand), typeof(ICommand), typeof(LibraryPanel),
+            new PropertyMetadata(null, (d, e) =>
+                ((LibraryPanel)d).HideButton.Visibility = e.NewValue == null ? Visibility.Collapsed : Visibility.Visible));
+
         public LibraryPanel()
         {
             InitializeComponent();
+        }
+
+        public ICommand? HideCommand
+        {
+            get => (ICommand?)GetValue(HideCommandProperty);
+            set => SetValue(HideCommandProperty, value);
         }
 
         private void SongList_MouseDoubleClick(object sender, MouseButtonEventArgs e)

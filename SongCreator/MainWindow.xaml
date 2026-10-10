@@ -99,25 +99,6 @@
                     <Separator />
                     <MenuItem Header="E_xit" InputGestureText="Alt+F4" Click="Exit_Click" />
                 </MenuItem>
-                <MenuItem Header="_Edit" IsEnabled="{Binding IsEditingSong}">
-                    <MenuItem Header="_Undo" InputGestureText="Ctrl+Z" Click="Undo_Click" />
-                    <MenuItem Header="_Redo" InputGestureText="Ctrl+Y" Click="Redo_Click" />
-                    <Separator />
-                    <MenuItem Header="_Find and Replace…" InputGestureText="Ctrl+F" Click="Find_Click" />
-                </MenuItem>
-                <MenuItem Header="_View">
-                    <MenuItem Header="_Songs" Command="{Binding ShowSongsCommand}" />
-                    <MenuItem Header="Set_lists" InputGestureText="Ctrl+L" Command="{Binding ShowSetlistsCommand}" />
-                    <Separator />
-                    <MenuItem Header="_Library" InputGestureText="Ctrl+B" IsCheckable="True"
-                              IsChecked="{Binding IsLibraryPanelOpen}" />
-                </MenuItem>
-                <MenuItem Header="_Song" IsEnabled="{Binding IsEditingSong}">
-                    <MenuItem Header="Add _Section" Command="{Binding ActiveDocument.AddSectionCommand}" />
-                    <Separator />
-                    <MenuItem Header="Transpose _Up" Command="{Binding ActiveDocument.TransposeUpCommand}" />
-                    <MenuItem Header="Transpose _Down" Command="{Binding ActiveDocument.TransposeDownCommand}" />
-                </MenuItem>
             </Menu>
 
             <!-- Songs or Setlists (Ctrl+L) -->
@@ -141,11 +122,22 @@
                 <views:StartPage Visibility="{Binding HasDocuments, Converter={StaticResource BoolToCollapsed}}" />
 
                 <DockPanel Visibility="{Binding HasDocuments, Converter={StaticResource BoolToVisible}}">
-                    <!-- The library, next to the open songs (Ctrl+B) -->
-                    <Border DockPanel.Dock="Left" Width="260" Background="{DynamicResource ToolbarBackground}"
-                            BorderBrush="{DynamicResource CardBorder}" BorderThickness="0,0,1,0" Padding="12"
-                            Visibility="{Binding IsLibraryPanelOpen, Converter={StaticResource BoolToVisible}}">
-                        <views:LibraryPanel DataContext="{Binding Library}" />
+                    <!-- The library, next to the open songs (Ctrl+B). It slides shut; a thin rail brings it back. -->
+                    <Grid x:Name="LibraryHost" DockPanel.Dock="Left" Width="260" ClipToBounds="True">
+                        <Border Width="260" HorizontalAlignment="Left" Background="{DynamicResource ToolbarBackground}"
+                                BorderBrush="{DynamicResource CardBorder}" BorderThickness="0,0,1,0" Padding="12">
+                            <views:LibraryPanel DataContext="{Binding Library}"
+                                                HideCommand="{Binding DataContext.ToggleLibraryPanelCommand, RelativeSource={RelativeSource AncestorType=Window}}" />
+                        </Border>
+                    </Grid>
+                    <Border DockPanel.Dock="Left" Width="28" Background="{DynamicResource ToolbarBackground}"
+                            BorderBrush="{DynamicResource CardBorder}" BorderThickness="0,0,1,0"
+                            Visibility="{Binding IsLibraryPanelOpen, Converter={StaticResource BoolToCollapsed}}">
+                        <Button Style="{StaticResource FlatButton}" VerticalAlignment="Top" Padding="4,8" Margin="0,4,0,0"
+                                ToolTip="Show library (Ctrl+B)" AutomationProperties.Name="Show library"
+                                Command="{Binding ToggleLibraryPanelCommand}">
+                            <TextBlock Text="&#xE76C;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="12" />
+                        </Button>
                     </Border>
 
                     <!-- One tab per open song -->
@@ -195,7 +187,19 @@
                                     </Button>
                                 </StackPanel>
                                 <StackPanel Orientation="Horizontal">
-                                    <Button Content="+ Section" Style="{StaticResource FlatButton}" Command="{Binding AddSectionCommand}" />
+                                    <Button Style="{StaticResource FlatButton}" ToolTip="Undo (Ctrl+Z)" AutomationProperties.Name="Undo"
+                                            Click="Undo_Click">
+                                        <TextBlock Text="&#xE7A7;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" />
+                                    </Button>
+                                    <Button Style="{StaticResource FlatButton}" ToolTip="Redo (Ctrl+Y)" AutomationProperties.Name="Redo"
+                                            Click="Redo_Click">
+                                        <TextBlock Text="&#xE7A6;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" />
+                                    </Button>
+                                    <Button Style="{StaticResource FlatButton}" ToolTip="Find and replace (Ctrl+F)" AutomationProperties.Name="Find and replace"
+                                            Click="Find_Click">
+                                        <TextBlock Text="&#xE721;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" />
+                                    </Button>
+                                    <Button Content="+ Section" Style="{StaticResource FlatButton}" Margin="12,0,0,0" Command="{Binding AddSectionCommand}" />
                                     <TextBlock Text="Transpose" Margin="24,0,6,0" VerticalAlignment="Center"
                                                Foreground="{DynamicResource MutedForeground}" />
                                     <Button Content="−" Style="{StaticResource FlatButton}" Command="{Binding TransposeDownCommand}" ToolTip="Down one semitone" />
