@@ -7,7 +7,7 @@ Songs live in the app's library, with search, and you can still open and save so
 plain `.txt` with the chords on the line above the lyrics, or the ChordPro format used by many
 other chord apps.
 
-![The song editor in the Amp theme: Amazing Grace with chords above the lyrics, the library on the left and the chord palette on the right](docs/screenshots/editor-amp.png)
+![The song editor in the Amp theme: Amazing Grace with chords above the lyrics, and the library on the left](docs/screenshots/editor-amp.png)
 
 ## Install
 
