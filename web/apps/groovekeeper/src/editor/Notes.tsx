@@ -3,7 +3,8 @@ import { memo, useLayoutEffect, useRef, useState, type KeyboardEvent, type Point
 import type { MenuAt } from '../components/ContextMenu';
 import { trackDrag } from '../components/drag';
 import { rowAt } from '../components/notes';
-import { PRINTED_COLUMNS } from '../pdf/layout';
+import { printedColumns } from '../pdf/layout';
+import { useSetting } from '../settings';
 import { deleteNote, finishNote, moveNote, setNoteText } from './edit';
 import { useEditor, useEditorStore } from './store';
 
@@ -14,6 +15,7 @@ import { useEditor, useEditorStore } from './store';
 export function NoteLayer({ charWidth, onMenu }: { charWidth: number; onMenu: (menu: MenuAt) => void }) {
   const store = useEditorStore();
   const layer = useRef<HTMLDivElement>(null);
+  const paper = useSetting('paper');
   const ids = useEditor((s) => s.song.notes.map((note) => note.id).join(','));
   // What the rows depend on: the lines (by id) and where the notes are.
   const layout = useEditor(
@@ -45,7 +47,7 @@ export function NoteLayer({ charWidth, onMenu }: { charWidth: number; onMenu: (m
       <div
         aria-hidden="true"
         className="absolute inset-y-0 border-l border-dashed border-line"
-        style={{ left: `${PRINTED_COLUMNS}ch` }}
+        style={{ left: `${printedColumns(paper)}ch` }}
       />
       {ids
         ? ids.split(',').map((id) => <NoteBox key={id} id={id} charWidth={charWidth} onMenu={onMenu} />)

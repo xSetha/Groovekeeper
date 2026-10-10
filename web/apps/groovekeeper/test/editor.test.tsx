@@ -1,9 +1,9 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { App } from '../src/App';
-import { setChordNaming } from '../src/chordNaming';
+import { resetSettings, updateSettings } from '../src/settings';
 import { db } from '../src/library/db';
 
 const TEXT = 'Amazing Grace\n\nKey: G\n\n[Verse 1]\nG          C\nAmazing grace\nhow sweet\n';
@@ -23,7 +23,7 @@ const sheet = () => within(screen.getByRole('article', { name: 'Song' }));
 const stored = async () => (await db.songs.get('grace'))?.text;
 
 beforeEach(() => db.songs.clear());
-afterEach(() => setChordNaming('letters'));
+afterEach(() => resetSettings());
 
 describe('the editor', () => {
   it('shows a song as stored, without sections when it has none', async () => {
@@ -295,20 +295,25 @@ describe('typing chords', () => {
     expect(sheet().getByRole('button', { name: 'C' })).toBeInTheDocument();
   });
 
-  it('shows the song\'s chords as Roman numerals with I IV V, without changing them', async () => {
-    const user = userEvent.setup();
+  it('shows the song\'s chords as Roman numerals when Settings says so, without changing them', async () => {
+    updateSettings({ chords: 'numerals' });
     await openSong();
-    await user.click(screen.getByRole('button', { name: 'I IV V' }));
 
     expect(sheet().getByRole('button', { name: 'I' })).toBeInTheDocument();
     expect(sheet().getByRole('button', { name: 'IV' })).toBeInTheDocument();
     expect(await stored()).toBe(TEXT);
   });
 
+  it('has no display switches in its toolbar any more: they are in Settings', async () => {
+    await openSong();
+    expect(screen.queryByRole('button', { name: 'I IV V' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Do Re Mi' })).not.toBeInTheDocument();
+  });
+
   it('shows chords and keys as Do Re Mi, takes chords typed either way, and keeps the song in letters', async () => {
     const user = userEvent.setup();
+    updateSettings({ chords: 'solfege' });
     await openSong();
-    await user.click(screen.getByRole('button', { name: 'Do Re Mi' }));
 
     expect(sheet().getByRole('button', { name: 'Sol' })).toBeInTheDocument();
     expect(sheet().getByRole('button', { name: 'Do' })).toBeInTheDocument();
@@ -318,7 +323,7 @@ describe('typing chords', () => {
     await user.click(chordRow(1));
     await user.keyboard('Lam{Enter}');
     expect(sheet().getByRole('button', { name: 'Lam' })).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Do Re Mi' }));
+    act(() => updateSettings({ chords: 'letters' }));
     expect(sheet().getByRole('button', { name: 'Am' })).toBeInTheDocument();
   });
 

@@ -23,7 +23,7 @@ const CONSTANTINE =
 describe('the PDF file', () => {
   it('is written with the fonts, letters like ă and ş, and numerals', () => {
     const songs = [0, 1].map(() => ({ song: parseSongText(CONSTANTINE) }));
-    const doc = buildPdf(new jsPDF({ unit: 'pt', format: 'a4' }), fonts, 'Songbook', songs, { collapseRepeats: true, chords: 'numerals' }, inks);
+    const doc = buildPdf(new jsPDF({ unit: 'pt', format: 'a4' }), fonts, 'Songbook', songs, { collapseRepeats: true, chords: 'numerals', paper: 'a4' }, inks);
     const bytes = new Uint8Array(doc.output('arraybuffer'));
     const pdf = new TextDecoder('latin1').decode(bytes);
 

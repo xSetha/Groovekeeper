@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { displayChord, fromSolfege, normalizeChord, toSolfege } from '../src';
+import { displayChord, fromSolfege, normalizeChord, showChord, toSolfege } from '../src';
 
 // What the shared solfege.json fixture doesn't cover: how typed text is taken.
 describe('normalizeChord', () => {
@@ -26,5 +26,17 @@ describe('displayChord', () => {
 describe('typing what was shown', () => {
   it.each(['C', 'F#m7', 'Bbmaj7/D', 'G/B'])('%s comes back as the same chord', (chord) => {
     expect(fromSolfege(toSolfege(chord))).toBe(chord);
+  });
+});
+
+describe('showChord', () => {
+  it.each([
+    ['letters', 'Am7', 'G', 'Am7'],
+    ['solfege', 'Am7', 'G', 'Lam7'],
+    ['numerals', 'Am7', 'G', 'ii7'],
+    ['numerals', 'Am7', '', 'Am7'], // a song without a key keeps its letters
+    ['numerals', 'N.C.', 'G', 'N.C.'],
+  ] as const)('%s writes %s in the key of "%s" as %s', (style, chord, key, expected) => {
+    expect(showChord(chord, style, key)).toBe(expected);
   });
 });

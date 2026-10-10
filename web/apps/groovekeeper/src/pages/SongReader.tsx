@@ -1,7 +1,7 @@
-import { displayChord, displayTitle, songKey, transposeKey, transposeSong, type Song } from '@groovekeeper/core';
+import { displayTitle, showKey, songKey, transposeKey, transposeSong, type Song } from '@groovekeeper/core';
 import { useEffect, useLayoutEffect, useState, type ReactNode } from 'react';
 import { Link } from 'react-router';
-import { useChordNaming } from '../chordNaming';
+import { useSetting } from '../settings';
 import { noteColumns, SongSheet, songColumns } from '../components/SongSheet';
 import { useCharWidth } from '../components/useCharWidth';
 import type { SongNote } from '../library/db';
@@ -33,7 +33,7 @@ export function SongReader({ song, notes, back = { to: '/', label: 'Library' }, 
   const shown = semitones === 0 ? song : transposeSong(song, semitones);
   // The song's key, or the one its chords point to, moved with the song.
   const original = songKey(song).key;
-  const naming = useChordNaming();
+  const style = useSetting('chords');
   const fontSize = useFittedFontSize(song, notes);
 
   useEffect(() => {
@@ -60,11 +60,11 @@ export function SongReader({ song, notes, back = { to: '/', label: 'Library' }, 
         <div className="text-center leading-tight">
           <div>
             <span className="text-muted">Key </span>
-            <span className="font-semibold" data-testid="song-key">{displayChord(transposeKey(original, semitones), naming) || '–'}</span>
+            <span className="font-semibold" data-testid="song-key">{showKey(transposeKey(original, semitones), style) || '–'}</span>
           </div>
           {semitones !== 0 ? (
             <button type="button" className="min-h-8 text-sm text-accent short:min-h-6" onClick={() => setSemitones(0)}>
-              Back to {displayChord(original, naming) || 'the original key'}
+              Back to {showKey(original, style) || 'the original key'}
             </button>
           ) : (
             <div className="min-h-8 text-sm text-muted short:min-h-6">Transpose</div>
@@ -118,8 +118,8 @@ function useFittedFontSize(song: Song, notes: SongNote[] = []): { px: number; me
     return () => observer.disconnect();
   }, [element]);
 
-  const naming = useChordNaming();
-  const columns = Math.max(songColumns(song, naming), ...notes.map(noteColumns));
+  const style = useSetting('chords');
+  const columns = Math.max(songColumns(song, style), ...notes.map(noteColumns));
   const ratio = letterAtProbe / PROBE_PX;
   const fitting = ratio > 0 && width > 0 ? Math.floor(width / (columns * ratio)) : LARGEST_PX;
   return { px: Math.max(SMALLEST_PX, Math.min(LARGEST_PX, fitting)), measure: setElement };

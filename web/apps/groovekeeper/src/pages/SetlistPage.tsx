@@ -1,8 +1,7 @@
-import { displayChord, UNTITLED_TITLE } from '@groovekeeper/core';
+import { showKey, UNTITLED_TITLE } from '@groovekeeper/core';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useEffect, useRef, useState, type PointerEvent } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router';
-import { useChordNaming } from '../chordNaming';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { trackDrag } from '../components/drag';
 import { db, type LibrarySetlist } from '../library/db';
@@ -12,6 +11,7 @@ import {
 } from '../library/setlists';
 import { isNewFrom } from '../navigation';
 import { useIsPhone } from '../phone';
+import { useSetting } from '../settings';
 import { saveBeforeLeaving } from '../saving';
 import { toast } from '../toasts';
 
@@ -57,7 +57,7 @@ interface Loaded {
 
 /** On a phone: the songs in order; each opens in the reading view. */
 function SetlistToPlay({ setlist, songs }: Loaded) {
-  const naming = useChordNaming();
+  const style = useSetting('chords');
   return (
     <main className="min-h-0 flex-1 overflow-y-auto px-4 py-3">
       <Link to="/setlists" className="-ml-2 inline-flex min-h-11 items-center px-2 text-muted">
@@ -75,7 +75,7 @@ function SetlistToPlay({ setlist, songs }: Loaded) {
                 {song.artist ? <span className="block truncate text-sm text-muted">{song.artist}</span> : null}
               </span>
               {song.song.key ? (
-                <span className="shrink-0 rounded bg-chip px-1.5 py-0.5 font-mono text-sm">{displayChord(song.song.key, naming)}</span>
+                <span className="shrink-0 rounded bg-chip px-1.5 py-0.5 font-mono text-sm">{showKey(song.song.key, style)}</span>
               ) : null}
             </Link>
           </li>

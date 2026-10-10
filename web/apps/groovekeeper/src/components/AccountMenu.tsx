@@ -110,7 +110,7 @@ function SignedInMenu() {
               </Link>
             ) : (
               <>
-                <Link role="menuitem" to="/settings" className={ITEM} onClick={() => close(false)}>
+                <Link role="menuitem" to="/settings/account" className={ITEM} onClick={() => close(false)}>
                   Settings
                 </Link>
                 <button

@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { App } from '../src/App';
-import { setChordNaming } from '../src/chordNaming';
+import { resetSettings, updateSettings } from '../src/settings';
 import { db } from '../src/library/db';
 import { exportPdf } from '../src/pdf/exportPdf';
 import { pdfFileName } from '../src/pages/PdfPage';
@@ -17,7 +17,7 @@ const GRACE =
 const HOUSE = 'House of the Rising Sun\nTraditional\n\n[Verse]\nAm      C      D      F\nThere is a house\nAm     E     Am\nin New Orleans\n';
 
 beforeEach(async () => {
-  setChordNaming('letters');
+  resetSettings();
   vi.mocked(exportPdf).mockClear();
   await db.songs.clear();
   await db.setlists.clear();
@@ -64,7 +64,7 @@ describe('exporting a PDF', () => {
   });
 
   it('starts the Chords choice on how the editor shows chords', async () => {
-    setChordNaming('solfege');
+    updateSettings({ chords: 'solfege' });
     renderAt('/pdf?song=grace');
     expect(await screen.findByRole('combobox', { name: /Chords/ })).toHaveValue('solfege');
     expect(chordsShown()).toEqual(['Sol', 'Do', 'Re']); // the second chorus is collapsed
@@ -80,7 +80,20 @@ describe('exporting a PDF', () => {
     const [fileName, title, songs, options] = vi.mocked(exportPdf).mock.calls[0]!;
     expect([fileName, title]).toEqual(['Amazing Grace.pdf', 'Amazing Grace']);
     expect(songs.map((s) => s.song.title)).toEqual(['Amazing Grace']);
-    expect(options).toEqual({ collapseRepeats: true, chords: 'numerals' });
+    expect(options).toEqual({ collapseRepeats: true, chords: 'numerals', paper: 'a4' });
+  });
+
+  it('starts from the options in Settings, the paper included', async () => {
+    const user = userEvent.setup();
+    updateSettings({ collapseRepeats: false, paper: 'letter' });
+    renderAt('/pdf?song=grace');
+    expect(await screen.findByRole('checkbox', { name: /Collapse repeated sections/ })).not.toBeChecked();
+    expect(preview().getAllByText('Amazing')).toHaveLength(2);
+
+    await user.click(screen.getByRole('button', { name: 'Export PDF' }));
+
+    await waitFor(() => expect(exportPdf).toHaveBeenCalledTimes(1));
+    expect(vi.mocked(exportPdf).mock.calls[0]![3]).toEqual({ collapseRepeats: false, chords: 'letters', paper: 'letter' });
   });
 
   it('previews and exports a song’s notes', async () => {

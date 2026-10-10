@@ -1,9 +1,8 @@
 import {
-  ALL_KEYS, displayChord, displayTitle, hasContent, transposeSong, UNTITLED_TITLE, type Song,
+  ALL_KEYS, displayTitle, hasContent, showKey, transposeSong, UNTITLED_TITLE, type Song,
 } from '@groovekeeper/core';
 import { Fragment, useCallback, useEffect, useRef, useState, type MouseEvent, type PointerEvent, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router';
-import { setChordNaming, useChordNaming } from '../chordNaming';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { ContextMenu, type MenuAt } from '../components/ContextMenu';
 import { useCharWidth } from '../components/useCharWidth';
@@ -13,6 +12,7 @@ import { deleteSong, saveSong } from '../library/library';
 import { toastFailure } from '../library/limits';
 import { useNewSong } from '../navigation';
 import { saveBeforeLeaving } from '../saving';
+import { EDITOR_TEXT, useSetting } from '../settings';
 import { holdOpenSong } from '../sync/account';
 import { dismissToast, toast } from '../toasts';
 import { addNote, addSection, setArtist, setKey, setTitle, withIds, type KeyedSong } from './edit';
@@ -56,7 +56,8 @@ export function SongEditor({ id, initial, notes = [], isNew = false }: Props) {
 
 function EditorBody() {
   const store = useEditorStore();
-  const charWidth = useCharWidth('text-lg');
+  const lyricsText = EDITOR_TEXT[useSetting('textSize')].lyrics;
+  const charWidth = useCharWidth(lyricsText);
   const title = useEditor((s) => s.song.title);
   const artist = useEditor((s) => s.song.artist);
   // The song's shape (sections and their lines, by id) as one string: this part re-renders only when lines
@@ -158,7 +159,7 @@ function EditorBody() {
       />
       <div
         ref={sectionsBox}
-        className="relative font-mono text-lg"
+        className={`relative font-mono ${lyricsText}`}
         data-sections
         onContextMenu={onContextMenu}
         onPointerDown={onPointerDown}
@@ -214,9 +215,8 @@ function Toolbar(props: { id: string; onDelete: () => void; onDeleteFailed: () =
   const canUndo = useEditor((s) => s.past.length > 0);
   const canRedo = useEditor((s) => s.future.length > 0);
   const key = useEditor((s) => s.song.key);
-  const numerals = useEditor((s) => s.numerals);
-  const naming = useChordNaming();
-  const { edit, undo, redo, setNumerals } = store.getState();
+  const style = useSetting('chords');
+  const { edit, undo, redo } = store.getState();
 
   const saveFile = (format: SongFormat) => {
     const file = songFile(store.getState().song, format);
@@ -257,31 +257,11 @@ function Toolbar(props: { id: string; onDelete: () => void; onDeleteFailed: () =
           <option value="">–</option>
           {ALL_KEYS.map((k) => (
             <option key={k} value={k}>
-              {displayChord(k, naming)}
+              {showKey(k, style)}
             </option>
           ))}
         </select>
       </label>
-      {key ? (
-        <button
-          type="button"
-          aria-pressed={numerals}
-          title="Show the chords as Roman numerals in the song's key"
-          className="rounded px-2 py-1.5 hover:bg-hover aria-pressed:bg-accent-fill aria-pressed:text-on-accent pointer-coarse:min-h-11"
-          onClick={() => setNumerals(!numerals)}
-        >
-          I IV V
-        </button>
-      ) : null}
-      <button
-        type="button"
-        aria-pressed={naming === 'solfege'}
-        title="Show chords and keys as Do Re Mi instead of letters (every song)"
-        className="rounded px-2 py-1.5 hover:bg-hover aria-pressed:bg-accent-fill aria-pressed:text-on-accent pointer-coarse:min-h-11"
-        onClick={() => setChordNaming(naming === 'solfege' ? 'letters' : 'solfege')}
-      >
-        Do Re Mi
-      </button>
       <span className="ml-auto flex items-center gap-1">
         <IconButton
           label="Save as file"

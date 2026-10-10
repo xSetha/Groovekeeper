@@ -5,7 +5,7 @@ import sansBoldUrl from '../assets/fonts/NotoSans-Bold.ttf?url';
 import sansItalicUrl from '../assets/fonts/NotoSans-Italic.ttf?url';
 import sansUrl from '../assets/fonts/NotoSans-Regular.ttf?url';
 import type { jsPDF } from 'jspdf';
-import { layoutPdf, PAGE, type ExportOptions, type ExportSong, type Face, type Ink } from './layout';
+import { layoutPdf, PAGES, type ExportOptions, type ExportSong, type Face, type Ink } from './layout';
 
 // Each face as jsPDF knows it: a font family and a style, and the file it comes from.
 const FACES: Record<Face, { family: string; style: string; url: string }> = {
@@ -52,10 +52,10 @@ export async function exportPdf(
   inks: Record<Ink, string>,
 ): Promise<void> {
   const [{ jsPDF }, fontData] = await Promise.all([import('jspdf'), loadFonts()]);
-  buildPdf(new jsPDF({ unit: 'pt', format: 'a4' }), fontData, title, songs, options, inks).save(fileName);
+  buildPdf(new jsPDF({ unit: 'pt', format: options.paper }), fontData, title, songs, options, inks).save(fileName);
 }
 
-/** Writes the songs into an empty A4 document; `fonts` are the font files as base64. */
+/** Writes the songs into an empty document (of `options.paper`); `fonts` are the font files as base64. */
 export function buildPdf(
   doc: jsPDF,
   fonts: Record<Face, string>,
@@ -78,13 +78,14 @@ export function buildPdf(
     use(face, size);
     return doc.getTextWidth(text);
   });
+  const page = PAGES[options.paper];
   pages.forEach((marks, index) => {
     if (index > 0) doc.addPage();
     for (const mark of marks) {
       if (mark.kind === 'rule') {
         doc.setDrawColor(inks.line);
         doc.setLineWidth(0.75);
-        doc.line(PAGE.margin, mark.y, PAGE.width - PAGE.margin, mark.y);
+        doc.line(page.margin, mark.y, page.width - page.margin, mark.y);
       } else {
         use(mark.face, mark.size);
         doc.setTextColor(inks[mark.ink]);

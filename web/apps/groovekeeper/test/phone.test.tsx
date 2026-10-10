@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { App } from '../src/App';
-import { setChordNaming } from '../src/chordNaming';
+import { resetSettings, updateSettings } from '../src/settings';
 import { songColumns } from '../src/components/SongSheet';
 import { db } from '../src/library/db';
 import { PHONE_QUERY } from '../src/phone';
@@ -30,7 +30,7 @@ beforeEach(async () => {
 
 afterEach(() => {
   vi.unstubAllGlobals();
-  setChordNaming('letters');
+  resetSettings();
 });
 
 describe('on a phone', () => {
@@ -82,7 +82,7 @@ describe('Do Re Mi on a phone', () => {
   it('writes the chords and the key in the reader the way the editor does', async () => {
     const user = userEvent.setup();
     await db.songs.add({ id: 'grace', title: 'Amazing Grace', artist: 'John Newton', key: 'G', text: TEXT, updatedAt: 0, version: 0, dirty: 1 });
-    setChordNaming('solfege');
+    updateSettings({ chords: 'solfege' });
     renderApp('/songs/grace');
 
     expect((await screen.findAllByText('Sol')).length).toBeGreaterThan(1); // the chord and the key
@@ -94,7 +94,7 @@ describe('Do Re Mi on a phone', () => {
 
   it('shows the key chip in the library and a setlist in Do Re Mi', async () => {
     await db.songs.add({ id: 'grace', title: 'Amazing Grace', artist: 'John Newton', key: 'G', text: TEXT, updatedAt: 0, version: 0, dirty: 1 });
-    setChordNaming('solfege');
+    updateSettings({ chords: 'solfege' });
     renderApp('/');
 
     expect(await screen.findByText('Amazing Grace')).toBeInTheDocument();
@@ -111,5 +111,7 @@ describe('fitting a song to the screen', () => {
   it('counts the chords as they are written in Do Re Mi, which are wider', () => {
     // Fmaj7 starts at column 13 and becomes Famaj7, one letter wider.
     expect(songColumns(parseSongText('[Intro]\nC   G   Am   Fmaj7\n'), 'solfege')).toBe(19);
+    // Fmaj7 in the key of C is IVmaj7, one letter wider too.
+    expect(songColumns(parseSongText('Key: C\n\n[Intro]\nC   G   Am   Fmaj7\n'), 'numerals')).toBe(19);
   });
 });

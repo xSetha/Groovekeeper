@@ -47,6 +47,7 @@ export function TopBar() {
       <div className="flex items-center gap-1">
         <SyncNotes />
         <AccountMenu />
+        <SettingsLink />
         <ThemePicker />
       </div>
     </header>
@@ -77,3 +78,20 @@ function SyncNotes() {
   );
 }
 
+/** A gear that opens Settings, for guests too (the account menu has its own link for a signed-in user). */
+function SettingsLink() {
+  return (
+    <Link
+      to="/settings"
+      aria-label="Settings"
+      title="Settings"
+      className="flex items-center justify-center rounded p-1.5 text-muted hover:bg-hover hover:text-fg pointer-coarse:min-h-11 pointer-coarse:min-w-11"
+    >
+      {/* A gear. */}
+      <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="3" />
+        <path d="M12 2.8l1.5 2.4 2.8-.7.9 2.7 2.7.9-.7 2.8 2.4 1.5-2.4 1.5.7 2.8-2.7.9-.9 2.7-2.8-.7L12 21.2l-1.5-2.4-2.8.7-.9-2.7-2.7-.9.7-2.8L2.4 12l2.4-1.5-.7-2.8 2.7-.9.9-2.7 2.8.7z" />
+      </svg>
+    </Link>
+  );
+}

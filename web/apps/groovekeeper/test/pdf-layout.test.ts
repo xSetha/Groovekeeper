@@ -1,14 +1,37 @@
 import { parseSongText } from '@groovekeeper/core';
 import { describe, expect, it } from 'vitest';
 import {
-  chordDisplay, keyText, layoutPdf, lineSegments, PAGE, placeNotes, printedSections, PRINTED_COLUMNS, wrapLine, type Mark, type Measure,
+  chordDisplay, keyText, layoutPdf, lineSegments, PAGE, PAGES, placeNotes, printedColumns, printedSections, PRINTED_COLUMNS, wrapLine, type Mark, type Measure,
 } from '../src/pdf/layout';
 
 // Letters of a fixed width: 0.6 of the size, as in Cascadia Mono, and half the size for the sans font.
 const measure: Measure = (text, face, size) => text.length * size * (face.startsWith('mono') ? 0.6 : 0.5);
-const options = { collapseRepeats: true, chords: 'letters' as const };
+const options = { collapseRepeats: true, chords: 'letters' as const, paper: 'a4' as const };
 
 const texts = (page: Mark[]) => page.flatMap((mark) => (mark.kind === 'text' ? [mark.text] : []));
+
+describe('the paper', () => {
+  const songs = [{ song: parseSongText('Song\n\n[Verse]\nG\nla la\n') }];
+
+  it('is A4 or US Letter, in points', () => {
+    expect(PAGES.a4).toMatchObject({ width: 595.28, height: 841.89 });
+    expect(PAGES.letter).toMatchObject({ width: 612, height: 792 });
+  });
+
+  it('breaks pages for Letter\'s shorter page', () => {
+    const long = parseSongText(`Song\n\n[Verse]\n${'la la\n'.repeat(120)}`);
+    const a4 = layoutPdf([{ song: long }], options, measure);
+    const letter = layoutPdf([{ song: long }], { ...options, paper: 'letter' }, measure);
+    expect(letter.length).toBeGreaterThanOrEqual(a4.length); // Letter is about 50 pt shorter
+    for (const mark of letter.flat()) if (mark.kind === 'text') expect(mark.y).toBeLessThanOrEqual(PAGES.letter.height - PAGES.letter.margin);
+    expect(layoutPdf(songs, { ...options, paper: 'letter' }, measure)).toHaveLength(1);
+  });
+
+  it('fits a few more letters across Letter paper', () => {
+    expect(printedColumns('a4')).toBe(PRINTED_COLUMNS);
+    expect(printedColumns('letter')).toBeGreaterThan(printedColumns('a4'));
+  });
+});
 
 describe('chord styles', () => {
   const song = parseSongText('Song\n\nKey: Dm\n\n[Verse]\nDm      Am/G\nla la\n');

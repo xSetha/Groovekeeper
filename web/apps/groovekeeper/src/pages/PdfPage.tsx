@@ -3,8 +3,8 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import { db, type LibrarySong, type SongNote } from '../library/db';
-import { chordNaming } from '../chordNaming';
 import { listSongs } from '../library/library';
+import { getSettings } from '../settings';
 import { setlistSongs } from '../library/setlists';
 import {
   keyText, lineSegments, placeNotes, printedSections, type ChordStyle, type ExportOptions, type ExportSong, type Ink,
@@ -27,8 +27,11 @@ export default function PdfPage() {
   const [params] = useSearchParams();
   const songId = params.get('song');
   const setlistId = params.get('setlist');
-  // The Chords choice starts on how the editor shows chords; it isn't remembered for the next export.
-  const [options, setOptions] = useState<Options>(() => ({ collapseRepeats: true, chords: chordNaming() }));
+  // The options start as Settings has them; a change here is for this export only. The paper is Settings'.
+  const [options, setOptions] = useState<Options>(() => {
+    const { chords, collapseRepeats, paper } = getSettings();
+    return { collapseRepeats, chords, paper };
+  });
 
   const optionBoxes = (
     <fieldset className="mt-6 flex flex-col gap-2">
@@ -227,7 +230,7 @@ function PdfLayout({ title, back, songs, empty, intro, options, children }: Layo
         {songs.length === 0 ? <p className="text-muted">{empty}</p> : null}
         {songs.length > 0 ? (
           // The paper, in the Songbook theme's ink whatever the app's theme.
-          <div ref={paper} data-theme="songbook" className="mx-auto max-w-[21cm] bg-card px-[2cm] py-[1.5cm] text-fg shadow-xl max-sm:px-6">
+          <div ref={paper} data-theme="songbook" className={`mx-auto ${options.paper === 'letter' ? 'max-w-[21.59cm]' : 'max-w-[21cm]'} bg-card px-[2cm] py-[1.5cm] text-fg shadow-xl max-sm:px-6`}>
             {songs.map(({ id, song, notes }) => (
               <PreviewSong key={id} song={song} notes={notes} options={options} />
             ))}

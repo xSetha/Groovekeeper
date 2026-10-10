@@ -15,3 +15,46 @@ export function Group({ title, description, children }: { title: string; descrip
     </section>
   );
 }
+
+/** A choice of one among a few, as radio buttons, each with a line on what it does. */
+export function RadioGroup<T extends string>(props: {
+  label: string;
+  value: T;
+  options: readonly { value: T; label: string; hint?: ReactNode }[];
+  onChange: (value: T) => void;
+}) {
+  return (
+    <fieldset className="flex flex-col gap-1">
+      <legend className="sr-only">{props.label}</legend>
+      {props.options.map((option) => (
+        <label key={option.value} className="flex cursor-pointer items-start gap-2 rounded px-1 py-1.5 hover:bg-hover pointer-coarse:min-h-11 pointer-coarse:items-center">
+          <input
+            type="radio"
+            name={props.label}
+            checked={props.value === option.value}
+            onChange={() => props.onChange(option.value)}
+            className="mt-1 size-4 shrink-0 accent-accent pointer-coarse:mt-0"
+          />
+          <span className="min-w-0">
+            {option.label}
+            {option.hint ? <span className="block text-sm text-muted">{option.hint}</span> : null}
+          </span>
+        </label>
+      ))}
+    </fieldset>
+  );
+}
+
+export function CheckOption(props: { checked: boolean; onChange: (checked: boolean) => void; children: ReactNode }) {
+  return (
+    <label className="flex cursor-pointer items-center gap-2 rounded px-1 py-1.5 hover:bg-hover pointer-coarse:min-h-11">
+      <input
+        type="checkbox"
+        checked={props.checked}
+        onChange={(event) => props.onChange(event.target.checked)}
+        className="size-4 shrink-0 accent-accent"
+      />
+      {props.children}
+    </label>
+  );
+}

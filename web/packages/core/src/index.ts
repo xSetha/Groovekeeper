@@ -5,6 +5,7 @@ export * from './music/chord-theory';
 export * from './music/key-detector';
 export * from './music/roman-numerals';
 export * from './music/note-names';
+export * from './music/chord-style';
 export * from './models/song';
 export * from './models/song-line';
 export * from './formats/song-text';

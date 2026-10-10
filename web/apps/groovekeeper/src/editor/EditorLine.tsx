@@ -1,12 +1,12 @@
 import {
   memo, useLayoutEffect, useRef, useState, type ClipboardEvent, type KeyboardEvent, type MouseEvent, type PointerEvent,
 } from 'react';
-import { displayChord, romanNumeral } from '@groovekeeper/core';
-import { useChordNaming } from '../chordNaming';
+import { showChord, toSolfege } from '@groovekeeper/core';
 import { trackDrag } from '../components/drag';
 import {
   editText, joinWithPrevious, moveChord, neighbourLine, partInRange, pasteLines, removeChord, setChord, splitLine,
 } from './edit';
+import { EDITOR_TEXT, useSetting } from '../settings';
 import { useEditor, useEditorStore } from './store';
 
 interface Props {
@@ -27,9 +27,10 @@ export const EditorLine = memo(function EditorLine({ section, line: lineIndex, l
   const at = { section, line: lineIndex };
   const line = useEditor((s) => s.song.sections[section]?.lines[lineIndex]);
   const focus = useEditor((s) => (s.focus?.lineId === lineId ? s.focus : null));
-  // The key to show chords as Roman numerals in, or '' to show their names.
-  const numeralKey = useEditor((s) => (s.numerals ? s.song.key : ''));
-  const naming = useChordNaming();
+  // How chords are written (Settings), and the key Roman numerals are counted from.
+  const style = useSetting('chords');
+  const songKey = useEditor((s) => s.song.key);
+  const chordText = EDITOR_TEXT[useSetting('textSize')].chords;
   // This line's part of a selection across lines, as "from-to" ("from-" to the end of the line), or ''.
   const selected = useEditor((s) => {
     const part = s.selection && partInRange(s.song, s.selection, lineId);
@@ -56,8 +57,7 @@ export const EditorLine = memo(function EditorLine({ section, line: lineIndex, l
 
   if (!line) return null;
   const { edit, editAndFocus } = store.getState();
-  // Roman numerals win over Do Re Mi while I IV V is on.
-  const shown = (name: string) => (numeralKey ? (romanNumeral(name, numeralKey) ?? displayChord(name, naming)) : displayChord(name, naming));
+  const shown = (name: string) => showChord(name, style, songKey);
   // Wide enough for the lyrics, the chords past their end, and room to type.
   const width = Math.max(
     line.text.length + 2,
@@ -137,8 +137,8 @@ export const EditorLine = memo(function EditorLine({ section, line: lineIndex, l
     setSelectedId(null);
     setHoverColumn(null);
     boxOpen.current = true;
-    // The box shows the name the way chords are shown; typed as letters or Do Re Mi, the song keeps letters.
-    setTyping({ column, name: displayChord(name, naming), refused: false });
+    // The box shows Do Re Mi when chords are written so; typed as letters or Do Re Mi, the song keeps letters.
+    setTyping({ column, name: style === 'solfege' ? toSolfege(name) : name, refused: false });
   }
 
   function closeBox() {
@@ -224,7 +224,7 @@ export const EditorLine = memo(function EditorLine({ section, line: lineIndex, l
               // The box grows with the chord, in its own (smaller) letters.
               style={{ width: `${Math.max(typing.name.length, 2) + 1}ch` }}
               className={
-                '-ml-0.5 rounded bg-chip px-0.5 text-sm font-semibold text-chord outline-none ring-1 ring-accent ' +
+                `-ml-0.5 rounded bg-chip px-0.5 ${chordText} font-semibold text-chord outline-none ring-1 ring-accent ` +
                 'aria-invalid:ring-2 aria-invalid:ring-chord pointer-coarse:text-base'
               }
               onFocus={caretHere}
@@ -253,7 +253,7 @@ export const EditorLine = memo(function EditorLine({ section, line: lineIndex, l
               aria-pressed={selectedId === chord.id}
               className={
                 // On touch screens the invisible ::before makes the chord easier to hit than its small label.
-                '-ml-0.5 relative cursor-grab rounded bg-chip px-0.5 text-sm font-semibold text-chord select-none ' +
+                `-ml-0.5 relative cursor-grab rounded bg-chip px-0.5 ${chordText} font-semibold text-chord select-none ` +
                 '[-webkit-touch-callout:none] active:cursor-grabbing aria-pressed:ring-2 aria-pressed:ring-accent ' +
                 "pointer-coarse:before:absolute pointer-coarse:before:-inset-x-1.5 pointer-coarse:before:-inset-y-2 pointer-coarse:before:content-[''] " +
                 (draggingId === chord.id ? 'ring-2 ring-accent' : '')

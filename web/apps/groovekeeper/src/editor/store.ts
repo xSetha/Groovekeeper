@@ -16,8 +16,6 @@ export interface EditorState {
   mergeKey: string | null;
   /** The line to put the caret in; `request` changes each time, so the same place can be asked for again. */
   focus: (Focus & { request: number }) | null;
-  /** Show the chords as Roman numerals in the song's key (only how they're shown; the song keeps chord names). */
-  numerals: boolean;
   /** The section the caret was last in (its lyrics, a chord or its name), by id; null after the title or artist. */
   caretSection: string | null;
   /** While a section is dragged by its grip: the place it would land, as an index before the move. */
@@ -37,7 +35,6 @@ export interface EditorState {
   undo: () => void;
   redo: () => void;
   setFocus: (focus: Focus) => void;
-  setNumerals: (numerals: boolean) => void;
   setCaretSection: (caretSection: string | null) => void;
   setSectionDrop: (sectionDrop: number | null) => void;
   setFocusNote: (id: string) => void;
@@ -59,7 +56,6 @@ export function createEditorStore(song: KeyedSong): EditorStore {
     future: [],
     mergeKey: null,
     focus: null,
-    numerals: false,
     caretSection: null,
     sectionDrop: null,
     focusNote: null,
@@ -104,7 +100,6 @@ export function createEditorStore(song: KeyedSong): EditorStore {
     },
 
     setFocus: (focus) => set({ focus: { ...focus, request: ++requests } }),
-    setNumerals: (numerals) => set({ numerals }),
     setCaretSection: (caretSection) => set({ caretSection }),
     setSectionDrop: (sectionDrop) => set({ sectionDrop }),
     setFocusNote: (id) => set({ focusNote: { id, request: ++requests } }),

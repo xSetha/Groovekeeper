@@ -1,15 +1,15 @@
-import { displayChord, type ChordNaming, type Song, type SongLine } from '@groovekeeper/core';
+import { showChord, type ChordStyle, type Song, type SongLine } from '@groovekeeper/core';
 import { useLayoutEffect, useRef, useState } from 'react';
-import { useChordNaming } from '../chordNaming';
+import { useSetting } from '../settings';
 import type { SongNote } from '../library/db';
 import { topAt } from './notes';
 
-/** The number of letter columns the song's widest line needs, lyrics and chords (written as `naming` writes them). */
-export const songColumns = (song: Song, naming: ChordNaming = 'letters'): number =>
+/** The number of letter columns the song's widest line needs, lyrics and chords (written in the chord `style`). */
+export const songColumns = (song: Song, style: ChordStyle = 'letters'): number =>
   Math.max(
     1,
     ...song.sections.flatMap((s) => s.lines).map((line) =>
-      Math.max(line.text.length, ...line.chords.map((c) => c.position + displayChord(c.name, naming).length))),
+      Math.max(line.text.length, ...line.chords.map((c) => c.position + showChord(c.name, style, song.key).length))),
   );
 
 /**
@@ -50,7 +50,7 @@ export function SongSheet({ song, fontSize, notes = [] }: { song: Song; fontSize
             [{section.name}]{section.repeat ? <span className="font-normal text-muted"> (repeat)</span> : null}
           </h2>
           {section.lines.map((line, lineIndex) => (
-            <SheetLine key={lineIndex} line={line} />
+            <SheetLine key={lineIndex} line={line} songKey={song.key} />
           ))}
         </section>
       ))}
@@ -68,8 +68,8 @@ export function SongSheet({ song, fontSize, notes = [] }: { song: Song; fontSize
   );
 }
 
-function SheetLine({ line }: { line: SongLine }) {
-  const naming = useChordNaming();
+function SheetLine({ line, songKey }: { line: SongLine; songKey: string }) {
+  const style = useSetting('chords');
   return (
     // A blank line keeps a row of height, as in the editor, so notes find the same line.
     <div data-sheet-line className="mt-[0.3em] min-h-[1.2em]">
@@ -79,7 +79,7 @@ function SheetLine({ line }: { line: SongLine }) {
           {line.chords.map((chord, index) => (
             <span key={index} className="absolute top-0" style={{ left: `${chord.position}ch` }}>
               <span className="-ml-[0.1em] rounded bg-chip px-[0.1em] text-[0.85em] font-semibold text-chord">
-                {displayChord(chord.name, naming)}
+                {showChord(chord.name, style, songKey)}
               </span>
             </span>
           ))}

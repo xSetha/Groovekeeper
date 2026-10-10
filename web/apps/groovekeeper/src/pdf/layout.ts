@@ -9,9 +9,13 @@ import type { SongNote } from '../library/db';
 /** How chords are written in the PDF: letters, Do Re Mi, or Roman numerals in each song's key (a song without a key keeps letters). */
 export type ChordStyle = 'letters' | 'solfege' | 'numerals';
 
+/** The paper of the PDF. */
+export type Paper = 'a4' | 'letter';
+
 export interface ExportOptions {
   collapseRepeats: boolean;
   chords: ChordStyle;
+  paper: Paper;
 }
 
 /** How each chord of the song is written in the PDF, or undefined to write it as the song has it. */
@@ -155,13 +159,20 @@ export type Mark =
 /** The width of the text in points. */
 export type Measure = (text: string, face: Face, size: number) => number;
 
-export const PAGE = { width: 595.28, height: 841.89, margin: 56.69 }; // A4 in points, 2 cm margins
+// The pages in points, with 2 cm margins.
+export const PAGES: Record<Paper, { width: number; height: number; margin: number }> = {
+  a4: { width: 595.28, height: 841.89, margin: 56.69 },
+  letter: { width: 612, height: 792, margin: 56.69 },
+};
+export const PAGE = PAGES.a4;
 
 const SONG_SIZE = 10.5;
 // A letter of Cascadia Mono, the songs' font, is 1200 of its 2048 units wide.
 const MONO_ADVANCE_EM = 1200 / 2048;
 /** How many letters of a song's lines fit across the page; longer lines wrap. The editor marks this edge. */
-export const PRINTED_COLUMNS = Math.floor((PAGE.width - 2 * PAGE.margin) / (SONG_SIZE * MONO_ADVANCE_EM));
+export const printedColumns = (paper: Paper): number =>
+  Math.floor((PAGES[paper].width - 2 * PAGES[paper].margin) / (SONG_SIZE * MONO_ADVANCE_EM));
+export const PRINTED_COLUMNS = printedColumns('a4');
 const SONG_ROW = 13; // a row of lyrics or chords
 const TITLE_SIZE = 18;
 const SUBTITLE_SIZE = 11;
@@ -176,19 +187,20 @@ type Block = { height: number; marks: (top: number) => Mark[] }[];
 
 /** The pages of the PDF, each a list of marks. */
 export function layoutPdf(songs: ExportSong[], options: ExportOptions, measure: Measure): Mark[][] {
-  const left = PAGE.margin;
-  const width = PAGE.width - 2 * PAGE.margin;
-  const bottom = PAGE.height - PAGE.margin;
+  const page = PAGES[options.paper];
+  const left = page.margin;
+  const width = page.width - 2 * page.margin;
+  const bottom = page.height - page.margin;
   const columns = Math.max(1, Math.floor(width / measure('M', 'mono', SONG_SIZE)));
 
   const pages: Mark[][] = [[]];
-  let y = PAGE.margin;
+  let y = page.margin;
   const place = (block: Block) => {
     const height = block.reduce((sum, row) => sum + row.height, 0);
     // A block that doesn't fit starts the next page, unless it's at the top already (longer than a page).
-    if (y + height > bottom && y > PAGE.margin) {
+    if (y + height > bottom && y > page.margin) {
       pages.push([]);
-      y = PAGE.margin;
+      y = page.margin;
     }
     for (const row of block) {
       pages.at(-1)!.push(...row.marks(y)); // pages always has at least one page

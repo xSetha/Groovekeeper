@@ -76,8 +76,10 @@ describe('Settings', () => {
   it('lists its sections, and opens the first at /settings', async () => {
     renderAt('/settings');
     const nav = within(await screen.findByRole('navigation', { name: 'Settings' }));
-    expect(nav.getAllByRole('link').map((link) => link.textContent)).toEqual(['Account', 'Sync and storage', 'Privacy and data', 'About']);
-    expect(screen.getByRole('heading', { name: 'Account' })).toBeInTheDocument();
+    expect(nav.getAllByRole('link').map((link) => link.textContent)).toEqual([
+      'Display', 'Export', 'Account', 'Sync and storage', 'Privacy and data', 'About',
+    ]);
+    expect(screen.getByRole('heading', { name: 'Display' })).toBeInTheDocument();
   });
 
   it('changes the password with the current one, saying when it isn\'t right', async () => {
@@ -96,7 +98,8 @@ describe('Settings', () => {
     await user.click(screen.getByRole('button', { name: 'Save password' }));
     expect(account.changePassword).toHaveBeenLastCalledWith('old one', 'new one!!', expect.stringMatching(/^test-token-/));
     expect(await screen.findByText('Password changed')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Account' })).toBeInTheDocument();
+    // Back on the account page once it has drawn (it can lag the toast when many tests run at once).
+    expect(await screen.findByRole('heading', { name: 'Account' })).toBeInTheDocument();
   });
 
   it('asks for a new email, and says the change waits for both addresses', async () => {

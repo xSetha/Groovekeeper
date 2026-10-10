@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { Link, Navigate, NavLink, Route, Routes, useLocation } from 'react-router';
 import { useMediaQuery } from '../../phone';
+import { useAccount } from '../../sync/account';
 import { SignedInOnly } from '../auth/AuthLayout';
 import { ChangePasswordPage } from './ChangePasswordPage';
 import { SECTIONS } from './sections';
@@ -8,16 +9,18 @@ import { SECTIONS } from './sections';
 // Below this width, Settings shows either the list of sections or one section, not both side by side.
 const NARROW_QUERY = '(max-width: 767px)';
 
-/** /settings/*: for signed-in users. The sections beside the one open; on a narrow screen, one or the other. */
+/**
+ * /settings/*: the sections beside the one open; on a narrow screen, one or the other. Display, Export and About are for
+ * everyone; the account's sections are for signed-in users, and a guest asking for one is sent to Sign in.
+ */
 export default function SettingsLayout() {
-  return (
-    <SignedInOnly>
-      <Settings />
-    </SignedInOnly>
-  );
+  return <Settings />;
 }
 
 function Settings() {
+  const status = useAccount((s) => s.status);
+  const signedIn = status === 'signedIn';
+  const sections = SECTIONS.filter((section) => signedIn || !section.needsAccount);
   const narrow = useMediaQuery(NARROW_QUERY);
   const { pathname } = useLocation();
   const atList = pathname.replace(/\/$/, '') === '/settings';
@@ -28,8 +31,11 @@ function Settings() {
     document.title = `${current ? `${current.label} – ` : ''}Settings – Groovekeeper`;
   }, [current]);
 
+  // Until the account is known the list would show only some sections and then grow.
+  if (status === 'starting') return null;
+
   // A wide screen always has a section open: the first one, at /settings.
-  if (atList && !narrow) return <Navigate to={`/settings/${SECTIONS[0]!.path}`} replace />;
+  if (atList && !narrow) return <Navigate to={`/settings/${sections[0]!.path}`} replace />;
 
   return (
     <main className="min-h-0 flex-1 overflow-y-auto">
@@ -38,7 +44,7 @@ function Settings() {
           <nav aria-label="Settings" className={narrow ? 'flex-1' : 'w-52 shrink-0'}>
             <h1 className="text-2xl font-semibold">Settings</h1>
             <ul className="mt-4 flex flex-col gap-1">
-              {SECTIONS.map((section) => (
+              {sections.map((section) => (
                 <li key={section.path}>
                   <NavLink
                     to={`/settings/${section.path}`}
@@ -61,10 +67,14 @@ function Settings() {
               </Link>
             ) : null}
             <Routes>
-              {SECTIONS.map(({ path, Component }) => (
-                <Route key={path} path={path} element={<Component />} />
+              {SECTIONS.map(({ path, needsAccount, Component }) => (
+                <Route
+                  key={path}
+                  path={path}
+                  element={needsAccount ? <SignedInOnly><Component /></SignedInOnly> : <Component />}
+                />
               ))}
-              <Route path="account/password" element={<ChangePasswordPage />} />
+              <Route path="account/password" element={<SignedInOnly><ChangePasswordPage /></SignedInOnly>} />
               <Route path="*" element={<Navigate to="/settings" replace />} />
             </Routes>
           </div>
