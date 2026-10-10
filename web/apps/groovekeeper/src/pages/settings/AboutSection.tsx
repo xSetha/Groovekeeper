@@ -10,8 +10,25 @@ export function AboutSection() {
       <SectionTitle>About</SectionTitle>
       <Group
         title="Groovekeeper"
-        description="Write chord sheets: lyrics with each chord on the syllable where it changes. There’s a desktop app for Windows too."
+        description="Write chord sheets: lyrics with each chord on the syllable where it changes."
       />
+      <Group title="Desktop app" description="Groovekeeper for Windows works offline and updates itself.">
+        <ul className="flex flex-col gap-2">
+          <li>
+            <a
+              href={`${REPOSITORY}/releases/latest/download/Groovekeeper-Setup.exe`}
+              className="text-accent hover:underline"
+            >
+              Download for Windows
+            </a>
+          </li>
+          <li>
+            <a href={`${REPOSITORY}/releases/latest`} target="_blank" rel="noreferrer" className="text-accent hover:underline">
+              What’s new
+            </a>
+          </li>
+        </ul>
+      </Group>
       <Group title="Open source" description="Groovekeeper is free and open source, under the MIT License.">
         <ul className="flex flex-col gap-2">
           <li>
