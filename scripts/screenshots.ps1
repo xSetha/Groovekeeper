@@ -77,7 +77,7 @@ $buildDir = Join-Path $root 'artifacts\screenshots-app'
 $samples = Join-Path $root 'samples\songs'
 $dataDir = Join-Path ([Environment]::GetFolderPath('ApplicationData')) 'SongCreator'
 # libraries.json too: it names the open library, which could be another file than library.db
-$dataFiles = 'library.db', 'library.db-wal', 'library.db-shm', 'libraries.json', 'theme.txt', 'window.json'
+$dataFiles = 'library.db', 'library.db-wal', 'library.db-shm', 'libraries.json', 'settings.json', 'session.json', 'theme.txt', 'window.json'
 # Theme name (as the app saves it) -> file name part
 $themes = [ordered]@{ 'Amp' = 'amp'; 'Backstage' = 'backstage'; 'Record Sleeve' = 'recordsleeve'; 'Songbook' = 'songbook' }
 

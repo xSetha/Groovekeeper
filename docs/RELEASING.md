@@ -47,7 +47,19 @@ app ("Chords stay on their syllable when…"), not for developers. It follows
 ## Making a release
 
 1. Check that `main` has everything for the release and that the tests pass: `dotnet test`.
-2. Choose the version from what's under `## [Unreleased]` in `CHANGELOG.md`, then let the script
+2. Retake the screenshots in `docs/screenshots` (the README shows them), so they match this version.
+   Screenshots are only retaken here, once per release, not after each change. Close Groovekeeper
+   first: the script runs the app on a sample library in place of yours and puts yours back
+   afterwards.
+
+   ```powershell
+   powershell -ExecutionPolicy Bypass -File scripts\screenshots.ps1
+   ```
+
+   Look at the pictures, then commit them as `docs: retake the screenshots for 1.5.0`. The next step
+   refuses to run while there are uncommitted changes.
+
+3. Choose the version from what's under `## [Unreleased]` in `CHANGELOG.md`, then let the script
    prepare the release:
 
    ```powershell
@@ -59,7 +71,7 @@ app ("Chords stay on their syllable when…"), not for developers. It follows
    `SongCreator/SongCreator.csproj`, renames `## [Unreleased]` to the version and today's date with a
    new empty `## [Unreleased]` above it, and commits both as `chore: release 1.5.0`.
 
-3. Optional, but worth it for a bigger release: build the installer yourself and try it.
+4. Optional, but worth it for a bigger release: build the installer yourself and try it.
 
    ```powershell
    powershell -ExecutionPolicy Bypass -File scripts\release.ps1
@@ -67,7 +79,7 @@ app ("Chords stay on their syllable when…"), not for developers. It follows
 
    It puts `Groovekeeper-Setup.exe` and `Groovekeeper-Portable.zip` in `artifacts\releases`.
 
-4. Tag the commit and push both:
+5. Tag the commit and push both:
 
    ```powershell
    git tag v1.5.0
