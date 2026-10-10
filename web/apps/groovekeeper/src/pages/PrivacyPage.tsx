@@ -15,12 +15,14 @@ export default function PrivacyPage() {
     <main className="min-h-0 flex-1 overflow-y-auto">
       <article className="mx-auto max-w-2xl px-4 py-8 leading-relaxed">
         <h1 className="text-2xl font-semibold">Privacy</h1>
-        <p className="mt-2 text-sm text-muted">Last changed on 8 October 2026.</p>
+        <p className="mt-2 text-sm text-muted">Last changed on 10 October 2026.</p>
 
         <p className="mt-4">
           Groovekeeper is run by {OPERATOR}, who is responsible for the personal data described here. For any
           question about it, write to <a href={`mailto:${CONTACT}`} className="text-accent hover:underline">{CONTACT}</a>.
-          Groovekeeper is free and open source; it has no ads, no tracking and no analytics.
+          Groovekeeper is free and open source; it has no ads and no tracking: no analytics scripts, and no cookies
+          for statistics. The only figures we see about visits are the totals Cloudflare keeps on its servers (visits,
+          visitors and countries per day).
         </p>
 
         <Section title="Without an account">
@@ -76,7 +78,9 @@ export default function PrivacyPage() {
 
         <Section title="Why">
           Keeping your account and songs is what you ask for by creating an account (the service you signed up for).
-          Keeping bots out and making backups protect the site and everyone’s songs (a legitimate interest).
+          Keeping bots out and making backups protect the site and everyone’s songs (a legitimate interest). So does
+          watching the totals (how many accounts, how many songs, how much storage is left): we open an individual
+          account only to help you when you ask or to deal with misuse, and we never read your songs.
         </Section>
 
         <Section title="What you can do">
