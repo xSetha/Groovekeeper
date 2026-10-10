@@ -23,6 +23,20 @@ namespace SongCreator.Tests
         private SongLine Line(int index) => _song.Sections[0].Lines[index];
 
         [Fact]
+        public void ChordsAreFoundAndReplacedByTheirDoReMiNamesToo()
+        {
+            Find.SearchChords = true;
+            Find.FindText = "Sol";
+            Find.ReplaceText = "Fa#m";
+
+            Assert.Equal("1 match", Find.Summary);
+            Find.ReplaceAll();
+
+            Assert.Equal("F#m", Line(0).Chords[0].Name);
+            Assert.Equal("C", Line(0).Chords[1].Name);
+        }
+
+        [Fact]
         public void CountsLyricMatchesIgnoringCase()
         {
             Find.FindText = "love";

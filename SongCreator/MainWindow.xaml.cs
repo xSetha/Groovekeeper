@@ -12,6 +12,7 @@ using Microsoft.Data.Sqlite;
 using SongCreator.Controls;
 using SongCreator.IO;
 using SongCreator.Models;
+using SongCreator.Music;
 using SongCreator.Themes;
 using SongCreator.ViewModels;
 using SongCreator.Views;
@@ -106,6 +107,7 @@ namespace SongCreator
             Width = Math.Clamp(settings.Width, MinWidth, Math.Max(MinWidth, SystemParameters.WorkArea.Width));
             Height = Math.Clamp(settings.Height, MinHeight, Math.Max(MinHeight, SystemParameters.WorkArea.Height));
             _viewModel.IsLibraryPanelOpen = settings.IsLibraryPanelOpen;
+            _viewModel.UseSolfege = settings.Naming == NoteNaming.Solfege;
             // The remembered state is shown as it is, without sliding.
             LibraryHost.BeginAnimation(WidthProperty, null);
             LibraryHost.Width = LibraryWidth;
@@ -135,7 +137,7 @@ namespace SongCreator
         {
             // A maximized or minimized window remembers the size it goes back to.
             var size = WindowState == WindowState.Normal ? new Size(ActualWidth, ActualHeight) : RestoreBounds.Size;
-            return new WindowSettings(size.Width, size.Height, _viewModel.IsLibraryPanelOpen);
+            return new WindowSettings(size.Width, size.Height, _viewModel.IsLibraryPanelOpen, _viewModel.Naming);
         }
 
         private void Exit_Click(object sender, RoutedEventArgs e) => Close();

@@ -78,6 +78,17 @@ namespace SongCreator.Controls
             nameof(NumeralKey), typeof(string), typeof(SongLineControl),
             new PropertyMetadata("", (d, _) => ((SongLineControl)d).RenderChords()));
 
+        /// <summary>How chord names are written (letters or Do Re Mi); Roman numerals, when on, win.</summary>
+        public NoteNaming NoteNaming
+        {
+            get => (NoteNaming)GetValue(NoteNamingProperty);
+            set => SetValue(NoteNamingProperty, value);
+        }
+
+        public static readonly DependencyProperty NoteNamingProperty = DependencyProperty.Register(
+            nameof(NoteNaming), typeof(NoteNaming), typeof(SongLineControl),
+            new PropertyMetadata(NoteNaming.Letters, (d, _) => ((SongLineControl)d).RenderChords()));
+
         /// <summary>Lyric text to highlight (the find bar's search), or empty.</summary>
         public string HighlightText
         {
@@ -338,7 +349,9 @@ namespace SongCreator.Controls
         }
 
         private string Display(ChordPlacement chord) =>
-            NumeralKey.Length > 0 ? RomanNumerals.Of(chord.Name, NumeralKey) ?? chord.Name : chord.Name;
+            NumeralKey.Length > 0 && RomanNumerals.Of(chord.Name, NumeralKey) is { } numeral
+                ? numeral
+                : NoteNames.Display(chord.Name, NoteNaming);
 
         // ---- Typing a chord: a click on the lane, or a double-click on a chord ----
 
@@ -381,7 +394,7 @@ namespace SongCreator.Controls
             ColumnGhost.Visibility = Visibility.Collapsed;
             SetTagsVisibility(column, Visibility.Hidden);
             ChordEditor.Margin = new Thickness(ColumnX(column) - TagPadding - ChordBoxInset, 0, 0, 0);
-            ChordBox.Text = name;
+            ChordBox.Text = NoteNames.Display(name, NoteNaming);
             ShowChordError(false);
             ChordEditor.Visibility = Visibility.Visible;
             Dispatcher.BeginInvoke(DispatcherPriority.Loaded, () =>

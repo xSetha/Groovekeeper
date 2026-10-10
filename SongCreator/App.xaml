@@ -14,6 +14,7 @@
             <converters:BoolToVisibilityConverter x:Key="BoolToVisible" />
             <converters:BoolToVisibilityConverter x:Key="BoolToCollapsed" Invert="True" />
             <converters:InverseBooleanConverter x:Key="InverseBoolean" />
+            <converters:NoteNameConverter x:Key="NoteName" />
 
         <Style x:Key="BareTextBox" TargetType="TextBox">
             <Setter Property="Background" Value="Transparent" />
@@ -379,7 +380,7 @@
                             <StackPanel Orientation="Horizontal" Margin="4,0" IsHitTestVisible="False">
                                 <TextBlock x:Name="Hint" Text="—" Foreground="{DynamicResource MutedForeground}"
                                            Visibility="Collapsed" VerticalAlignment="Center" />
-                                <ContentPresenter Content="{TemplateBinding SelectionBoxItem}" VerticalAlignment="Center" />
+                                <ContentPresenter Content="{TemplateBinding SelectionBoxItem}" ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}" VerticalAlignment="Center" />
                                 <Path Data="M0,0 L4,4 L8,0" Stroke="{DynamicResource MutedForeground}" StrokeThickness="1.5"
                                       VerticalAlignment="Center" Margin="6,2,0,0" />
                             </StackPanel>

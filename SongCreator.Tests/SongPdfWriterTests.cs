@@ -22,6 +22,38 @@ namespace SongCreator.Tests
             Assert.Equal("%PDF", Encoding.ASCII.GetString(pdf, 0, 4));
         }
 
+        [Theory]
+        [InlineData(ChordStyle.Letters)]
+        [InlineData(ChordStyle.Solfege)]
+        [InlineData(ChordStyle.Numerals)]
+        public void EveryChordStyleCreatesAPdf(ChordStyle style)
+        {
+            byte[] pdf = SongPdfWriter.Create([SongTextReader.Parse(Constantine)], tableOfContents: false, style);
+
+            Assert.Equal("%PDF", Encoding.ASCII.GetString(pdf, 0, 4));
+        }
+
+        [Fact]
+        public void ChordStylesWriteChordsAndTheKeyLine()
+        {
+            var song = SongTextReader.Parse(Constantine);
+
+            Assert.Null(SongPdfWriter.ChordDisplay(song, ChordStyle.Letters));
+            Assert.Equal("Rem", SongPdfWriter.ChordDisplay(song, ChordStyle.Solfege)!("Dm"));
+            Assert.Equal("i", SongPdfWriter.ChordDisplay(song, ChordStyle.Numerals)!("Dm"));
+            Assert.Equal("Dm", SongPdfWriter.KeyText(song, ChordStyle.Letters));
+            Assert.Equal("Rem", SongPdfWriter.KeyText(song, ChordStyle.Solfege));
+            Assert.Equal("Dm", SongPdfWriter.KeyText(song, ChordStyle.Numerals));
+        }
+
+        [Fact]
+        public void RomanNumeralsNeedAKeyElseTheChordsStayLetters()
+        {
+            var song = SongTextReader.Parse("Song\n\n[Verse]\nG\nla la\n");
+
+            Assert.Null(SongPdfWriter.ChordDisplay(song, ChordStyle.Numerals));
+        }
+
         [Fact]
         public void LongSongsFlowOntoMorePages()
         {

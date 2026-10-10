@@ -5,6 +5,7 @@ using System.Windows.Input;
 using Microsoft.Data.Sqlite;
 using SongCreator.IO;
 using SongCreator.Models;
+using SongCreator.Music;
 using SongCreator.Services;
 
 namespace SongCreator.ViewModels
@@ -18,13 +19,16 @@ namespace SongCreator.ViewModels
         private readonly SongLibrary _library;
         private bool _includeTableOfContents = true;
         private bool _openWhenDone = true;
-        private bool _romanNumerals;
+        private ChordStyle _chordStyle;
         private bool _collapseRepeats = true;
 
-        public ExportPdfViewModel(IEnumerable<SongDocumentViewModel> openDocuments, IDialogService dialogs, SongLibrary library)
+        /// <param name="naming">How the editor writes chords; the Chords drop-down starts on it.</param>
+        public ExportPdfViewModel(IEnumerable<SongDocumentViewModel> openDocuments, IDialogService dialogs, SongLibrary library,
+            NoteNaming naming = NoteNaming.Letters)
         {
             _dialogs = dialogs;
             _library = library;
+            _chordStyle = ChordStyleOption.Of(naming);
             Items.CollectionChanged += (_, e) =>
             {
                 foreach (ExportItemViewModel item in e.NewItems ?? Array.Empty<object>())
@@ -61,11 +65,11 @@ namespace SongCreator.ViewModels
             set => SetProperty(ref _openWhenDone, value);
         }
 
-        /// <summary>Write chords as Roman numerals in each song's key.</summary>
-        public bool RomanNumerals
+        /// <summary>How chords are written: letters, Do Re Mi, or Roman numerals in each song's key.</summary>
+        public ChordStyle ChordStyle
         {
-            get => _romanNumerals;
-            set => SetProperty(ref _romanNumerals, value);
+            get => _chordStyle;
+            set => SetProperty(ref _chordStyle, value);
         }
 
         /// <summary>Print a section that is an exact copy of an earlier one as a repeat, e.g. "[Chorus] (repeat)".</summary>
@@ -144,7 +148,7 @@ namespace SongCreator.ViewModels
 
             try
             {
-                File.WriteAllBytes(path, SongPdfWriter.Create(songs, IncludeTableOfContents, RomanNumerals,
+                File.WriteAllBytes(path, SongPdfWriter.Create(songs, IncludeTableOfContents, ChordStyle,
                     collapseRepeats: CollapseRepeats));
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)

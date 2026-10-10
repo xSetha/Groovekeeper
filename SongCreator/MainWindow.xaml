@@ -4,6 +4,7 @@
         xmlns:controls="clr-namespace:SongCreator.Controls"
         xmlns:views="clr-namespace:SongCreator.Views"
         xmlns:music="clr-namespace:SongCreator.Music"
+        x:Name="Root"
         Title="{Binding WindowTitle}" MinWidth="900" MinHeight="600" WindowStartupLocation="CenterScreen"
         Icon="Assets/SongCreator.ico"
         Background="{DynamicResource WindowBackground}"
@@ -210,6 +211,19 @@
                                     <ComboBox Style="{StaticResource DarkComboBox}" ItemsSource="{x:Static music:MusicKeys.All}"
                                               SelectedItem="{Binding KeyChoice}" FontWeight="SemiBold" MinHeight="26"
                                               MaxDropDownHeight="540" ToolTip="Key">
+                                        <!-- The values stay letters; Do Re Mi only changes what's shown -->
+                                        <ComboBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <TextBlock>
+                                                    <TextBlock.Text>
+                                                        <MultiBinding Converter="{StaticResource NoteName}">
+                                                            <Binding />
+                                                            <Binding Path="DataContext.Naming" ElementName="Root" />
+                                                        </MultiBinding>
+                                                    </TextBlock.Text>
+                                                </TextBlock>
+                                            </DataTemplate>
+                                        </ComboBox.ItemTemplate>
                                         <ComboBox.ItemsPanel>
                                             <ItemsPanelTemplate>
                                                 <UniformGrid Columns="2" />
@@ -220,6 +234,10 @@
                                                   FontFamily="{DynamicResource UiFont}" FontSize="12" Content="I IV V"
                                                   ToolTip="Show chords as Roman numerals in the song's key"
                                                   IsChecked="{Binding ShowNumerals}" />
+                                    <ToggleButton Style="{StaticResource IconToggle}" Width="72" Margin="6,0,0,0"
+                                                  FontFamily="{DynamicResource UiFont}" FontSize="12" Content="Do Re Mi"
+                                                  ToolTip="Show chords and keys as Do Re Mi instead of letters (every song)"
+                                                  IsChecked="{Binding DataContext.UseSolfege, ElementName=Root}" />
                                 </StackPanel>
                             </DockPanel>
                         </Border>
@@ -341,6 +359,7 @@
                                                         <ItemsControl.ItemTemplate>
                                                             <DataTemplate>
                                                                 <controls:SongLineControl NumeralKey="{Binding DataContext.NumeralKey, ElementName=EditorPanel}"
+                                                                                          NoteNaming="{Binding DataContext.Naming, ElementName=Root}"
                                                                                           HighlightText="{Binding DataContext.Find.HighlightText, ElementName=EditorPanel}"
                                                                                           CurrentMatch="{Binding DataContext.Find.CurrentMatch, ElementName=EditorPanel}"
                                                                                           SplitRequested="Line_SplitRequested"

@@ -38,9 +38,9 @@ namespace SongCreator.IO
             QuestPDF.Settings.UseSystemFonts = true;
         }
 
-        /// <param name="romanNumerals">Write chords as Roman numerals in each song's key (songs without a key keep chord names).</param>
+        /// <param name="chordStyle">How chords (and keys) are written: letters, Do Re Mi, or Roman numerals in each song's key (songs without a key keep letters).</param>
         /// <param name="collapseRepeats">Print a section that is an exact copy of an earlier one as a repeat (see <see cref="RepeatedSections"/>).</param>
-        public static byte[] Create(IReadOnlyList<Song> songs, bool tableOfContents, bool romanNumerals = false,
+        public static byte[] Create(IReadOnlyList<Song> songs, bool tableOfContents, ChordStyle chordStyle = ChordStyle.Letters,
             bool collapseRepeats = false)
         {
             return Document.Create(document =>
@@ -64,7 +64,7 @@ namespace SongCreator.IO
                             if (i > 0)
                                 column.Item().PaddingVertical(22).LineHorizontal(0.75f).LineColor(Colors.Grey.Lighten2);
                             // Keep a song's title from being stranded at the bottom of a page.
-                            column.Item().Section(SectionId(i)).EnsureSpace(110).Element(container => ComposeSong(container, songs[i], romanNumerals, collapseRepeats));
+                            column.Item().Section(SectionId(i)).EnsureSpace(110).Element(container => ComposeSong(container, songs[i], chordStyle, collapseRepeats));
                         }
                     });
                 });
@@ -156,13 +156,24 @@ namespace SongCreator.IO
             return placed;
         }
 
-        private static void ComposeSong(IContainer container, Song song, bool romanNumerals, bool collapseRepeats)
+        /// <summary>How each chord of the song is written in the PDF, or null to write it as the song has it.</summary>
+        public static Func<string, string>? ChordDisplay(Song song, ChordStyle chordStyle) => chordStyle switch
+        {
+            ChordStyle.Solfege => NoteNames.ToSolfege,
+            ChordStyle.Numerals when MusicKeys.TryParse(song.Key, out _, out _) => name => RomanNumerals.Of(name, song.Key) ?? name,
+            _ => null,
+        };
+
+        /// <summary>The song's key as the "Key:" line writes it: in Do Re Mi when the chords are.</summary>
+        public static string KeyText(Song song, ChordStyle chordStyle) =>
+            chordStyle == ChordStyle.Solfege ? NoteNames.ToSolfege(song.Key) : song.Key;
+
+        private static void ComposeSong(IContainer container, Song song, ChordStyle chordStyle, bool collapseRepeats)
         {
             var repeated = collapseRepeats ? RepeatedSections(song) : new HashSet<Section>();
             var notes = PlaceNotes(song, repeated);
-            Func<string, string>? display = romanNumerals && MusicKeys.TryParse(song.Key, out _, out _)
-                ? name => RomanNumerals.Of(name, song.Key) ?? name
-                : null;
+            var display = ChordDisplay(song, chordStyle);
+            string key = KeyText(song, chordStyle);
 
             container.Column(column =>
             {
@@ -171,7 +182,7 @@ namespace SongCreator.IO
                     column.Item().Text(song.Artist).FontSize(11).FontColor(MutedColor);
 
                 if (song.Key.Length > 0)
-                    column.Item().PaddingTop(4).Text($"Key: {song.Key}").FontSize(9).FontColor(MutedColor);
+                    column.Item().PaddingTop(4).Text($"Key: {key}").FontSize(9).FontColor(MutedColor);
 
                 foreach (var section in song.Sections)
                 {

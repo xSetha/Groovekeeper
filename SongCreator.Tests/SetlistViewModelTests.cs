@@ -1,6 +1,7 @@
 using System.IO;
 using SongCreator.IO;
 using SongCreator.Models;
+using SongCreator.Music;
 using SongCreator.Services;
 using SongCreator.ViewModels;
 
@@ -34,6 +35,19 @@ namespace SongCreator.Tests
             string path = Path.Combine(_dir, name + ".txt");
             File.WriteAllText(path, text);
             return path;
+        }
+
+        [Fact]
+        public void TheChordsChoiceFollowsTheEditorUnlessItIsOnRomanNumerals()
+        {
+            var vm = Create();
+
+            vm.FollowNaming(NoteNaming.Solfege);
+            Assert.Equal(ChordStyle.Solfege, vm.ChordStyle);
+
+            vm.ChordStyle = ChordStyle.Numerals;
+            vm.FollowNaming(NoteNaming.Letters);
+            Assert.Equal(ChordStyle.Numerals, vm.ChordStyle);
         }
 
         private SetlistViewModel Create() => new(_dialogs, new LibraryViewModel(_library, _dialogs));

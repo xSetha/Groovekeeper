@@ -77,6 +77,28 @@ namespace SongCreator.Tests
             Assert.Equal([(0, "G"), (6, "Am7")], ChordsOf(line));
         }
 
+        [Theory]
+        [InlineData("Sol7", "G7")]
+        [InlineData("lam", "Am")]
+        [InlineData("Sib/Re", "Bb/D")]
+        public void SetChordTakesDoReMiAndKeepsLetters(string typed, string stored)
+        {
+            var line = new SongLine("hello");
+
+            Assert.True(line.SetChord(0, typed));
+
+            Assert.Equal(stored, Assert.Single(line.Chords).Name);
+        }
+
+        [Fact]
+        public void SetChordRefusesAWordThatStartsLikeANote()
+        {
+            var line = new SongLine("hello");
+
+            Assert.False(line.SetChord(0, "Domino"));
+            Assert.Empty(line.Chords);
+        }
+
         [Fact]
         public void SetChordRenamesTheChordAlreadyThere()
         {

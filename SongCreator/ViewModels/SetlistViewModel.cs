@@ -5,6 +5,7 @@ using System.Windows.Input;
 using Microsoft.Data.Sqlite;
 using SongCreator.IO;
 using SongCreator.Models;
+using SongCreator.Music;
 using SongCreator.Services;
 
 namespace SongCreator.ViewModels
@@ -27,7 +28,7 @@ namespace SongCreator.ViewModels
         // Set while the setlist list is rebuilt, when the list view briefly clears its selection.
         private bool _updatingSetlists;
         private bool _includeTableOfContents = true;
-        private bool _romanNumerals;
+        private ChordStyle _chordStyle;
         private bool _collapseRepeats = true;
         private bool _openWhenDone = true;
 
@@ -113,10 +114,18 @@ namespace SongCreator.ViewModels
             set => SetProperty(ref _includeTableOfContents, value);
         }
 
-        public bool RomanNumerals
+        /// <summary>How chords are written in the PDF: letters, Do Re Mi, or Roman numerals in each song's key.</summary>
+        public ChordStyle ChordStyle
         {
-            get => _romanNumerals;
-            set => SetProperty(ref _romanNumerals, value);
+            get => _chordStyle;
+            set => SetProperty(ref _chordStyle, value);
+        }
+
+        /// <summary>The editor now writes chords this way, so the drop-down follows (unless it is on Roman numerals).</summary>
+        public void FollowNaming(NoteNaming naming)
+        {
+            if (ChordStyle != ChordStyle.Numerals)
+                ChordStyle = ChordStyleOption.Of(naming);
         }
 
         /// <summary>Print a section that is an exact copy of an earlier one as a repeat, e.g. "[Chorus] (repeat)".</summary>
@@ -271,7 +280,7 @@ namespace SongCreator.ViewModels
 
             try
             {
-                File.WriteAllBytes(path, SongPdfWriter.Create(Items.Select(i => i.Song).ToList(), IncludeTableOfContents, RomanNumerals,
+                File.WriteAllBytes(path, SongPdfWriter.Create(Items.Select(i => i.Song).ToList(), IncludeTableOfContents, ChordStyle,
                     collapseRepeats: CollapseRepeats));
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)

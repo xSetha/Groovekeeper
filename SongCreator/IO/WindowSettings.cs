@@ -1,12 +1,16 @@
 using System.IO;
 using System.Text.Json;
+using System.Text.Json.Serialization;
+using SongCreator.Music;
 
 namespace SongCreator.IO
 {
     /// <summary>
-    /// The main window's size and whether the library panel is open, remembered between runs.
+    /// The main window's size, whether the library panel is open and how chords are written (letters or Do Re Mi),
+    /// remembered between runs.
     /// </summary>
-    public record WindowSettings(double Width, double Height, bool IsLibraryPanelOpen)
+    public record WindowSettings(double Width, double Height, bool IsLibraryPanelOpen,
+        [property: JsonConverter(typeof(JsonStringEnumConverter<NoteNaming>))] NoteNaming Naming = NoteNaming.Letters)
     {
         public const double DefaultWidth = 1200;
         public const double DefaultHeight = 900;

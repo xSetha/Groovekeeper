@@ -4,6 +4,7 @@ using System.Windows.Input;
 using Microsoft.Data.Sqlite;
 using SongCreator.IO;
 using SongCreator.Models;
+using SongCreator.Music;
 using SongCreator.Services;
 
 namespace SongCreator.ViewModels
@@ -19,6 +20,7 @@ namespace SongCreator.ViewModels
         private readonly LibraryList? _libraries;
         private SongDocumentViewModel? _activeDocument;
         private bool _isLibraryPanelOpen = true;
+        private bool _useSolfege;
         private bool _isSetlistsViewActive;
 
         /// <param name="libraries">The named libraries, with <paramref name="library"/> open on the current one; none means a single library.</param>
@@ -51,7 +53,7 @@ namespace SongCreator.ViewModels
             SaveCommand = new RelayCommand(() => { if (IsEditingSong) Save(ActiveDocument!); });
             SaveAsCommand = new RelayCommand(() => { if (IsEditingSong) SaveAs(ActiveDocument!); });
             CloseSongCommand = new RelayCommand<SongDocumentViewModel>(document => Close(document));
-            ExportPdfCommand = new RelayCommand(() => _dialogs.ShowExportPdf(new ExportPdfViewModel(Documents, _dialogs, _library)));
+            ExportPdfCommand = new RelayCommand(() => _dialogs.ShowExportPdf(new ExportPdfViewModel(Documents, _dialogs, _library, Naming)));
             ShowSongsCommand = new RelayCommand(() => IsSetlistsViewActive = false);
             ShowSetlistsCommand = new RelayCommand(() => IsSetlistsViewActive = true);
             BackupLibraryCommand = new RelayCommand(BackupLibrary);
@@ -101,6 +103,21 @@ namespace SongCreator.ViewModels
             get => _isLibraryPanelOpen;
             set => SetProperty(ref _isLibraryPanelOpen, value);
         }
+
+        /// <summary>Whether chords and keys are shown as Do Re Mi (every song); songs keep letters either way.</summary>
+        public bool UseSolfege
+        {
+            get => _useSolfege;
+            set
+            {
+                if (!SetProperty(ref _useSolfege, value))
+                    return;
+                OnPropertyChanged(nameof(Naming));
+                Setlists.FollowNaming(Naming);
+            }
+        }
+
+        public NoteNaming Naming => UseSolfege ? NoteNaming.Solfege : NoteNaming.Letters;
 
         /// <summary>Theme picker; set by the view (it needs the running WPF application).</summary>
         public ThemesViewModel? Themes { get; init; }

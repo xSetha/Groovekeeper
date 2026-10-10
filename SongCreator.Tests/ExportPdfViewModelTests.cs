@@ -132,6 +132,19 @@ namespace SongCreator.Tests
             Assert.Equal("Library  ·  Me", item.Details);
         }
 
+        [Theory]
+        [InlineData(false, ChordStyle.Letters)]
+        [InlineData(true, ChordStyle.Solfege)]
+        public void TheChordsDropDownStartsOnHowTheEditorWritesChords(bool solfege, ChordStyle expected)
+        {
+            var main = new MainViewModel(_dialogs, _library) { UseSolfege = solfege };
+            main.NewSong();
+
+            main.ExportPdfCommand.Execute(null);
+
+            Assert.Equal(expected, _dialogs.ShownExport!.ChordStyle);
+        }
+
         [Fact]
         public void MainWindowCommandOpensTheExportWindowWithOpenSongs()
         {

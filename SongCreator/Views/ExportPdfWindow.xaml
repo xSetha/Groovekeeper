@@ -1,6 +1,7 @@
 <Window x:Class="SongCreator.Views.ExportPdfWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:SongCreator.ViewModels"
         Title="Export PDF" Width="620" SizeToContent="Height" ResizeMode="NoResize"
         WindowStyle="None" AllowsTransparency="True" Background="Transparent"
         ShowInTaskbar="False" WindowStartupLocation="CenterOwner"
@@ -32,7 +33,12 @@
             <!-- Options -->
             <WrapPanel DockPanel.Dock="Bottom" Margin="28,4,28,12">
                 <CheckBox Content="Table of contents" IsChecked="{Binding IncludeTableOfContents}" Margin="0,0,28,6" />
-                <CheckBox Content="Chords as Roman numerals" IsChecked="{Binding RomanNumerals}" Margin="0,0,28,6" />
+                <StackPanel Orientation="Horizontal" Margin="0,0,28,6">
+                    <TextBlock Text="Chords" VerticalAlignment="Center" Margin="0,0,8,0" Foreground="{DynamicResource MutedForeground}" />
+                    <ComboBox Style="{StaticResource DarkComboBox}" MinHeight="26" ItemsSource="{x:Static vm:ChordStyleOption.All}"
+                              DisplayMemberPath="Label" SelectedValuePath="Style" SelectedValue="{Binding ChordStyle}"
+                              ToolTip="How chords are written in the PDF. Roman numerals are in each song's key; a song without a key keeps letters." />
+                </StackPanel>
                 <CheckBox Content="Collapse repeated sections" IsChecked="{Binding CollapseRepeats}" Margin="0,0,28,6"
                           ToolTip="A section that is exactly the same as an earlier one (name, chords and lyrics) is printed as [Chorus] (repeat)" />
                 <CheckBox Content="Open the PDF when done" IsChecked="{Binding OpenWhenDone}" Margin="0,0,0,6" />

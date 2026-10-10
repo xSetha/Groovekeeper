@@ -90,7 +90,7 @@ namespace SongCreator.ViewModels
             {
                 if (FindText.Length == 0)
                     return "";
-                if (SearchChords && ReplaceText.Length > 0 && !Chord.IsValid(ReplaceText))
+                if (SearchChords && ReplaceText.Length > 0 && NoteNames.Normalize(ReplaceText) == null)
                     return $"\"{ReplaceText}\" isn't a chord";
                 int count = SearchChords ? MatchingChords().Count() : Lines.Sum(line => MatchesIn(line).Count);
                 return count switch
@@ -144,12 +144,12 @@ namespace SongCreator.ViewModels
                 return;
             if (SearchChords)
             {
-                if (!Chord.IsValid(ReplaceText))
+                if (NoteNames.Normalize(ReplaceText) is not { } replacement)
                     return;
                 _edit(() =>
                 {
                     foreach (var chord in MatchingChords().ToList())
-                        chord.Name = ReplaceText;
+                        chord.Name = replacement;
                 });
             }
             else
@@ -179,8 +179,12 @@ namespace SongCreator.ViewModels
 
         private IEnumerable<SongLine> Lines => _song.Sections.SelectMany(s => s.Lines);
 
-        private IEnumerable<ChordPlacement> MatchingChords() =>
-            Lines.SelectMany(l => l.Chords).Where(c => c.Name == FindText);
+        // A chord is found by its name as letters or as Do Re Mi.
+        private IEnumerable<ChordPlacement> MatchingChords()
+        {
+            string find = NoteNames.Normalize(FindText) ?? FindText;
+            return Lines.SelectMany(l => l.Chords).Where(c => c.Name == find);
+        }
 
         private List<int> MatchesIn(SongLine line) => MatchesIn(line.Text, FindText);
 

@@ -217,6 +217,27 @@ namespace SongCreator.Tests
             Assert.Equal((string?)c["expected"], RomanNumerals.Of((string)c["chord"]!, (string)c["key"]!));
         }
 
+        // ---- music/solfege.json ----
+
+        public static TheoryData<string> ToSolfegeCases() => Cases("solfege.json", "toSolfege");
+        public static TheoryData<string> FromSolfegeCases() => Cases("solfege.json", "fromSolfege");
+
+        [Theory]
+        [MemberData(nameof(ToSolfegeCases))]
+        public void WritesChordInSolfege(string json)
+        {
+            var c = Case(json);
+            Assert.Equal((string)c["expected"]!, NoteNames.ToSolfege((string)c["chord"]!));
+        }
+
+        [Theory]
+        [MemberData(nameof(FromSolfegeCases))]
+        public void ReadsChordTypedInSolfege(string json)
+        {
+            var c = Case(json);
+            Assert.Equal((string?)c["expected"], NoteNames.FromSolfege((string)c["text"]!));
+        }
+
         [Theory]
         [MemberData(nameof(KeyDetectionCases))]
         public void DetectsKey(string json)

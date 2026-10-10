@@ -34,6 +34,7 @@ be past the end of the text (chord-only lines).
 | `chords.json` | Valid chords split into root, type, bass and triad; text that isn't a chord; pitch classes of rare spellings |
 | `transpose.json` | Transposing chords (`useFlats`: `true`, `false` or `null` to keep each note's own accidental), keys, which keys use flats, and whole songs (`steps` applied in order): only the chords move, spelled in the key their chords move to, and the song's key stays as it was set |
 | `roman-numerals.json` | A chord written as a Roman numeral in a key; `null` when the chord or key isn't valid |
+| `solfege.json` | A chord or key written with Do Re Mi Fa Sol La Si for C D E F G A B (`toSolfege`: `Am7/G` → `Lam7/Sol`, anything else unchanged), and a chord typed in Do Re Mi read back as its letter chord (`fromSolfege`: `Sib/Re` → `Bb/D`; `null` for anything that isn't one, such as the words "Domino" and "Sola") |
 | `key-detection.json` | The key guessed from a song's chords; `null` when there's no clear key |
 | `chord-theory.json` | The chords of a key, the palette root of a key, whether a chord fits a key, and what usually comes next |
 | `printing.json` | Printed songs: which sections repeat an earlier one exactly (as indexes) |

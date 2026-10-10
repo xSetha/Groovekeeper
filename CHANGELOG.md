@@ -7,12 +7,18 @@ version's section here becomes the text of its GitHub release.
 ## [Unreleased]
 
 ### Added
+- Do Re Mi: the **Do Re Mi** button in the editor's toolbar shows every chord and the Key box as Do Re
+  Mi Fa Sol La Si (`Lam7/Sol` for `Am7/G`), for all songs, and Groovekeeper remembers the choice. You
+  can type chords either way (`Sol7` or `G7`, also in Find and replace); songs, files and the library
+  keep letters.
 - Libraries: keep songs apart in several libraries (Personal, Band…). The name at the top of the
   library panel opens a menu to switch to another library, or to create, rename or delete one. Each
   library has its own songs, notes and setlists, and a deleted library goes to the Recycle Bin. Your
   songs so far are in the first one, "My library". Songs open from the old library close when you switch.
 
 ### Changed
+- In Export PDF and on the Setlists tab, the "Chords as Roman numerals" checkbox is now a Chords
+  drop-down: letters, Do Re Mi or Roman numerals. It starts on how the editor shows chords.
 - The menu bar now has only File. Undo, Redo and Find and replace are buttons at the start of the
   editor's toolbar, and the Songs and Setlists tabs are the only way to switch between the two.
 - The library hides from its own panel: a « button in its header slides it shut, and a thin bar at the

@@ -79,10 +79,13 @@ The installer isn't code-signed yet, so Windows may warn that it "protected your
   spelled in the key they move to: `E A B7` moved up one becomes `F Bb C7`, not `F A# C7`.
 - Roman numerals (`I IV V vi`, `ii7`, `bVII`, `I/3`), shown with the **I IV V** toggle on the
   chords in the editor, in the key set in the Key box.
+- Chords and keys in Do Re Mi Fa Sol La Si (`Lam7/Sol` for `Am7/G`, `Fa#m`, `Sib`), shown with the
+  **Do Re Mi** toggle in the editor's toolbar for every song. You can type chords either way, and
+  songs, files and the library always keep letters. The choice is remembered.
 
 **Printing and gigs**
 - Export one or many songs to a single PDF songbook, with an optional table of contents
-  and an option to print the chords as Roman numerals.
+  and a Chords choice: letters, Do Re Mi or Roman numerals (in each song's key).
 - "Collapse repeated sections" (on by default, for songbooks and setlists): a section that is
   exactly the same as an earlier one, with the same name, chords and lyrics, is printed as
   `[Chorus] (repeat)` instead of in full. The song itself isn't changed.
@@ -230,7 +233,7 @@ keep that name.
 | Folder | Contents |
 | --- | --- |
 | `SongCreator/Models` | Song, sections, lines and chord placements |
-| `SongCreator/Music` | Chord parsing, keys, transposing, key detection, Roman numerals |
+| `SongCreator/Music` | Chord parsing, keys, transposing, key detection, Roman numerals, Do Re Mi names |
 | `SongCreator/IO` | Song library (SQLite), song files, setlist import, PDF export (QuestPDF) |
 | `SongCreator/ViewModels` | Editor, library, undo history, find/replace, export and setlist logic |
 | `SongCreator/Views`, `Controls` | WPF windows and the lyric line editor |

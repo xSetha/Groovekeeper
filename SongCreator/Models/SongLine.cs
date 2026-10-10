@@ -42,8 +42,10 @@ namespace SongCreator.Models
                     Chords.Remove(existing);
                 return true;
             }
-            if (!Chord.IsValid(name))
+            // Typed as letters or as Do Re Mi; the song keeps letters.
+            if (NoteNames.Normalize(name) is not { } letters)
                 return false;
+            name = letters;
             if (existing != null)
                 existing.Name = name;
             else
