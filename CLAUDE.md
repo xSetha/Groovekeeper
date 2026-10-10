@@ -15,10 +15,15 @@ those.
   of the desktop `Models`, `Music` and song formats; keep it free of React and browser APIs. Both apps run
   the golden cases in `shared/fixtures`: when a song or music rule changes, update the fixture and both
   implementations.
-- **Changelog:** every change users will notice adds a line under `## [Unreleased]` in `CHANGELOG.md`,
-  in the same commit, written for the people using the app. Changes only developers see (tests,
-  refactoring, build and release scripts) don't go in. The format and the headings are in
-  `docs/RELEASING.md`.
+- **Changelogs:** two, one per app, never mixed. Every change users will notice adds a line in the
+  same commit, written for the people using the app. Changes only developers see (tests, refactoring,
+  build and release scripts) don't go in.
+  - Desktop: under `## [Unreleased]` in `CHANGELOG.md`. The format and the headings are in
+    `docs/RELEASING.md`.
+  - Web: `web/CHANGELOG.md`, which has no versions (the app deploys on every push to `main`): add the
+    line under today's `## YYYY-MM-DD` heading, creating it at the top if it isn't there, under
+    `### Added`, `### Changed`, `### Removed` or `### Fixed`.
+  - A change to both apps (a shared format or music rule) goes in both.
 - **Releases:** the version numbering and the release steps are in `docs/RELEASING.md`. When asked to
   prepare a release, choose the version from the `[Unreleased]` entries, retake the screenshots (next
   bullet), commit them, then run `scripts/prepare-release.ps1 -Version X.Y.Z`; the user tags and pushes.
