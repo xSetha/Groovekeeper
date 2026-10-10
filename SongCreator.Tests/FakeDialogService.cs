@@ -72,6 +72,10 @@ namespace SongCreator.Tests
             return answer != null && problem(answer) == null ? answer : null;
         }
 
+        public SettingsWindowViewModel? ShownSettings { get; private set; }
+
+        public void ShowSettings(SettingsWindowViewModel viewModel) => ShownSettings = viewModel;
+
         public void OpenWithDefaultApp(string path) => Opened.Add(path);
 
         /// <summary>What the user does in the Import from Web window (e.g. import some text); nothing if null.</summary>

@@ -27,16 +27,21 @@ namespace SongCreator.ViewModels
         private bool _loading;
         // Set while the setlist list is rebuilt, when the list view briefly clears its selection.
         private bool _updatingSetlists;
-        private bool _includeTableOfContents = true;
+        private bool _includeTableOfContents;
+        private readonly AppSettingsViewModel _settings;
         private ChordStyle _chordStyle;
-        private bool _collapseRepeats = true;
-        private bool _openWhenDone = true;
+        private bool _collapseRepeats;
+        private bool _openWhenDone;
 
-        public SetlistViewModel(IDialogService dialogs, LibraryViewModel library)
+        /// <param name="settings">The export options start from these and follow them when they change; the paper is theirs too.</param>
+        public SetlistViewModel(IDialogService dialogs, LibraryViewModel library, AppSettingsViewModel? settings = null)
         {
             _dialogs = dialogs;
             _library = library.Library;
             Library = library;
+            _settings = settings ?? new AppSettingsViewModel(new AppSettings());
+            CopyExportOptions();
+            _settings.PropertyChanged += (_, e) => CopyExportOption(e.PropertyName);
             Items.CollectionChanged += (_, _) =>
             {
                 for (int i = 0; i < Items.Count; i++)
@@ -121,11 +126,26 @@ namespace SongCreator.ViewModels
             set => SetProperty(ref _chordStyle, value);
         }
 
-        /// <summary>The editor now writes chords this way, so the drop-down follows (unless it is on Roman numerals).</summary>
-        public void FollowNaming(NoteNaming naming)
+        private void CopyExportOptions()
         {
-            if (ChordStyle != ChordStyle.Numerals)
-                ChordStyle = ChordStyleOption.Of(naming);
+            foreach (string option in new[]
+            {
+                nameof(AppSettingsViewModel.ChordStyle), nameof(AppSettingsViewModel.IncludeTableOfContents),
+                nameof(AppSettingsViewModel.CollapseRepeats), nameof(AppSettingsViewModel.OpenWhenDone),
+            })
+                CopyExportOption(option);
+        }
+
+        // An export option follows Settings: a change there replaces what was picked here for that option only.
+        private void CopyExportOption(string? option)
+        {
+            switch (option)
+            {
+                case nameof(AppSettingsViewModel.ChordStyle): ChordStyle = _settings.ChordStyle; break;
+                case nameof(AppSettingsViewModel.IncludeTableOfContents): IncludeTableOfContents = _settings.IncludeTableOfContents; break;
+                case nameof(AppSettingsViewModel.CollapseRepeats): CollapseRepeats = _settings.CollapseRepeats; break;
+                case nameof(AppSettingsViewModel.OpenWhenDone): OpenWhenDone = _settings.OpenWhenDone; break;
+            }
         }
 
         /// <summary>Print a section that is an exact copy of an earlier one as a repeat, e.g. "[Chorus] (repeat)".</summary>
@@ -281,7 +301,7 @@ namespace SongCreator.ViewModels
             try
             {
                 File.WriteAllBytes(path, SongPdfWriter.Create(Items.Select(i => i.Song).ToList(), IncludeTableOfContents, ChordStyle,
-                    collapseRepeats: CollapseRepeats));
+                    collapseRepeats: CollapseRepeats, paper: _settings.Paper));
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {

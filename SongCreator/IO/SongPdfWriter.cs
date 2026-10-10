@@ -29,7 +29,9 @@ namespace SongCreator.IO
         public record PlacedNote(SongNote Note, float X, float Y);
 
         /// <summary>How many letters of a song's lyrics fit across a printed page; the editor marks this edge.</summary>
-        public static int PrintedColumns => (int)((PageSizes.A4.Width - 2 * MarginCm * PointsPerCm) / SongCharWidth);
+        public static int PrintedColumns(PaperSize paper) => (int)((PageOf(paper).Width - 2 * MarginCm * PointsPerCm) / SongCharWidth);
+
+        private static PageSize PageOf(PaperSize paper) => paper == PaperSize.Letter ? PageSizes.Letter : PageSizes.A4;
 
         static SongPdfWriter()
         {
@@ -40,14 +42,15 @@ namespace SongCreator.IO
 
         /// <param name="chordStyle">How chords (and keys) are written: letters, Do Re Mi, or Roman numerals in each song's key (songs without a key keep letters).</param>
         /// <param name="collapseRepeats">Print a section that is an exact copy of an earlier one as a repeat (see <see cref="RepeatedSections"/>).</param>
+        /// <param name="paper">The page size: A4 or US Letter.</param>
         public static byte[] Create(IReadOnlyList<Song> songs, bool tableOfContents, ChordStyle chordStyle = ChordStyle.Letters,
-            bool collapseRepeats = false)
+            bool collapseRepeats = false, PaperSize paper = PaperSize.A4)
         {
             return Document.Create(document =>
             {
                 document.Page(page =>
                 {
-                    page.Size(PageSizes.A4);
+                    page.Size(PageOf(paper));
                     page.Margin(MarginCm, Unit.Centimetre);
                     page.DefaultTextStyle(style => style.FontFamily(TextFont).FontSize(10).FontColor(Colors.Black));
 

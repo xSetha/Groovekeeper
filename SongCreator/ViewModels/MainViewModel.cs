@@ -20,15 +20,16 @@ namespace SongCreator.ViewModels
         private readonly LibraryList? _libraries;
         private SongDocumentViewModel? _activeDocument;
         private bool _isLibraryPanelOpen = true;
-        private bool _useSolfege;
         private bool _isSetlistsViewActive;
 
         /// <param name="libraries">The named libraries, with <paramref name="library"/> open on the current one; none means a single library.</param>
-        public MainViewModel(IDialogService dialogs, SongLibrary library, LibraryList? libraries = null)
+        /// <param name="settings">The options in Settings; without them (e.g. in tests) the defaults apply and nothing is saved.</param>
+        public MainViewModel(IDialogService dialogs, SongLibrary library, LibraryList? libraries = null, AppSettingsViewModel? settings = null)
         {
             _dialogs = dialogs;
             _library = library;
             _libraries = libraries;
+            Settings = settings ?? new AppSettingsViewModel(new AppSettings());
             Library = new LibraryViewModel(library, dialogs, libraries);
             Library.SwitchRequested += (_, target) => SwitchLibrary(target);
             Library.PropertyChanged += (_, e) =>
@@ -44,7 +45,7 @@ namespace SongCreator.ViewModels
                 OnPropertyChanged(nameof(HasDocuments));
                 OnPropertyChanged(nameof(IsEditingSong));
             };
-            Setlists = new SetlistViewModel(dialogs, Library);
+            Setlists = new SetlistViewModel(dialogs, Library, Settings);
             Setlists.OpenSongRequested += (_, id) => OpenFromLibrary(id);
 
             NewSongCommand = new RelayCommand(NewSong);
@@ -53,12 +54,14 @@ namespace SongCreator.ViewModels
             SaveCommand = new RelayCommand(() => { if (IsEditingSong) Save(ActiveDocument!); });
             SaveAsCommand = new RelayCommand(() => { if (IsEditingSong) SaveAs(ActiveDocument!); });
             CloseSongCommand = new RelayCommand<SongDocumentViewModel>(document => Close(document));
-            ExportPdfCommand = new RelayCommand(() => _dialogs.ShowExportPdf(new ExportPdfViewModel(Documents, _dialogs, _library, Naming)));
+            ExportPdfCommand = new RelayCommand(() => _dialogs.ShowExportPdf(new ExportPdfViewModel(Documents, _dialogs, _library, Settings)));
             ShowSongsCommand = new RelayCommand(() => IsSetlistsViewActive = false);
             ShowSetlistsCommand = new RelayCommand(() => IsSetlistsViewActive = true);
             BackupLibraryCommand = new RelayCommand(BackupLibrary);
             ImportFromWebCommand = new RelayCommand(ImportFromWeb);
             ToggleLibraryPanelCommand = new RelayCommand(() => IsLibraryPanelOpen = !IsLibraryPanelOpen);
+            OpenSettingsCommand = new RelayCommand(() =>
+                _dialogs.ShowSettings(new SettingsWindowViewModel(Settings, Themes, AppVersion)));
         }
 
         public ObservableCollection<SongDocumentViewModel> Documents { get; } = new();
@@ -104,20 +107,14 @@ namespace SongCreator.ViewModels
             set => SetProperty(ref _isLibraryPanelOpen, value);
         }
 
-        /// <summary>Whether chords and keys are shown as Do Re Mi (every song); songs keep letters either way.</summary>
-        public bool UseSolfege
-        {
-            get => _useSolfege;
-            set
-            {
-                if (!SetProperty(ref _useSolfege, value))
-                    return;
-                OnPropertyChanged(nameof(Naming));
-                Setlists.FollowNaming(Naming);
-            }
-        }
+        // The version without the commit the build was made from ("1.2.0+abc123" → "1.2.0").
+        private static string AppVersion =>
+            System.Reflection.Assembly.GetExecutingAssembly()
+                .GetCustomAttributes(typeof(System.Reflection.AssemblyInformationalVersionAttribute), false)
+                .OfType<System.Reflection.AssemblyInformationalVersionAttribute>().FirstOrDefault()?.InformationalVersion.Split('+')[0] ?? "";
 
-        public NoteNaming Naming => UseSolfege ? NoteNaming.Solfege : NoteNaming.Letters;
+        /// <summary>The options in Settings (how chords are written, text size, export defaults, updates, startup).</summary>
+        public AppSettingsViewModel Settings { get; }
 
         /// <summary>Theme picker; set by the view (it needs the running WPF application).</summary>
         public ThemesViewModel? Themes { get; init; }
@@ -133,6 +130,7 @@ namespace SongCreator.ViewModels
         public ICommand BackupLibraryCommand { get; }
         public ICommand ToggleLibraryPanelCommand { get; }
         public ICommand ImportFromWebCommand { get; }
+        public ICommand OpenSettingsCommand { get; }
 
         /// <summary>Asks the view to focus the active song's title.</summary>
         public event EventHandler? FocusTitleRequested;
@@ -234,6 +232,69 @@ namespace SongCreator.ViewModels
             Documents.Remove(document);
             ActiveDocument = Documents.Count > 0 ? Documents[Math.Min(index, Documents.Count - 1)] : null;
             return true;
+        }
+
+        /// <summary>
+        /// The saved songs that are open, in tab order, for opening them again at the next start. A song that was never
+        /// saved has no place to come back from, so it isn't in it.
+        /// </summary>
+        public Session CaptureSession()
+        {
+            var open = Documents.Where(d => d.LibraryId != null || d.FilePath != null).ToList();
+            var songs = open.Select(d => new SessionSong(d.LibraryId, d.FilePath)).ToList();
+            // An unsaved song can't come back: the saved song before it (or the first) is the active one then.
+            int active = open.IndexOf(ActiveDocument!);
+            if (active < 0)
+                active = Math.Max(0, open.Count(d => Documents.IndexOf(d) < Documents.IndexOf(ActiveDocument!)) - 1);
+            return new Session(_libraries?.Current.Id, songs, active);
+        }
+
+        /// <summary>
+        /// Opens the songs of an earlier <see cref="CaptureSession"/>. A song that is gone (deleted, or its file moved), or that
+        /// belongs to another library than the open one, is skipped without a word: the app starts as it should.
+        /// </summary>
+        public void RestoreSession(Session session)
+        {
+            bool sameLibrary = session.Library == _libraries?.Current.Id;
+            // Each song that came back, with its place in the saved session.
+            var restored = new List<(int Index, SongDocumentViewModel Document)>();
+            for (int i = 0; i < session.Songs.Count; i++)
+            {
+                var song = session.Songs[i];
+                SongDocumentViewModel? document = null;
+                if (song.FilePath != null && File.Exists(song.FilePath))
+                {
+                    // Opening can fail (a locked file, an offline share): then nothing is added, and the song is skipped.
+                    Open([song.FilePath]);
+                    document = Documents.FirstOrDefault(d => string.Equals(d.FilePath, song.FilePath, StringComparison.OrdinalIgnoreCase));
+                }
+                else if (song.LibraryId is long id && sameLibrary)
+                {
+                    document = Documents.FirstOrDefault(d => d.LibraryId == id);
+                    if (document == null && TryLoad(id) is { } loaded)
+                    {
+                        Add(new SongDocumentViewModel(loaded, libraryId: id));
+                        document = Documents[^1];
+                    }
+                }
+                if (document != null)
+                    restored.Add((i, document));
+            }
+            // The song that was active, or when it's gone the next one that came back, or the last.
+            if (restored.Count > 0)
+                Show(restored.FirstOrDefault(r => r.Index >= session.Active).Document ?? restored[^1].Document);
+        }
+
+        private Song? TryLoad(long id)
+        {
+            try
+            {
+                return _library.LoadSong(id);
+            }
+            catch (SqliteException)
+            {
+                return null;
+            }
         }
 
         /// <summary>Closes every song (asking to save each); returns false if the user cancelled.</summary>

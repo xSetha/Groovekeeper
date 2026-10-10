@@ -91,6 +91,12 @@ namespace SongCreator.Views
         public string? AskText(string title, string prompt, string initial, string confirmText, Func<string, string?> problem) =>
             TextPromptDialog.Ask(ActiveWindow, title, prompt, initial, confirmText, problem);
 
+        public void ShowSettings(SettingsWindowViewModel viewModel)
+        {
+            var window = new SettingsWindow { Owner = owner, DataContext = viewModel };
+            window.ShowDialog();
+        }
+
         public void ShowWebImport(WebImportViewModel viewModel)
         {
             var window = new WebImportWindow { Owner = owner, DataContext = viewModel };

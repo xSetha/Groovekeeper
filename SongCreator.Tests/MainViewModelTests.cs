@@ -141,17 +141,105 @@ namespace SongCreator.Tests
         }
 
         [Fact]
-        public void TurningDoReMiOnChangesTheNamingAndTheSetlistsChordsChoice()
+        public void TheSettingsMenuOpensTheSettingsWindowOnTheAppsSettings()
         {
-            _vm.UseSolfege = true;
+            _vm.OpenSettingsCommand.Execute(null);
 
-            Assert.Equal(NoteNaming.Solfege, _vm.Naming);
+            Assert.Same(_vm.Settings, _dialogs.ShownSettings!.Settings);
+        }
+
+        [Fact]
+        public void ChangingTheChordStyleInSettingsReachesTheSetlistsTab()
+        {
+            _vm.Settings.ChordStyle = ChordStyle.Solfege;
+
             Assert.Equal(ChordStyle.Solfege, _vm.Setlists.ChordStyle);
+        }
 
-            _vm.UseSolfege = false;
+        [Fact]
+        public void TheSessionHoldsTheSavedSongsInTabOrderAndLeavesOutNewOnes()
+        {
+            _vm.NewSong();
+            _vm.ActiveDocument!.Song.Title = "In the library";
+            _vm.Save(_vm.ActiveDocument);
+            string file = WriteSong("on-disk.txt", "On disk\n");
+            _vm.Open([file]);
+            _vm.NewSong();   // never saved
+            _vm.ActiveDocument = _vm.Documents[1];
 
-            Assert.Equal(NoteNaming.Letters, _vm.Naming);
-            Assert.Equal(ChordStyle.Letters, _vm.Setlists.ChordStyle);
+            var session = _vm.CaptureSession();
+
+            Assert.Equal(2, session.Songs.Count);
+            Assert.NotNull(session.Songs[0].LibraryId);
+            Assert.Equal(file, session.Songs[1].FilePath);
+            Assert.Equal(1, session.Active);
+        }
+
+        [Fact]
+        public void RestoringOpensWhatCanBeFoundAndSkipsTheRestQuietly()
+        {
+            long inLibrary = _library.AddSong(new Models.Song { Title = "Still there" });
+            string file = WriteSong("here.txt", "Here\n");
+            var session = new Session(null,
+            [
+                new SessionSong(inLibrary, null), new SessionSong(999, null),
+                new SessionSong(null, Path.Combine(_dir, "gone.txt")), new SessionSong(null, file),
+            ], 1);
+
+            _vm.RestoreSession(session);
+
+            Assert.Equal(["Still there", "Here"], _vm.Documents.Select(d => d.Song.Title));
+            Assert.Same(_vm.Documents[1], _vm.ActiveDocument);   // the second song that came back
+            Assert.Empty(_dialogs.Notifications);
+        }
+
+        [Fact]
+        public void ARememberedFileThatCantBeReadDoesNotStopTheRestFromComingBack()
+        {
+            string locked = WriteSong("locked.txt", "Locked\n");
+            string fine = WriteSong("fine.txt", "Fine\n");
+            using var hold = new FileStream(locked, FileMode.Open, FileAccess.Read, FileShare.None);   // another program has it open
+
+            _vm.RestoreSession(new Session(null, [new SessionSong(null, locked), new SessionSong(null, fine)], 0));
+
+            Assert.Equal(["Fine"], _vm.Documents.Select(d => d.Song.Title));
+            Assert.Same(_vm.Documents[0], _vm.ActiveDocument);
+            Assert.Single(_dialogs.ErrorNotifications);   // the unreadable file was reported once, the app still started
+        }
+
+        [Fact]
+        public void TheActiveTabIsTheSongThatWasActiveEvenWhenOthersAreGone()
+        {
+            long b = _library.AddSong(new Models.Song { Title = "B" });
+            long c = _library.AddSong(new Models.Song { Title = "C" });
+            // A was deleted; the saved active tab was B (index 1).
+            _vm.RestoreSession(new Session(null, [new SessionSong(999, null), new SessionSong(b, null), new SessionSong(c, null)], 1));
+
+            Assert.Equal("B", _vm.ActiveDocument!.Song.Title);
+        }
+
+        [Fact]
+        public void AnUnsavedActiveSongLeavesTheSavedSongBeforeItActive()
+        {
+            _vm.NewSong();
+            _vm.ActiveDocument!.Song.Title = "Saved one";
+            _vm.Save(_vm.ActiveDocument);
+            _vm.NewSong();   // unsaved and active
+
+            var session = _vm.CaptureSession();
+
+            Assert.Single(session.Songs);
+            Assert.Equal(0, session.Active);
+        }
+
+        [Fact]
+        public void LibrarySongsOfAnotherLibraryAreNotRestored()
+        {
+            long id = _library.AddSong(new Models.Song { Title = "Elsewhere" });
+
+            _vm.RestoreSession(new Session("some-other-library", [new SessionSong(id, null)], 0));
+
+            Assert.Empty(_vm.Documents);
         }
 
         [Fact]

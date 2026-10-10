@@ -154,7 +154,23 @@ namespace SongCreator.Tests
         [Fact]
         public void APageFitsAboutEightyLetters()
         {
-            Assert.InRange(SongPdfWriter.PrintedColumns, 80, 86);
+            Assert.InRange(SongPdfWriter.PrintedColumns(PaperSize.A4), 80, 86);
+        }
+
+        [Fact]
+        public void USLetterPaperIsWiderThanA4()
+        {
+            Assert.True(SongPdfWriter.PrintedColumns(PaperSize.Letter) > SongPdfWriter.PrintedColumns(PaperSize.A4));
+        }
+
+        [Theory]
+        [InlineData(PaperSize.A4)]
+        [InlineData(PaperSize.Letter)]
+        public void EveryPaperSizeCreatesAPdf(PaperSize paper)
+        {
+            byte[] pdf = SongPdfWriter.Create([SongTextReader.Parse(Constantine)], tableOfContents: false, paper: paper);
+
+            Assert.Equal("%PDF", Encoding.ASCII.GetString(pdf, 0, 4));
         }
     }
 }

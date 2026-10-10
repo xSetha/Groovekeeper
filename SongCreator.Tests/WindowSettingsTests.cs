@@ -1,6 +1,5 @@
 using System.IO;
 using SongCreator.IO;
-using SongCreator.Music;
 
 namespace SongCreator.Tests
 {
@@ -17,25 +16,6 @@ namespace SongCreator.Tests
             new WindowSettings(1400, 950, IsLibraryPanelOpen: false).Save(path);
 
             Assert.Equal(new WindowSettings(1400, 950, false), WindowSettings.Load(path));
-        }
-
-        [Fact]
-        public void RemembersDoReMi()
-        {
-            string path = Path.Combine(_dir, "window.json");
-            new WindowSettings(1400, 950, true, NoteNaming.Solfege).Save(path);
-
-            Assert.Equal(NoteNaming.Solfege, WindowSettings.Load(path).Naming);
-            Assert.Contains("Solfege", File.ReadAllText(path));
-        }
-
-        [Fact]
-        public void AFileFromBeforeDoReMiMeansLetters()
-        {
-            string path = Path.Combine(_dir, "window.json");
-            File.WriteAllText(path, """{ "Width": 1400, "Height": 950, "IsLibraryPanelOpen": false }""");
-
-            Assert.Equal(new WindowSettings(1400, 950, false, NoteNaming.Letters), WindowSettings.Load(path));
         }
 
         [Theory]

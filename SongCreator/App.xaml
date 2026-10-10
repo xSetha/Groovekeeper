@@ -478,6 +478,50 @@
                 </Setter.Value>
             </Setter>
         </Style>
+
+        <!-- A choice in a drop-down (SettingChoice, ChordStyleOption): its label. The drop-down's closed box needs a template, not DisplayMemberPath. -->
+        <DataTemplate x:Key="ChoiceLabelTemplate">
+            <TextBlock Text="{Binding Label}" />
+        </DataTemplate>
+
+        <!-- One theme in a list of themes: a miniature, its name and a tick on the one in use (the theme popup and Settings) -->
+        <DataTemplate x:Key="ThemeOptionTemplate">
+            <Button Style="{StaticResource ThemeOptionButton}" Command="{Binding SelectCommand}">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Miniature of the theme: a chord tag over a lyric line, plus its accent -->
+                    <Border Width="68" Height="46" CornerRadius="4" Background="{Binding Background}"
+                            BorderBrush="{Binding Border}" BorderThickness="1">
+                        <StackPanel Margin="8,7,0,0">
+                            <Border HorizontalAlignment="Left" CornerRadius="2" Padding="3,0"
+                                    Background="{Binding ChordBackground}">
+                                <TextBlock Text="Am" FontFamily="Consolas" FontSize="9" FontWeight="Bold"
+                                           Foreground="{Binding ChordForeground}" />
+                            </Border>
+                            <Rectangle Width="42" Height="3" RadiusX="1.5" RadiusY="1.5" Margin="0,5,0,0"
+                                       HorizontalAlignment="Left" Fill="{Binding Text}" Opacity="0.7" />
+                            <Rectangle Width="20" Height="3" RadiusX="1.5" RadiusY="1.5" Margin="0,4,0,0"
+                                       HorizontalAlignment="Left" Fill="{Binding Accent}" />
+                        </StackPanel>
+                    </Border>
+
+                    <StackPanel Grid.Column="1" Margin="12,0,8,0" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+                        <TextBlock Text="{Binding Description}" FontSize="11.5" TextWrapping="Wrap"
+                                   Foreground="{DynamicResource MutedForeground}" />
+                    </StackPanel>
+
+                    <TextBlock Grid.Column="2" Text="✓" FontWeight="Bold" VerticalAlignment="Center"
+                               Margin="0,0,6,0" Foreground="{DynamicResource AccentBrush}"
+                               Visibility="{Binding IsCurrent, Converter={StaticResource BoolToVisible}}" />
+                </Grid>
+            </Button>
+        </DataTemplate>
         </ResourceDictionary>
     </Application.Resources>
 </Application>

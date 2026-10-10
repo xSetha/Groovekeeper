@@ -133,16 +133,38 @@ namespace SongCreator.Tests
         }
 
         [Theory]
-        [InlineData(false, ChordStyle.Letters)]
-        [InlineData(true, ChordStyle.Solfege)]
-        public void TheChordsDropDownStartsOnHowTheEditorWritesChords(bool solfege, ChordStyle expected)
+        [InlineData(ChordStyle.Letters)]
+        [InlineData(ChordStyle.Solfege)]
+        [InlineData(ChordStyle.Numerals)]
+        public void TheExportWindowStartsOnTheOptionsInSettings(ChordStyle style)
         {
-            var main = new MainViewModel(_dialogs, _library) { UseSolfege = solfege };
+            var settings = new AppSettingsViewModel(new AppSettings
+            {
+                ChordStyle = style, IncludeTableOfContents = false, CollapseRepeats = false, OpenWhenDone = false,
+            });
+            var main = new MainViewModel(_dialogs, _library, settings: settings);
             main.NewSong();
 
             main.ExportPdfCommand.Execute(null);
 
-            Assert.Equal(expected, _dialogs.ShownExport!.ChordStyle);
+            var export = _dialogs.ShownExport!;
+            Assert.Equal(style, export.ChordStyle);
+            Assert.False(export.IncludeTableOfContents);
+            Assert.False(export.CollapseRepeats);
+            Assert.False(export.OpenWhenDone);
+        }
+
+        [Fact]
+        public void ChangingAnOptionInTheExportWindowLeavesSettingsAlone()
+        {
+            var settings = new AppSettingsViewModel(new AppSettings());
+            var export = new ExportPdfViewModel([], _dialogs, _library, settings);
+
+            export.ChordStyle = ChordStyle.Numerals;
+            export.IncludeTableOfContents = false;
+
+            Assert.Equal(ChordStyle.Letters, settings.ChordStyle);
+            Assert.True(settings.IncludeTableOfContents);
         }
 
         [Fact]

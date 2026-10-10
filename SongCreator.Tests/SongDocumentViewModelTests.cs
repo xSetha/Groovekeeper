@@ -262,18 +262,16 @@ namespace SongCreator.Tests
         }
 
         [Fact]
-        public void NumeralsFollowTheToggleAndTheKey()
+        public void SongKeyFollowsTheSongsKey()
         {
             _song.Key = "G";
             var changed = new List<string?>();
             _document.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
 
-            Assert.Equal("", _document.NumeralKey);
-            _document.ShowNumerals = true;
-            Assert.Equal("G", _document.NumeralKey);
+            Assert.Equal("G", _document.SongKey);
             _song.Key = "A";
-            Assert.Equal("A", _document.NumeralKey);
-            Assert.Equal(2, changed.Count(name => name == nameof(SongDocumentViewModel.NumeralKey)));
+            Assert.Equal("A", _document.SongKey);
+            Assert.Equal(1, changed.Count(name => name == nameof(SongDocumentViewModel.SongKey)));
         }
 
         [Fact]

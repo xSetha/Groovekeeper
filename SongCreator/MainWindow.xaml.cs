@@ -53,7 +53,8 @@ namespace SongCreator
             ToastArea.DataContext = toasts;
             Dialogs = new DialogService(this, toasts);
             var libraries = LibraryList.Load(LibraryList.DefaultFolder);
-            _viewModel = new MainViewModel(Dialogs, OpenLibrary(libraries), libraries) { Themes = new ThemesViewModel() };
+            var settings = new AppSettingsViewModel(AppSettings.Load(AppSettings.DefaultPath), changed => changed.Save(AppSettings.DefaultPath));
+            _viewModel = new MainViewModel(Dialogs, OpenLibrary(libraries), libraries, settings) { Themes = new ThemesViewModel() };
             _viewModel.FocusTitleRequested += (_, _) => Dispatcher.BeginInvoke(DispatcherPriority.Loaded, () => TitleBox.Focus());
             _viewModel.FocusLineRequested += (_, request) => FocusLine(request.Line, request.Caret);
             _viewModel.FindMatchFound += (_, match) => FindLineControl(this, match.Line)?.BringIntoView();
@@ -64,7 +65,15 @@ namespace SongCreator
                 else if (e.PropertyName == nameof(MainViewModel.IsLibraryPanelOpen))
                     SlideLibrary(_viewModel.IsLibraryPanelOpen);
             };
+            // The paper moves the edge of the printed page shown in the editor.
+            _viewModel.Settings.PropertyChanged += (_, e) =>
+            {
+                if (e.PropertyName == nameof(AppSettingsViewModel.Paper))
+                    UpdateNoteLayout();
+            };
             DataContext = _viewModel;
+            if (settings.Startup == StartupMode.ReopenSongs)
+                _viewModel.RestoreSession(Session.Load(Session.DefaultPath));
             SectionList.LayoutUpdated += (_, _) => UpdateNoteLayout();
             ApplySettings(WindowSettings.Load(WindowSettings.DefaultPath));
 
@@ -96,9 +105,14 @@ namespace SongCreator
 
         private void Window_Closing(object? sender, CancelEventArgs e)
         {
+            // Before the songs close, while they are still open.
+            var session = _viewModel.CaptureSession();
             e.Cancel = !_viewModel.CloseAll();
-            if (!e.Cancel)
-                CurrentSettings().Save(WindowSettings.DefaultPath);
+            if (e.Cancel)
+                return;
+            CurrentSettings().Save(WindowSettings.DefaultPath);
+            // Kept only while the songs are to be reopened, so an old session can't come back later.
+            (_viewModel.Settings.Startup == StartupMode.ReopenSongs ? session : new Session(null, [], 0)).Save(Session.DefaultPath);
         }
 
         /// <summary>The remembered size, kept between the minimum size and the screen's work area.</summary>
@@ -107,7 +121,6 @@ namespace SongCreator
             Width = Math.Clamp(settings.Width, MinWidth, Math.Max(MinWidth, SystemParameters.WorkArea.Width));
             Height = Math.Clamp(settings.Height, MinHeight, Math.Max(MinHeight, SystemParameters.WorkArea.Height));
             _viewModel.IsLibraryPanelOpen = settings.IsLibraryPanelOpen;
-            _viewModel.UseSolfege = settings.Naming == NoteNaming.Solfege;
             // The remembered state is shown as it is, without sliding.
             LibraryHost.BeginAnimation(WidthProperty, null);
             LibraryHost.Width = LibraryWidth;
@@ -137,7 +150,7 @@ namespace SongCreator
         {
             // A maximized or minimized window remembers the size it goes back to.
             var size = WindowState == WindowState.Normal ? new Size(ActualWidth, ActualHeight) : RestoreBounds.Size;
-            return new WindowSettings(size.Width, size.Height, _viewModel.IsLibraryPanelOpen, _viewModel.Naming);
+            return new WindowSettings(size.Width, size.Height, _viewModel.IsLibraryPanelOpen);
         }
 
         private void Exit_Click(object sender, RoutedEventArgs e) => Close();
@@ -509,7 +522,7 @@ namespace SongCreator
                 _columnWidth = Math.Max(1, lines[0].ColumnWidth);
             }
             SetIfChanged(PageEdge, FrameworkElement.MarginProperty,
-                new Thickness(_columnLeft + SongPdfWriter.PrintedColumns * _columnWidth, 0, 0, 0));
+                new Thickness(_columnLeft + SongPdfWriter.PrintedColumns(_viewModel.Settings.Paper) * _columnWidth, 0, 0, 0));
 
             var tops = lines.Select(line => (line.TranslatePoint(new Point(), NoteLayer).Y, line.ActualHeight)).ToList();
             double right = 0, bottom = 0;

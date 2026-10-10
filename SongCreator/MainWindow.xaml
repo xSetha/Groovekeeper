@@ -20,6 +20,7 @@
         <KeyBinding Key="L" Modifiers="Control" Command="{Binding ShowSetlistsCommand}" />
         <KeyBinding Key="B" Modifiers="Control" Command="{Binding ToggleLibraryPanelCommand}" />
         <KeyBinding Key="I" Modifiers="Control" Command="{Binding ImportFromWebCommand}" />
+        <KeyBinding Key="OemComma" Modifiers="Control" Command="{Binding OpenSettingsCommand}" />
     </Window.InputBindings>
 
     <Grid>
@@ -38,47 +39,7 @@
                     <StackPanel>
                         <TextBlock Text="THEME" FontSize="11" FontWeight="SemiBold" Margin="10,6,10,6"
                                    Foreground="{DynamicResource MutedForeground}" />
-                        <ItemsControl ItemsSource="{Binding Themes.Options}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <Button Style="{StaticResource ThemeOptionButton}" Command="{Binding SelectCommand}">
-                                        <Grid>
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="Auto" />
-                                                <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="Auto" />
-                                            </Grid.ColumnDefinitions>
-
-                                            <!-- Miniature of the theme: a chord tag over a lyric line, plus its accent -->
-                                            <Border Width="68" Height="46" CornerRadius="4" Background="{Binding Background}"
-                                                    BorderBrush="{Binding Border}" BorderThickness="1">
-                                                <StackPanel Margin="8,7,0,0">
-                                                    <Border HorizontalAlignment="Left" CornerRadius="2" Padding="3,0"
-                                                            Background="{Binding ChordBackground}">
-                                                        <TextBlock Text="Am" FontFamily="Consolas" FontSize="9" FontWeight="Bold"
-                                                                   Foreground="{Binding ChordForeground}" />
-                                                    </Border>
-                                                    <Rectangle Width="42" Height="3" RadiusX="1.5" RadiusY="1.5" Margin="0,5,0,0"
-                                                               HorizontalAlignment="Left" Fill="{Binding Text}" Opacity="0.7" />
-                                                    <Rectangle Width="20" Height="3" RadiusX="1.5" RadiusY="1.5" Margin="0,4,0,0"
-                                                               HorizontalAlignment="Left" Fill="{Binding Accent}" />
-                                                </StackPanel>
-                                            </Border>
-
-                                            <StackPanel Grid.Column="1" Margin="12,0,8,0" VerticalAlignment="Center">
-                                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
-                                                <TextBlock Text="{Binding Description}" FontSize="11.5" TextWrapping="Wrap"
-                                                           Foreground="{DynamicResource MutedForeground}" />
-                                            </StackPanel>
-
-                                            <TextBlock Grid.Column="2" Text="✓" FontWeight="Bold" VerticalAlignment="Center"
-                                                       Margin="0,0,6,0" Foreground="{DynamicResource AccentBrush}"
-                                                       Visibility="{Binding IsCurrent, Converter={StaticResource BoolToVisible}}" />
-                                        </Grid>
-                                    </Button>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
+                        <ItemsControl ItemsSource="{Binding Themes.Options}" ItemTemplate="{StaticResource ThemeOptionTemplate}" />
                     </StackPanel>
                 </Border>
             </Popup>
@@ -100,6 +61,7 @@
                     <Separator />
                     <MenuItem Header="E_xit" InputGestureText="Alt+F4" Click="Exit_Click" />
                 </MenuItem>
+                <MenuItem Header="_Settings" ToolTip="Settings (Ctrl+,)" Command="{Binding OpenSettingsCommand}" />
             </Menu>
 
             <!-- Songs or Setlists (Ctrl+L) -->
@@ -218,7 +180,7 @@
                                                     <TextBlock.Text>
                                                         <MultiBinding Converter="{StaticResource NoteName}">
                                                             <Binding />
-                                                            <Binding Path="DataContext.Naming" ElementName="Root" />
+                                                            <Binding Path="DataContext.Settings.Naming" ElementName="Root" />
                                                         </MultiBinding>
                                                     </TextBlock.Text>
                                                 </TextBlock>
@@ -230,14 +192,6 @@
                                             </ItemsPanelTemplate>
                                         </ComboBox.ItemsPanel>
                                     </ComboBox>
-                                    <ToggleButton Style="{StaticResource IconToggle}" Width="56" Margin="12,0,0,0"
-                                                  FontFamily="{DynamicResource UiFont}" FontSize="12" Content="I IV V"
-                                                  ToolTip="Show chords as Roman numerals in the song's key"
-                                                  IsChecked="{Binding ShowNumerals}" />
-                                    <ToggleButton Style="{StaticResource IconToggle}" Width="72" Margin="6,0,0,0"
-                                                  FontFamily="{DynamicResource UiFont}" FontSize="12" Content="Do Re Mi"
-                                                  ToolTip="Show chords and keys as Do Re Mi instead of letters (every song)"
-                                                  IsChecked="{Binding DataContext.UseSolfege, ElementName=Root}" />
                                 </StackPanel>
                             </DockPanel>
                         </Border>
@@ -286,6 +240,11 @@
                                       GotKeyboardFocus="EditorScroll_GotKeyboardFocus"
                                       PreviewMouseRightButtonDown="EditorScroll_PreviewMouseRightButtonDown">
                             <StackPanel Margin="40,24,40,40">
+                                <!-- Text size (Settings): everything in the song scales together -->
+                                <StackPanel.LayoutTransform>
+                                    <ScaleTransform ScaleX="{Binding DataContext.Settings.TextScale, ElementName=Root}"
+                                                    ScaleY="{Binding DataContext.Settings.TextScale, ElementName=Root}" />
+                                </StackPanel.LayoutTransform>
                                 <TextBox x:Name="TitleBox" Text="{Binding Song.Title, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource HintTextBox}" Tag="Song title"
                                          FontSize="26" FontWeight="SemiBold" />
                                 <TextBox Text="{Binding Song.Artist, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource HintTextBox}" Tag="Artist"
@@ -358,8 +317,8 @@
                                                                   Visibility="{Binding IsRepeat, Converter={StaticResource BoolToCollapsed}}">
                                                         <ItemsControl.ItemTemplate>
                                                             <DataTemplate>
-                                                                <controls:SongLineControl NumeralKey="{Binding DataContext.NumeralKey, ElementName=EditorPanel}"
-                                                                                          NoteNaming="{Binding DataContext.Naming, ElementName=Root}"
+                                                                <controls:SongLineControl SongKey="{Binding DataContext.SongKey, ElementName=EditorPanel}"
+                                                                                          ChordStyle="{Binding DataContext.Settings.ChordStyle, ElementName=Root}"
                                                                                           HighlightText="{Binding DataContext.Find.HighlightText, ElementName=EditorPanel}"
                                                                                           CurrentMatch="{Binding DataContext.Find.CurrentMatch, ElementName=EditorPanel}"
                                                                                           SplitRequested="Line_SplitRequested"

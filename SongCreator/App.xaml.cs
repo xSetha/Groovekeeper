@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Windows;
 using System.Windows.Threading;
 using Serilog;
+using SongCreator.IO;
 using SongCreator.Services;
 using SongCreator.Themes;
 using Velopack;
@@ -61,7 +62,8 @@ namespace SongCreator
         {
             ThemeManager.LoadSaved();
             base.OnStartup(e);
-            _ = DownloadUpdateAsync();
+            if (AppSettings.Load(AppSettings.DefaultPath).CheckForUpdates)
+                _ = DownloadUpdateAsync();
         }
 
         /// <summary>A log file a day, the last week kept; errors nothing else caught are written there.</summary>

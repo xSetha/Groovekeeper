@@ -1,0 +1,103 @@
+<Window x:Class="SongCreator.Views.SettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:SongCreator.ViewModels"
+        Title="Settings" Width="720" SizeToContent="Height" ResizeMode="NoResize"
+        WindowStyle="None" AllowsTransparency="True" Background="Transparent"
+        ShowInTaskbar="False" WindowStartupLocation="CenterOwner"
+        FontFamily="{DynamicResource UiFont}" Foreground="{DynamicResource TextForeground}">
+    <!-- Settings (SettingsWindowViewModel): options that apply to the whole app. Each change is applied and remembered at once. -->
+    <Border Background="{DynamicResource CardBackground}" BorderBrush="{DynamicResource PopupBorder}" BorderThickness="1"
+            CornerRadius="4" Margin="40" Effect="{DynamicResource CardShadow}">
+        <DockPanel>
+            <!-- Header (drag to move) -->
+            <StackPanel DockPanel.Dock="Top" Margin="28,24,28,16" Background="Transparent"
+                        MouseLeftButtonDown="Header_MouseLeftButtonDown">
+                <TextBlock Text="Settings" FontSize="20" FontWeight="SemiBold" />
+                <TextBlock Margin="0,6,0,0" TextWrapping="Wrap" Foreground="{DynamicResource MutedForeground}"
+                           Text="These apply to every song. Changes take effect straight away." />
+            </StackPanel>
+
+            <!-- Footer -->
+            <Border DockPanel.Dock="Bottom" BorderBrush="{DynamicResource CardBorder}" BorderThickness="0,1,0,0" Padding="28,16">
+                <Button Content="Close" Style="{StaticResource PrimaryButton}" Padding="22,8" HorizontalAlignment="Right"
+                        IsCancel="True" IsDefault="True" />
+            </Border>
+
+            <!-- The sections -->
+            <StackPanel DockPanel.Dock="Left" Width="150" Margin="20,0,0,16">
+                <RadioButton x:Name="DisplayTab" Content="Display" Style="{StaticResource ViewTab}" IsChecked="True" />
+                <RadioButton x:Name="ExportTab" Content="Export" Style="{StaticResource ViewTab}" />
+                <RadioButton x:Name="GeneralTab" Content="General" Style="{StaticResource ViewTab}" />
+            </StackPanel>
+
+            <Grid Margin="16,0,28,16" MinHeight="420">
+                <!-- Display -->
+                <ScrollViewer VerticalScrollBarVisibility="Auto"
+                              Visibility="{Binding IsChecked, ElementName=DisplayTab, Converter={StaticResource BoolToVisible}}">
+                    <StackPanel Margin="0,0,12,0">
+                        <TextBlock Text="Chords" FontWeight="SemiBold" />
+                        <ComboBox Style="{StaticResource DarkComboBox}" MinHeight="26" HorizontalAlignment="Left" MinWidth="220" Margin="0,6,0,0"
+                                  AutomationProperties.Name="Chords" ItemsSource="{x:Static vm:ChordStyleOption.All}" ItemTemplate="{StaticResource ChoiceLabelTemplate}" SelectedValuePath="Style"
+                                  SelectedValue="{Binding Settings.ChordStyle}" />
+                        <TextBlock Text="{Binding Settings.ChordExample}" Margin="0,8,0,0" FontFamily="{DynamicResource SongFont}"
+                                   FontWeight="Bold" Foreground="{DynamicResource ChordTagForeground}" />
+                        <TextBlock Margin="0,6,0,0" TextWrapping="Wrap" Foreground="{DynamicResource MutedForeground}"
+                                   Text="How chords are written in the editor and, to start with, in exports. Your songs always keep letters; you can type chords either way. Roman numerals count from each song's key, and a song without one keeps letters." />
+
+                        <TextBlock Text="Text size" FontWeight="SemiBold" Margin="0,22,0,0" />
+                        <ComboBox Style="{StaticResource DarkComboBox}" MinHeight="26" HorizontalAlignment="Left" MinWidth="220" Margin="0,6,0,0"
+                                  AutomationProperties.Name="Text size" ItemsSource="{x:Static vm:AppSettingsViewModel.TextSizes}" ItemTemplate="{StaticResource ChoiceLabelTemplate}" SelectedValuePath="Value"
+                                  SelectedValue="{Binding Settings.TextSize}" />
+                        <TextBlock Margin="0,6,0,0" TextWrapping="Wrap" Foreground="{DynamicResource MutedForeground}"
+                                   Text="The lyrics and chords in the editor. Printed songs keep their own size." />
+
+                        <TextBlock Text="Theme" FontWeight="SemiBold" Margin="0,22,0,6" />
+                        <ItemsControl ItemsSource="{Binding Themes.Options}" ItemTemplate="{StaticResource ThemeOptionTemplate}" />
+                    </StackPanel>
+                </ScrollViewer>
+
+                <!-- Export -->
+                <ScrollViewer VerticalScrollBarVisibility="Auto"
+                              Visibility="{Binding IsChecked, ElementName=ExportTab, Converter={StaticResource BoolToVisible}}">
+                    <StackPanel Margin="0,0,12,0">
+                        <TextBlock Text="Exporting PDFs" FontWeight="SemiBold" />
+                        <TextBlock Margin="0,6,0,10" TextWrapping="Wrap" Foreground="{DynamicResource MutedForeground}"
+                                   Text="Where each export starts. The Export PDF window and the Setlists tab can still change them for one export." />
+                        <CheckBox Content="Table of contents" IsChecked="{Binding Settings.IncludeTableOfContents}" Margin="0,0,0,8" />
+                        <CheckBox Content="Collapse repeated sections" IsChecked="{Binding Settings.CollapseRepeats}" Margin="0,0,0,8" />
+                        <CheckBox Content="Open the PDF when done" IsChecked="{Binding Settings.OpenWhenDone}" Margin="0,0,0,8" />
+
+                        <TextBlock Text="Paper size" FontWeight="SemiBold" Margin="0,18,0,0" />
+                        <ComboBox Style="{StaticResource DarkComboBox}" MinHeight="26" HorizontalAlignment="Left" MinWidth="220" Margin="0,6,0,0"
+                                  AutomationProperties.Name="Paper size" ItemsSource="{x:Static vm:AppSettingsViewModel.Papers}" ItemTemplate="{StaticResource ChoiceLabelTemplate}" SelectedValuePath="Value"
+                                  SelectedValue="{Binding Settings.Paper}" />
+                        <TextBlock Margin="0,6,0,0" TextWrapping="Wrap" Foreground="{DynamicResource MutedForeground}"
+                                   Text="The faint line in the editor shows where a printed line ends on this paper." />
+                    </StackPanel>
+                </ScrollViewer>
+
+                <!-- General -->
+                <ScrollViewer VerticalScrollBarVisibility="Auto"
+                              Visibility="{Binding IsChecked, ElementName=GeneralTab, Converter={StaticResource BoolToVisible}}">
+                    <StackPanel Margin="0,0,12,0">
+                        <TextBlock Text="When Groovekeeper starts" FontWeight="SemiBold" />
+                        <ComboBox Style="{StaticResource DarkComboBox}" MinHeight="26" HorizontalAlignment="Left" MinWidth="220" Margin="0,6,0,0"
+                                  AutomationProperties.Name="When Groovekeeper starts" ItemsSource="{x:Static vm:AppSettingsViewModel.Startups}" ItemTemplate="{StaticResource ChoiceLabelTemplate}" SelectedValuePath="Value"
+                                  SelectedValue="{Binding Settings.Startup}" />
+                        <TextBlock Margin="0,6,0,0" TextWrapping="Wrap" Foreground="{DynamicResource MutedForeground}"
+                                   Text="Only songs you saved are brought back: a library song, or a song file that is still where it was." />
+
+                        <TextBlock Text="Updates" FontWeight="SemiBold" Margin="0,22,0,10" />
+                        <CheckBox Content="Download updates automatically" IsChecked="{Binding Settings.CheckForUpdates}" />
+                        <TextBlock Margin="0,6,0,0" TextWrapping="Wrap" Foreground="{DynamicResource MutedForeground}"
+                                   Text="A new version downloads in the background and installs the next time you start the app. Turning this on or off applies from the next start." />
+                        <TextBlock Margin="0,10,0,0" Foreground="{DynamicResource MutedForeground}">
+                            <Run Text="Groovekeeper " /><Run Text="{Binding Version, Mode=OneWay}" />
+                        </TextBlock>
+                    </StackPanel>
+                </ScrollViewer>
+            </Grid>
+        </DockPanel>
+    </Border>
+</Window>

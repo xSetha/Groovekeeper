@@ -1,5 +1,4 @@
 using SongCreator.IO;
-using SongCreator.Music;
 
 namespace SongCreator.ViewModels
 {
@@ -12,8 +11,5 @@ namespace SongCreator.ViewModels
             new(ChordStyle.Solfege, "Do Re Mi"),
             new(ChordStyle.Numerals, "I IV V (Roman numerals)"),
         ];
-
-        /// <summary>The style that matches how the editor writes chords, which the drop-down starts on.</summary>
-        public static ChordStyle Of(NoteNaming naming) => naming == NoteNaming.Solfege ? ChordStyle.Solfege : ChordStyle.Letters;
     }
 }

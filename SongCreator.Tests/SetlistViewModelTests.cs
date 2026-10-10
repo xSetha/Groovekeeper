@@ -1,7 +1,6 @@
 using System.IO;
 using SongCreator.IO;
 using SongCreator.Models;
-using SongCreator.Music;
 using SongCreator.Services;
 using SongCreator.ViewModels;
 
@@ -38,16 +37,44 @@ namespace SongCreator.Tests
         }
 
         [Fact]
-        public void TheChordsChoiceFollowsTheEditorUnlessItIsOnRomanNumerals()
+        public void TheExportOptionsStartFromSettingsAndFollowThem()
         {
-            var vm = Create();
-
-            vm.FollowNaming(NoteNaming.Solfege);
+            var settings = new AppSettingsViewModel(new AppSettings { ChordStyle = ChordStyle.Solfege, OpenWhenDone = false });
+            var vm = new SetlistViewModel(_dialogs, new LibraryViewModel(_library, _dialogs), settings);
             Assert.Equal(ChordStyle.Solfege, vm.ChordStyle);
+            Assert.False(vm.OpenWhenDone);
+
+            settings.ChordStyle = ChordStyle.Numerals;
+            settings.CollapseRepeats = false;
+
+            Assert.Equal(ChordStyle.Numerals, vm.ChordStyle);
+            Assert.False(vm.CollapseRepeats);
+        }
+
+        [Fact]
+        public void ChangingOneExportOptionInSettingsKeepsTheOthersPickedOnTheSetlistsTab()
+        {
+            var settings = new AppSettingsViewModel(new AppSettings());
+            var vm = new SetlistViewModel(_dialogs, new LibraryViewModel(_library, _dialogs), settings);
+            vm.ChordStyle = ChordStyle.Numerals;
+
+            settings.OpenWhenDone = false;
+
+            Assert.False(vm.OpenWhenDone);
+            Assert.Equal(ChordStyle.Numerals, vm.ChordStyle);
+        }
+
+        [Fact]
+        public void AChoiceMadeOnTheSetlistsTabIsKeptUntilSettingsChange()
+        {
+            var settings = new AppSettingsViewModel(new AppSettings());
+            var vm = new SetlistViewModel(_dialogs, new LibraryViewModel(_library, _dialogs), settings);
 
             vm.ChordStyle = ChordStyle.Numerals;
-            vm.FollowNaming(NoteNaming.Letters);
+            settings.TextSize = TextSize.Large;   // not an export option
+
             Assert.Equal(ChordStyle.Numerals, vm.ChordStyle);
+            Assert.Equal(ChordStyle.Letters, settings.ChordStyle);
         }
 
         private SetlistViewModel Create() => new(_dialogs, new LibraryViewModel(_library, _dialogs));

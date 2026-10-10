@@ -7,10 +7,17 @@ version's section here becomes the text of its GitHub release.
 ## [Unreleased]
 
 ### Added
-- Do Re Mi: the **Do Re Mi** button in the editor's toolbar shows every chord and the Key box as Do Re
-  Mi Fa Sol La Si (`Lam7/Sol` for `Am7/G`), for all songs, and Groovekeeper remembers the choice. You
-  can type chords either way (`Sol7` or `G7`, also in Find and replace); songs, files and the library
-  keep letters. The web app has the same button, and its song pages and setlists follow the choice.
+- Settings: the new Settings menu next to File (Ctrl+,) opens a window for the options that apply to
+  every song, each remembered and applied straight away. Display: how chords are written, the size of
+  the text in the editor, and the theme. Export: what a PDF export starts with (table of contents,
+  collapse repeated sections, open the PDF when done) and the paper, A4 or US Letter. General: download
+  updates automatically or not, and start with the start page or with the songs that were open.
+  The web app has Settings too, with a gear in the top bar that guests can use as well: Display (chords,
+  text size, theme) and Export (collapse repeated sections, paper).
+- Do Re Mi: chords and the Key box can be written as Do Re Mi Fa Sol La Si (`Lam7/Sol` for `Am7/G`),
+  in Settings → Display, for all songs, on the web too: song pages, setlists and the library follow it.
+  You can type chords either way (`Sol7` or `G7`, also in Find and replace); songs, files and the
+  library keep letters.
 - Libraries: keep songs apart in several libraries (Personal, Band…). The name at the top of the
   library panel opens a menu to switch to another library, or to create, rename or delete one. Each
   library has its own songs, notes and setlists, and a deleted library goes to the Recycle Bin. Your
@@ -18,9 +25,12 @@ version's section here becomes the text of its GitHub release.
 
 ### Changed
 - In Export PDF (and on the desktop's Setlists tab), the "Chords as Roman numerals" checkbox is now a
-  Chords drop-down: letters, Do Re Mi or Roman numerals. It starts on how the editor shows chords.
-- The menu bar now has only File. Undo, Redo and Find and replace are buttons at the start of the
+  Chords drop-down: letters, Do Re Mi or Roman numerals. It starts on what Settings says.
+- The menu bar has File and Settings. Undo, Redo and Find and replace are buttons at the start of the
   editor's toolbar, and the Songs and Setlists tabs are the only way to switch between the two.
+- Roman numerals (I IV V) are now a choice in Settings → Display that applies to every song, instead
+  of a button on each song, and Roman numerals now show when reading a song on the web too. The I IV V
+  and Do Re Mi buttons are no longer in the editor's toolbar.
 - The library hides from its own panel: a « button in its header slides it shut, and a thin bar at the
   left edge brings it back (Ctrl+B still works).
 - A section can be empty, just its heading: Backspace on a section's only empty line removes the line,

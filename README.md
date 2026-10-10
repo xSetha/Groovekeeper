@@ -77,11 +77,10 @@ The installer isn't code-signed yet, so Windows may warn that it "protected your
 - The song's key is yours to set in the Key box; nothing else changes it.
 - Transpose up or down by a semitone moves every chord in the song, and only the chords. They are
   spelled in the key they move to: `E A B7` moved up one becomes `F Bb C7`, not `F A# C7`.
-- Roman numerals (`I IV V vi`, `ii7`, `bVII`, `I/3`), shown with the **I IV V** toggle on the
-  chords in the editor, in the key set in the Key box.
-- Chords and keys in Do Re Mi Fa Sol La Si (`Lam7/Sol` for `Am7/G`, `Fa#m`, `Sib`), shown with the
-  **Do Re Mi** toggle in the editor's toolbar for every song. You can type chords either way, and
-  songs, files and the library always keep letters. The choice is remembered.
+- Roman numerals (`I IV V vi`, `ii7`, `bVII`, `I/3`) in the key set in the Key box, and chords and
+  keys in Do Re Mi Fa Sol La Si (`Lam7/Sol` for `Am7/G`, `Fa#m`, `Sib`): pick how chords are written
+  in Settings → Display, for every song. You can type chords as letters or as Do Re Mi, and songs,
+  files and the library always keep letters.
 
 **Printing and gigs**
 - Export one or many songs to a single PDF songbook, with an optional table of contents
@@ -99,6 +98,12 @@ The installer isn't code-signed yet, so Windows may warn that it "protected your
   transpose the song itself.
 - Export a setlist to one PDF. Older `.setlist` files can be imported, together with their
   songs.
+
+**Settings** (the Settings menu, or Ctrl+,)
+- Display: how chords are written (A B C, Do Re Mi or I IV V), the size of the editor's text, and the
+  theme. Export: the table of contents, collapsed repeats, opening the PDF when done, and the paper
+  (A4 or US Letter). General: automatic updates on or off, and what the app starts with: the start
+  page, or the songs that were open (only songs you saved). Every change applies at once.
 
 **Looks**
 - Four themes: Amp (black and blood red), Backstage (charcoal and brass), Record Sleeve (forest
@@ -137,7 +142,7 @@ Other scripts, each run with `powershell -ExecutionPolicy Bypass -File scripts\<
 | Script | What it does |
 | --- | --- |
 | `prepare-release.ps1 -Version 1.5.0` | Sets the version, dates the changelog and commits both, ready to tag |
-| `screenshots.ps1` | Retakes the screenshots in `docs/screenshots` with the sample songs. It runs the app on a sample library in place of yours (close the app first) and puts your library back afterwards |
+| `screenshots.ps1` | Retakes the screenshots in `docs/screenshots` with the sample songs, as a step of each release ([docs/RELEASING.md](docs/RELEASING.md)). It runs the app on a sample library in place of yours (close the app first) and puts your library back afterwards |
 | `make-icon.ps1` | Redraws the app icon and the installer's splash image |
 | `check.ps1` | Runs every check before a commit: the desktop tests, the web typecheck and tests, the database's access rules and the end-to-end tests, then sums them up. Checks that need the local Supabase are skipped when it isn't running. `-SkipDesktop`, `-SkipE2E` leave parts out |
 | `web-dev.ps1` | Starts what the web app needs while working on it: Docker Desktop, the local Supabase and the app at http://localhost:5173. `-Network` also serves it on the local network, for a phone |
@@ -154,6 +159,7 @@ Other scripts, each run with `powershell -ExecutionPolicy Bypass -File scripts\<
 | Ctrl+I | Import from the web |
 | Ctrl+E | Export PDF |
 | Ctrl+L | Setlists tab |
+| Ctrl+, | Settings |
 | Ctrl+Z | Undo |
 | Ctrl+Y, Ctrl+Shift+Z | Redo |
 | Ctrl+F, Ctrl+H | Find and replace (Enter: next match, Esc: close) |
@@ -210,6 +216,11 @@ That [G]saved a wretch like [D]me
 setlists, one per library; `libraries.json` has their names and the open one. The first library is
 `library.db`, and the others are in `libraries\`. The folder keeps the app's old name, SongCreator, so that nobody's library moves. Each song is stored as its `.txt` text, with its notes in a table beside it. Don't keep it in a folder that a cloud service
 syncs while the app is open; use File → Back Up Library… to make a copy instead.
+
+**Settings (`%AppData%\SongCreator\settings.json`, `session.json`)**: `settings.json` holds the options in
+Settings (an option it doesn't know is ignored, so the file can be edited by hand); `session.json` holds the
+songs that were open, only while "start with the songs that were open" is chosen. The window's size and the
+theme are in `window.json` and `theme.txt` beside them.
 
 **Older setlists (`.setlist`)**: setlists used to be JSON files that point to song files. They can
 be imported on the Setlists tab (Import…), which adds their songs to the library. The key these

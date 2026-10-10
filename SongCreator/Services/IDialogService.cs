@@ -59,6 +59,9 @@ namespace SongCreator.Services
         /// </summary>
         string? AskText(string title, string prompt, string initial, string confirmText, Func<string, string?> problem);
 
+        /// <summary>Shows the Settings window (modal); the options apply as they are changed.</summary>
+        void ShowSettings(SettingsWindowViewModel viewModel);
+
         /// <summary>Shows the Import from Web window (modal) for the given view model.</summary>
         void ShowWebImport(WebImportViewModel viewModel);
 

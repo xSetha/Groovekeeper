@@ -33,7 +33,6 @@ namespace SongCreator.ViewModels
         private string? _savedText;
         private string? _filePath;
         private long? _libraryId;
-        private bool _showNumerals;
         private TextRange? _selection;
 
         public SongDocumentViewModel(Song song, string? filePath = null, long? libraryId = null)
@@ -45,7 +44,7 @@ namespace SongCreator.ViewModels
             {
                 if (e.PropertyName == nameof(Song.Key))
                 {
-                    OnPropertyChanged(nameof(NumeralKey));
+                    OnPropertyChanged(nameof(SongKey));
                     OnPropertyChanged(nameof(KeyChoice));
                 }
             };
@@ -74,17 +73,6 @@ namespace SongCreator.ViewModels
 
         public FindReplaceViewModel Find { get; }
 
-        /// <summary>Show chords as Roman numerals in the song's key (display only; the song keeps chord names).</summary>
-        public bool ShowNumerals
-        {
-            get => _showNumerals;
-            set
-            {
-                if (SetProperty(ref _showNumerals, value))
-                    OnPropertyChanged(nameof(NumeralKey));
-            }
-        }
-
         /// <summary>
         /// The key picked in the Key box: null when the song has no known key, so the box shows nothing
         /// (a value that isn't in the list would leave the previous tab's key on display). The box sends
@@ -100,8 +88,8 @@ namespace SongCreator.ViewModels
             }
         }
 
-        /// <summary>The key chords are shown as numerals in, or empty to show chord names.</summary>
-        public string NumeralKey => ShowNumerals ? Song.Key : "";
+        /// <summary>The song's key, which Roman numerals are counted from.</summary>
+        public string SongKey => Song.Key;
 
         /// <summary>The song file (.txt or ChordPro) this song was opened from or last saved to, if any.</summary>
         public string? FilePath

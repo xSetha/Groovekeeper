@@ -17,18 +17,23 @@ namespace SongCreator.ViewModels
     {
         private readonly IDialogService _dialogs;
         private readonly SongLibrary _library;
-        private bool _includeTableOfContents = true;
-        private bool _openWhenDone = true;
+        private readonly AppSettingsViewModel _settings;
+        private bool _includeTableOfContents;
+        private bool _openWhenDone;
         private ChordStyle _chordStyle;
-        private bool _collapseRepeats = true;
+        private bool _collapseRepeats;
 
-        /// <param name="naming">How the editor writes chords; the Chords drop-down starts on it.</param>
+        /// <param name="settings">The options start as Settings has them (and the paper is Settings'); changing one here is for this export only.</param>
         public ExportPdfViewModel(IEnumerable<SongDocumentViewModel> openDocuments, IDialogService dialogs, SongLibrary library,
-            NoteNaming naming = NoteNaming.Letters)
+            AppSettingsViewModel? settings = null)
         {
             _dialogs = dialogs;
             _library = library;
-            _chordStyle = ChordStyleOption.Of(naming);
+            _settings = settings ?? new AppSettingsViewModel(new AppSettings());
+            _chordStyle = _settings.ChordStyle;
+            _includeTableOfContents = _settings.IncludeTableOfContents;
+            _openWhenDone = _settings.OpenWhenDone;
+            _collapseRepeats = _settings.CollapseRepeats;
             Items.CollectionChanged += (_, e) =>
             {
                 foreach (ExportItemViewModel item in e.NewItems ?? Array.Empty<object>())
@@ -149,7 +154,7 @@ namespace SongCreator.ViewModels
             try
             {
                 File.WriteAllBytes(path, SongPdfWriter.Create(songs, IncludeTableOfContents, ChordStyle,
-                    collapseRepeats: CollapseRepeats));
+                    collapseRepeats: CollapseRepeats, paper: _settings.Paper));
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {

@@ -36,7 +36,7 @@
                 <StackPanel Orientation="Horizontal" Margin="0,0,28,6">
                     <TextBlock Text="Chords" VerticalAlignment="Center" Margin="0,0,8,0" Foreground="{DynamicResource MutedForeground}" />
                     <ComboBox Style="{StaticResource DarkComboBox}" MinHeight="26" ItemsSource="{x:Static vm:ChordStyleOption.All}"
-                              DisplayMemberPath="Label" SelectedValuePath="Style" SelectedValue="{Binding ChordStyle}"
+                              ItemTemplate="{StaticResource ChoiceLabelTemplate}" SelectedValuePath="Style" SelectedValue="{Binding ChordStyle}"
                               ToolTip="How chords are written in the PDF. Roman numerals are in each song's key; a song without a key keeps letters." />
                 </StackPanel>
                 <CheckBox Content="Collapse repeated sections" IsChecked="{Binding CollapseRepeats}" Margin="0,0,28,6"
