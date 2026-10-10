@@ -18,7 +18,7 @@ namespace SongCreator.Music
     {
         // By letter: C D E F G A B.
         private static readonly string[] Solfege = ["Do", "Re", "Mi", "Fa", "Sol", "La", "Si"];
-        private const string Letters = "CDEFGAB";
+        private const string LetterOrder = "CDEFGAB";
 
         // The names without accents; "Ré" is accepted too when typing. The accidental is the usual # or b.
         [GeneratedRegex(@"^(?<name>(?i:do|re|ré|mi|fa|sol|la|si))(?<accidental>[#b]?)(?<rest>.*)$")]
@@ -31,8 +31,8 @@ namespace SongCreator.Music
         {
             if (!Chord.TryParse(chord.Trim(), out var parsed))
                 return chord;
-            return Solfege[Letters.IndexOf(parsed.Root.Letter)] + Accidental(parsed.Root) + parsed.Quality
-                + (parsed.Bass is { } bass ? "/" + Solfege[Letters.IndexOf(bass.Letter)] + Accidental(bass) : "");
+            return Solfege[LetterOrder.IndexOf(parsed.Root.Letter)] + Accidental(parsed.Root) + parsed.Quality
+                + (parsed.Bass is { } bass ? "/" + Solfege[LetterOrder.IndexOf(bass.Letter)] + Accidental(bass) : "");
         }
 
         /// <summary>
@@ -83,7 +83,7 @@ namespace SongCreator.Music
 
         // "Ré" and "RÉ" are Re too: the regex took the name in any case.
         private static string LetterOf(Match match) =>
-            Letters[Array.FindIndex(Solfege, n => n.Equals(match.Groups["name"].Value.ToLowerInvariant().Replace('é', 'e'), StringComparison.OrdinalIgnoreCase))]
+            LetterOrder[Array.FindIndex(Solfege, n => n.Equals(match.Groups["name"].Value.ToLowerInvariant().Replace('é', 'e'), StringComparison.OrdinalIgnoreCase))]
             + match.Groups["accidental"].Value;
 
         private static string Accidental(Note note) => note.Accidental > 0 ? "#" : note.Accidental < 0 ? "b" : "";

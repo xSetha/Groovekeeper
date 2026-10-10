@@ -143,7 +143,7 @@ namespace SongCreator.Controls
         /// </summary>
         public void ShowSelection(int start, int? end)
         {
-            int lineEnd = _line == null ? 0 : _line.Chords.Select(c => c.Position + c.Name.Length).Append(_line.Text.Length).Max();
+            int lineEnd = _line == null ? 0 : _line.Chords.Select(c => c.Position + Display(c).Length).Append(_line.Text.Length).Max();
             int stop = end ?? lineEnd + 1;
             SelectionMark.Margin = new Thickness(ColumnX(start), 0, 0, 0);
             SelectionMark.Width = Math.Max(0, stop - start) * CharWidth;

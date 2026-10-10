@@ -69,11 +69,11 @@
                 <WrapPanel VerticalAlignment="Center">
                     <CheckBox Content="Table of contents" IsChecked="{Binding IncludeTableOfContents}" Margin="0,4,24,4" />
                     <StackPanel Orientation="Horizontal" Margin="0,4,24,4">
-                    <TextBlock Text="Chords" VerticalAlignment="Center" Margin="0,0,8,0" Foreground="{DynamicResource MutedForeground}" />
-                    <ComboBox Style="{StaticResource DarkComboBox}" MinHeight="26" ItemsSource="{x:Static vm:ChordStyleOption.All}"
-                              DisplayMemberPath="Label" SelectedValuePath="Style" SelectedValue="{Binding ChordStyle}"
-                              ToolTip="How chords are written in the PDF. Roman numerals are in each song's key; a song without a key keeps letters." />
-                </StackPanel>
+                        <TextBlock Text="Chords" VerticalAlignment="Center" Margin="0,0,8,0" Foreground="{DynamicResource MutedForeground}" />
+                        <ComboBox Style="{StaticResource DarkComboBox}" MinHeight="26" ItemsSource="{x:Static vm:ChordStyleOption.All}"
+                                  DisplayMemberPath="Label" SelectedValuePath="Style" SelectedValue="{Binding ChordStyle}"
+                                  ToolTip="How chords are written in the PDF. Roman numerals are in each song's key; a song without a key keeps letters." />
+                    </StackPanel>
                     <CheckBox Content="Collapse repeated sections" IsChecked="{Binding CollapseRepeats}" Margin="0,4,24,4"
                               ToolTip="A section that is exactly the same as an earlier one (name, chords and lyrics) is printed as [Chorus] (repeat)" />
                     <CheckBox Content="Open the PDF when done" IsChecked="{Binding OpenWhenDone}" Margin="0,4,24,4" />

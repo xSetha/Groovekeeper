@@ -1,5 +1,6 @@
 using System.IO;
 using SongCreator.IO;
+using SongCreator.Music;
 using SongCreator.Services;
 using SongCreator.ViewModels;
 
@@ -137,6 +138,20 @@ namespace SongCreator.Tests
             string path = Path.Combine(_dir, name);
             File.WriteAllText(path, text);
             return path;
+        }
+
+        [Fact]
+        public void TurningDoReMiOnChangesTheNamingAndTheSetlistsChordsChoice()
+        {
+            _vm.UseSolfege = true;
+
+            Assert.Equal(NoteNaming.Solfege, _vm.Naming);
+            Assert.Equal(ChordStyle.Solfege, _vm.Setlists.ChordStyle);
+
+            _vm.UseSolfege = false;
+
+            Assert.Equal(NoteNaming.Letters, _vm.Naming);
+            Assert.Equal(ChordStyle.Letters, _vm.Setlists.ChordStyle);
         }
 
         [Fact]
