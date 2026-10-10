@@ -27,18 +27,41 @@ namespace SongCreator.IO
         // 1: songs and setlists. 2: notes floating over a song.
         private const int SchemaVersion = 2;
 
-        private readonly string _connectionString;
+        private string _connectionString;
 
         public SongLibrary(string path)
         {
-            Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
-            // No pooling: the file is released as soon as a call is done, so it can be backed up, moved or deleted.
-            _connectionString = new SqliteConnectionStringBuilder { DataSource = path, Pooling = false }.ToString();
+            _connectionString = Connect(path);
             CreateSchema();
         }
 
-        public static string DefaultPath { get; } = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "SongCreator", "library.db");
+        /// <summary>
+        /// Makes this object read and write another library file (made if it doesn't exist). Everything holding this
+        /// library follows. The old file is left as it was; if the new one can't be opened, this keeps using the old one.
+        /// </summary>
+        public void SwitchTo(string path)
+        {
+            string previous = _connectionString;
+            _connectionString = Connect(path);
+            bool opened = false;
+            try
+            {
+                CreateSchema();
+                opened = true;
+            }
+            finally
+            {
+                if (!opened)
+                    _connectionString = previous;
+            }
+        }
+
+        private static string Connect(string path)
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
+            // No pooling: the file is released as soon as a call is done, so it can be backed up, moved or deleted.
+            return new SqliteConnectionStringBuilder { DataSource = path, Pooling = false }.ToString();
+        }
 
         public IReadOnlyList<SongSummary> ListSongs()
         {

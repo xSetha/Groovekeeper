@@ -16,15 +16,24 @@ namespace SongCreator.ViewModels
     {
         private readonly IDialogService _dialogs;
         private readonly SongLibrary _library;
+        private readonly LibraryList? _libraries;
         private SongDocumentViewModel? _activeDocument;
         private bool _isLibraryPanelOpen = true;
         private bool _isSetlistsViewActive;
 
-        public MainViewModel(IDialogService dialogs, SongLibrary library)
+        /// <param name="libraries">The named libraries, with <paramref name="library"/> open on the current one; none means a single library.</param>
+        public MainViewModel(IDialogService dialogs, SongLibrary library, LibraryList? libraries = null)
         {
             _dialogs = dialogs;
             _library = library;
-            Library = new LibraryViewModel(library, dialogs);
+            _libraries = libraries;
+            Library = new LibraryViewModel(library, dialogs, libraries);
+            Library.SwitchRequested += (_, target) => SwitchLibrary(target);
+            Library.PropertyChanged += (_, e) =>
+            {
+                if (e.PropertyName == nameof(LibraryViewModel.CurrentName))
+                    OnPropertyChanged(nameof(WindowTitle));
+            };
             Library.OpenRequested += (_, song) => OpenFromLibrary(song.Id);
             Library.ImportFromWebRequested += (_, _) => ImportFromWeb();
             Library.SongDeleted += (_, id) => Documents.FirstOrDefault(d => d.LibraryId == id)?.DetachFromLibrary();
@@ -59,6 +68,9 @@ namespace SongCreator.ViewModels
         }
 
         public bool HasDocuments => Documents.Count > 0;
+
+        /// <summary>The window's title; names the library when there are several to tell apart.</summary>
+        public string WindowTitle => _libraries is { Libraries.Count: > 1 } ? $"Groovekeeper — {Library.CurrentName}" : "Groovekeeper";
 
         public LibraryViewModel Library { get; }
 
@@ -294,6 +306,37 @@ namespace SongCreator.ViewModels
                 _dialogs.ShowError("Save song", $"Couldn't save {Path.GetFileName(path)}:\n{ex.Message}");
                 return false;
             }
+        }
+
+        /// <summary>
+        /// Opens another library. The songs open from the current one are closed first (asking to save each);
+        /// if the user cancels, nothing changes. Songs opened from files stay open.
+        /// </summary>
+        private void SwitchLibrary(LibraryInfo target)
+        {
+            if (_libraries == null || target.Id == _libraries.Current.Id)
+                return;
+            foreach (var document in Documents.Where(d => d.LibraryId != null).ToList())
+                if (!Close(document))
+                    return;
+
+            // Before the switch, so a setlist's pending change is saved in the library it belongs to.
+            Setlists.SelectedSetlist = null;
+            try
+            {
+                _library.SwitchTo(_libraries.PathOf(target));
+            }
+            catch (Exception ex) when (ex is SqliteException or IOException or UnauthorizedAccessException)
+            {
+                _dialogs.Notify(NotificationKind.Error, $"Couldn't open the library “{target.Name}”", ex.Message);
+                return;
+            }
+            _libraries.SetCurrent(target.Id);
+            Library.SaveLibraries();
+            Library.OnSwitched();
+            Setlists.Refresh();
+            OnPropertyChanged(nameof(WindowTitle));
+            _dialogs.Notify(NotificationKind.Success, $"Opened the library “{target.Name}”");
         }
 
         private void BackupLibrary()

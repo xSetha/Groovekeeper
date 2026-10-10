@@ -88,6 +88,9 @@ namespace SongCreator.Views
         public bool Confirm(string title, string question, string detail, string confirmText) =>
             ConfirmDialog.Ask(ActiveWindow, title, question, detail, confirmText);
 
+        public string? AskText(string title, string prompt, string initial, string confirmText, Func<string, string?> problem) =>
+            TextPromptDialog.Ask(ActiveWindow, title, prompt, initial, confirmText, problem);
+
         public void ShowWebImport(WebImportViewModel viewModel)
         {
             var window = new WebImportWindow { Owner = owner, DataContext = viewModel };

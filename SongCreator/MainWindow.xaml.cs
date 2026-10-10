@@ -51,7 +51,8 @@ namespace SongCreator
             var toasts = new ToastsViewModel();
             ToastArea.DataContext = toasts;
             Dialogs = new DialogService(this, toasts);
-            _viewModel = new MainViewModel(Dialogs, OpenLibrary()) { Themes = new ThemesViewModel() };
+            var libraries = LibraryList.Load(LibraryList.DefaultFolder);
+            _viewModel = new MainViewModel(Dialogs, OpenLibrary(libraries), libraries) { Themes = new ThemesViewModel() };
             _viewModel.FocusTitleRequested += (_, _) => Dispatcher.BeginInvoke(DispatcherPriority.Loaded, () => TitleBox.Focus());
             _viewModel.FocusLineRequested += (_, request) => FocusLine(request.Line, request.Caret);
             _viewModel.FindMatchFound += (_, match) => FindLineControl(this, match.Line)?.BringIntoView();
@@ -75,16 +76,17 @@ namespace SongCreator
 
         private SongDocumentViewModel Document => _viewModel.ActiveDocument!;
 
-        /// <summary>Opens the song library; the app can't run without it, so a failure is reported and ends the app.</summary>
-        private static SongLibrary OpenLibrary()
+        /// <summary>Opens the current song library; the app can't run without it, so a failure is reported and ends the app.</summary>
+        private static SongLibrary OpenLibrary(LibraryList libraries)
         {
+            string path = libraries.PathOf(libraries.Current);
             try
             {
-                return new SongLibrary(SongLibrary.DefaultPath);
+                return new SongLibrary(path);
             }
             catch (Exception ex) when (ex is SqliteException or IOException or UnauthorizedAccessException)
             {
-                MessageBox.Show($"Couldn't open the song library at {SongLibrary.DefaultPath}:\n{ex.Message}", "Groovekeeper",
+                MessageBox.Show($"Couldn't open the song library at {path}:\n{ex.Message}", "Groovekeeper",
                     MessageBoxButton.OK, MessageBoxImage.Error);
                 Environment.Exit(1);
                 throw;   // not reached

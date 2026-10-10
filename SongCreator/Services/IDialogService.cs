@@ -53,6 +53,12 @@ namespace SongCreator.Services
         /// </summary>
         bool Confirm(string title, string question, string detail, string confirmText);
 
+        /// <summary>
+        /// Asks for a line of text (e.g. a name), starting with <paramref name="initial"/>. <paramref name="problem"/> says why a
+        /// text can't be used (or returns null); the OK button waits until it returns null. Returns the text, or null if cancelled.
+        /// </summary>
+        string? AskText(string title, string prompt, string initial, string confirmText, Func<string, string?> problem);
+
         /// <summary>Shows the Import from Web window (modal) for the given view model.</summary>
         void ShowWebImport(WebImportViewModel viewModel);
 

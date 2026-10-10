@@ -53,6 +53,9 @@ The installer isn't code-signed yet, so Windows may warn that it "protected your
   The app remembers whether the panel was open, and the window's size.
 - Double-click a song to open it, right-click to delete it (it is also taken out of its setlists).
 - Import `.txt` and ChordPro files into the library; the files themselves aren't changed.
+- Keep songs apart in several libraries (Personal, Band…): the name at the top of the library panel
+  lists them, and switches, creates, renames or deletes one. Each has its own songs, notes and setlists;
+  Back Up Library and Export PDF use the open one. A deleted library goes to the Recycle Bin.
 - Back up the whole library to a single file (File → Back Up Library…).
 
 **Import from the web**
@@ -200,8 +203,9 @@ That [G]saved a wretch like [D]me
 {comment: Verse 1}
 ```
 
-**Library (`%AppData%\SongCreator\library.db`)**: a SQLite database with the songs and the
-setlists. The folder keeps the app's old name, SongCreator, so that nobody's library moves. Each song is stored as its `.txt` text, with its notes in a table beside it. Don't keep it in a folder that a cloud service
+**Libraries (`%AppData%\SongCreator\library.db`, `libraries\*.db`)**: SQLite databases with the songs and the
+setlists, one per library; `libraries.json` has their names and the open one. The first library is
+`library.db`, and the others are in `libraries\`. The folder keeps the app's old name, SongCreator, so that nobody's library moves. Each song is stored as its `.txt` text, with its notes in a table beside it. Don't keep it in a folder that a cloud service
 syncs while the app is open; use File → Back Up Library… to make a copy instead.
 
 **Older setlists (`.setlist`)**: setlists used to be JSON files that point to song files. They can

@@ -61,6 +61,17 @@ namespace SongCreator.Tests
             return ConfirmAnswer;
         }
 
+        /// <summary>The texts typed into the next text prompts, in order; a null (or none left) cancels.</summary>
+        public Queue<string?> TextAnswers { get; } = new();
+        public List<string> TextPrompts { get; } = [];
+
+        public string? AskText(string title, string prompt, string initial, string confirmText, Func<string, string?> problem)
+        {
+            TextPrompts.Add($"{title}: {prompt} [{initial}]");
+            string? answer = TextAnswers.Count > 0 ? TextAnswers.Dequeue() : null;
+            return answer != null && problem(answer) == null ? answer : null;
+        }
+
         public void OpenWithDefaultApp(string path) => Opened.Add(path);
 
         /// <summary>What the user does in the Import from Web window (e.g. import some text); nothing if null.</summary>

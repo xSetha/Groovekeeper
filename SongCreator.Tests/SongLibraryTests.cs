@@ -26,6 +26,33 @@ namespace SongCreator.Tests
         }
 
         [Fact]
+        public void SwitchingOpensAnotherFileAndLeavesTheFirstAsItWas()
+        {
+            _library.AddSong(MakeSong("In the first"));
+            string other = Path.Combine(_dir, "libraries", "other.db");
+
+            _library.SwitchTo(other);
+            Assert.Empty(_library.ListSongs());
+            _library.AddSong(MakeSong("In the other"));
+            _library.SwitchTo(Path.Combine(_dir, "library.db"));
+
+            Assert.Equal(["In the first"], _library.ListSongs().Select(s => s.Title));
+            Assert.Equal(["In the other"], new SongLibrary(other).ListSongs().Select(s => s.Title));
+        }
+
+        [Fact]
+        public void ASwitchThatFailsKeepsTheOpenLibrary()
+        {
+            _library.AddSong(MakeSong("Kept"));
+            string notALibrary = Path.Combine(_dir, "broken.db");
+            File.WriteAllText(notALibrary, "this is not a database");
+
+            Assert.ThrowsAny<Exception>(() => _library.SwitchTo(notALibrary));
+
+            Assert.Equal(["Kept"], _library.ListSongs().Select(s => s.Title));
+        }
+
+        [Fact]
         public void StartsEmpty()
         {
             Assert.Empty(_library.ListSongs());

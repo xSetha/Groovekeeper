@@ -1,0 +1,29 @@
+<Window x:Class="SongCreator.Views.TextPromptDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        SizeToContent="WidthAndHeight" ResizeMode="NoResize"
+        WindowStyle="None" AllowsTransparency="True" Background="Transparent"
+        ShowInTaskbar="False" WindowStartupLocation="CenterOwner"
+        FontFamily="{DynamicResource UiFont}"
+        MouseLeftButtonDown="Window_MouseLeftButtonDown">
+    <!-- Asks for a line of text in the app's theme, e.g. a library's name -->
+    <Border Background="{DynamicResource CardBackground}" BorderBrush="{DynamicResource PopupBorder}" BorderThickness="1"
+            CornerRadius="4" Padding="28,24" Margin="40" Width="420" Effect="{DynamicResource CardShadow}">
+        <StackPanel>
+            <TextBlock x:Name="Prompt" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource TextForeground}"
+                       TextWrapping="Wrap" />
+            <Border Margin="0,14,0,0" Background="{DynamicResource ToolbarBackground}" BorderBrush="{DynamicResource KeyCapBorder}"
+                    BorderThickness="1" CornerRadius="4" Padding="8,6">
+                <TextBox x:Name="Input" Style="{StaticResource HintTextBox}" Tag="Name" TextChanged="Input_TextChanged"
+                         KeyDown="Input_KeyDown" />
+            </Border>
+            <!-- Why the text can't be used; kept in the layout so the dialog doesn't jump -->
+            <TextBlock x:Name="Problem" Margin="0,8,0,16" MinHeight="18" Foreground="{DynamicResource MutedForeground}" TextWrapping="Wrap" />
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Content="Cancel" Style="{StaticResource FlatButton}" Padding="12,8" IsCancel="True" />
+                <Button x:Name="ConfirmButton" Style="{StaticResource PrimaryButton}" Padding="22,8" Margin="8,0,0,0"
+                        Click="Confirm_Click" />
+            </StackPanel>
+        </StackPanel>
+    </Border>
+</Window>

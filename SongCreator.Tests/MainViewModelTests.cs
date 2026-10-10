@@ -20,6 +20,118 @@ namespace SongCreator.Tests
 
         public void Dispose() => Directory.Delete(_dir, recursive: true);
 
+        /// <summary>A window with the first library open and "Band" added; files are deleted for real, not recycled.</summary>
+        private (MainViewModel Vm, LibraryList List, LibraryInfo Band) WithTwoLibraries()
+        {
+            var list = LibraryList.Load(Path.Combine(_dir, "data"));
+            list.DeleteFile = File.Delete;
+            var band = list.Add("Band");
+            var library = new SongLibrary(list.PathOf(list.Current));
+            return (new MainViewModel(_dialogs, library, list), list, band);
+        }
+
+        [Fact]
+        public void SwitchingLibraryShowsItsSongsAndClosesTheOnesOpenFromTheOldOne()
+        {
+            var (vm, list, band) = WithTwoLibraries();
+            vm.NewSong();
+            vm.Save(vm.ActiveDocument!);
+            string fromFile = WriteSong("file.txt", "Title: From a file\n");
+            vm.Open([fromFile]);
+            Assert.Single(vm.Library.Songs);
+
+            vm.Library.SwitchCommand.Execute(vm.Library.Options.Single(o => o.Info == band));
+
+            Assert.Equal(band, list.Current);
+            Assert.Empty(vm.Library.Songs);
+            Assert.True(vm.Library.IsEmpty);
+            Assert.Equal("Band", vm.Library.CurrentName);
+            Assert.Equal("Groovekeeper — Band", vm.WindowTitle);
+            Assert.Equal(fromFile, Assert.Single(vm.Documents).FilePath);   // the library song closed, the file stayed
+            Assert.Equal(band.Id, LibraryList.Load(Path.Combine(_dir, "data")).Current.Id);
+        }
+
+        [Fact]
+        public void CancellingTheSaveQuestionKeepsTheLibraryOpen()
+        {
+            var (vm, list, band) = WithTwoLibraries();
+            vm.NewSong();
+            vm.Save(vm.ActiveDocument!);
+            vm.ActiveDocument!.Song.Title = "Changed";   // unsaved, and the answer is Cancel
+
+            vm.Library.SwitchCommand.Execute(vm.Library.Options.Single(o => o.Info == band));
+
+            Assert.Equal(LibraryList.DefaultName, list.Current.Name);
+            Assert.Single(vm.Library.Songs);
+            Assert.Single(vm.Documents);
+        }
+
+        [Fact]
+        public void TheSetlistsFollowTheLibrary()
+        {
+            var (vm, _, band) = WithTwoLibraries();
+            vm.Setlists.NewCommand.Execute(null);
+            Assert.True(vm.Setlists.HasSetlists);
+
+            vm.Library.SwitchCommand.Execute(vm.Library.Options.Single(o => o.Info == band));
+
+            Assert.False(vm.Setlists.HasSetlists);
+            Assert.False(vm.Setlists.HasSelection);
+        }
+
+        [Fact]
+        public void NewLibraryIsCreatedAndOpened()
+        {
+            var (vm, list, _) = WithTwoLibraries();
+            _dialogs.TextAnswers.Enqueue("Church");
+
+            vm.Library.NewLibraryCommand.Execute(null);
+
+            Assert.Equal("Church", list.Current.Name);
+            Assert.Equal(3, list.Libraries.Count);
+            Assert.Equal("Groovekeeper — Church", vm.WindowTitle);
+        }
+
+        [Fact]
+        public void DeletingTheOpenLibraryOpensAnotherAndRemovesTheFile()
+        {
+            var (vm, list, band) = WithTwoLibraries();
+            vm.Library.SwitchCommand.Execute(vm.Library.Options.Single(o => o.Info == band));
+            string bandFile = list.PathOf(band);
+            Assert.True(File.Exists(bandFile));
+
+            vm.Library.DeleteLibraryCommand.Execute(null);
+
+            Assert.Equal([LibraryList.DefaultName], list.Libraries.Select(l => l.Name));
+            Assert.Equal(LibraryList.DefaultName, vm.Library.CurrentName);
+            Assert.False(File.Exists(bandFile));
+            Assert.False(vm.Library.CanDeleteLibrary);
+            Assert.Equal("Groovekeeper", vm.WindowTitle);
+        }
+
+        [Fact]
+        public void DecliningTheDeleteQuestionChangesNothing()
+        {
+            var (vm, list, _) = WithTwoLibraries();
+            _dialogs.ConfirmAnswer = false;
+
+            vm.Library.DeleteLibraryCommand.Execute(null);
+
+            Assert.Equal(2, list.Libraries.Count);
+        }
+
+        [Fact]
+        public void RenamingTheOpenLibraryUpdatesTheTitle()
+        {
+            var (vm, list, _) = WithTwoLibraries();
+            _dialogs.TextAnswers.Enqueue("Home");
+
+            vm.Library.RenameLibraryCommand.Execute(null);
+
+            Assert.Equal("Home", list.Current.Name);
+            Assert.Equal("Groovekeeper — Home", vm.WindowTitle);
+        }
+
         private string WriteSong(string name, string text)
         {
             string path = Path.Combine(_dir, name);

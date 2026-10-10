@@ -27,6 +27,23 @@ namespace SongCreator.Views
             set => SetValue(HideCommandProperty, value);
         }
 
+        private void Switcher_Click(object sender, RoutedEventArgs e)
+        {
+            var library = (LibraryViewModel)DataContext;
+            var menu = new ContextMenu { PlacementTarget = SwitcherButton, Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom };
+            foreach (var option in library.Options)
+                menu.Items.Add(new MenuItem
+                {
+                    Header = option.Name, IsCheckable = true, IsChecked = option.IsCurrent,
+                    Command = library.SwitchCommand, CommandParameter = option,
+                });
+            menu.Items.Add(new Separator());
+            menu.Items.Add(new MenuItem { Header = "New library…", Command = library.NewLibraryCommand });
+            menu.Items.Add(new MenuItem { Header = "Rename…", Command = library.RenameLibraryCommand });
+            menu.Items.Add(new MenuItem { Header = "Delete…", Command = library.DeleteLibraryCommand, IsEnabled = library.CanDeleteLibrary });
+            menu.IsOpen = true;
+        }
+
         private void SongList_MouseDoubleClick(object sender, MouseButtonEventArgs e)
         {
             // Only a double-click on a song, not on the scrollbar or the empty space below the list.
