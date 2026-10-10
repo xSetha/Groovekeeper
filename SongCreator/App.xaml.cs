@@ -16,14 +16,21 @@ namespace SongCreator
     /// </summary>
     public partial class App : Application
     {
-        private static readonly string LogPath = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SongCreator", "logs", "groovekeeper-.log");
+        /// <summary>
+        /// Logs and the Import from Web browser data. Not inside %LocalAppData%\SongCreator: that folder is the
+        /// installer's, and anything left in it after an uninstall makes the next setup say the app is installed.
+        /// </summary>
+        internal static readonly string LocalDataFolder = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Groovekeeper");
+
+        private static readonly string LogPath = Path.Combine(LocalDataFolder, "logs", "groovekeeper-.log");
 
         [STAThread]
         private static void Main()
         {
             // First, before any window: handles the installer's and updater's calls and installs a downloaded update.
-            VelopackApp.Build().Run();
+            // On uninstall it also removes the logs and browser data; songs and settings in %AppData% are kept.
+            VelopackApp.Build().OnBeforeUninstallFastCallback(_ => DeleteLocalData()).Run();
             StartLog();
             var app = new App();
             app.DispatcherUnhandledException += app.App_DispatcherUnhandledException;
@@ -35,6 +42,18 @@ namespace SongCreator
             finally
             {
                 Log.CloseAndFlush();
+            }
+        }
+
+        private static void DeleteLocalData()
+        {
+            try
+            {
+                Directory.Delete(LocalDataFolder, recursive: true);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                // Never fail the uninstall over leftover logs.
             }
         }
 

@@ -100,6 +100,9 @@ while the release doesn't exist yet.
   installed. The WebView2 Runtime used by Import from Web comes with Windows 10 and 11.
 - The user's songs, setlists and settings are in `%AppData%\SongCreator`, outside the install folder,
   so updating or reinstalling keeps them.
+- The install folder holds only the app. The error log and the Import from Web browser data are in
+  `%LocalAppData%\Groovekeeper`, and the uninstall hook removes them: anything left in the install
+  folder after an uninstall makes the next setup say the app is already installed.
 - The install and data folders keep the app's old name, SongCreator, like the package ID.
 
 The installer isn't code-signed yet, so Windows SmartScreen warns about it the first time: click

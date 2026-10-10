@@ -12,6 +12,9 @@ version's section here becomes the text of its GitHub release.
   again; + Line adds a line back.
 
 ### Fixed
+- After uninstalling, installing Groovekeeper again no longer says it is already installed. The error
+  log and the Import from Web browser data now live in `%LocalAppData%\Groovekeeper`, and uninstalling
+  removes them.
 - The start page's tips describe chords as they work since 1.2.0: typed above a letter rather than
   dragged from a panel, and transposing moves the chords but leaves the key as you set it.
 

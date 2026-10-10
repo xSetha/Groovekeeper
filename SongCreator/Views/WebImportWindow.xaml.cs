@@ -29,8 +29,7 @@ namespace SongCreator.Views
             })()
             """;
 
-        private static readonly string BrowserDataFolder = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SongCreator", "WebView2");
+        private static readonly string BrowserDataFolder = Path.Combine(App.LocalDataFolder, "WebView2");
 
         public WebImportWindow()
         {
